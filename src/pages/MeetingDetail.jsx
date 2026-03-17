@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMeeting, deleteMeeting } from '../api/meetingsApi'
-import { createConference, getConferenceByRoom } from '../api/conferenceApi'
+import { createConference } from '../api/conferenceApi'
 import { Video } from 'lucide-react'
 
 const STATUS_LABELS = { PLANNED: 'Planned', LIVE: 'Live', FINISHED: 'Finished' }
@@ -105,7 +105,7 @@ export default function MeetingDetail() {
               }}
             >
               <Video size={18} />
-              {creatingConference ? 'Starting...' : meeting.status === 'LIVE' ? 'Join Conference' : 'Start Conference'}
+              {creatingConference ? 'Opening...' : 'Open Meeting Room'}
             </button>
           )}
           <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Edit</button>

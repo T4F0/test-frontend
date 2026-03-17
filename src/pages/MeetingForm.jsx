@@ -169,7 +169,6 @@ export default function MeetingForm() {
         medical_case: form.medical_case || null,
         scheduled_date,
         status: form.status,
-        meeting_link: form.meeting_link || null,
         specialty: form.specialty || null,
         participants: form.participants,
       }
@@ -252,12 +251,10 @@ export default function MeetingForm() {
         </div>
         <div className="form-group">
           <label>Meeting link</label>
-          <input
-            type="url"
-            value={form.meeting_link}
-            onChange={(e) => handleChange('meeting_link', e.target.value)}
-            placeholder="https://..."
-          />
+          <div className="readonly-field">
+            <div className="readonly-field-title">{form.meeting_link || 'Generated automatically after saving the meeting'}</div>
+            <div className="readonly-field-meta">The join link is permanent and managed by the platform.</div>
+          </div>
         </div>
         <div className="form-group">
           <label>Specialty</label>

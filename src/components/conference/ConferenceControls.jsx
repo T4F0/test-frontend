@@ -7,6 +7,7 @@ export default function ConferenceControls({
   isMuted,
   isCameraOff,
   isScreenSharing,
+  isHandRaised,
   isHost,
   onToggleMute,
   onToggleCamera,
@@ -47,12 +48,12 @@ export default function ConferenceControls({
         </button>
 
         <button
-          className="control-btn"
+          className={`control-btn ${isHandRaised ? 'active-warning' : ''}`}
           onClick={onRaiseHand}
-          title="Raise hand"
+          title={isHandRaised ? 'Lower hand' : 'Raise hand'}
         >
           <Hand size={22} />
-          <span className="control-label">Raise Hand</span>
+          <span className="control-label">{isHandRaised ? 'Lower Hand' : 'Raise Hand'}</span>
         </button>
       </div>
 

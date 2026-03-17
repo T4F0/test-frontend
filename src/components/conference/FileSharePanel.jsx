@@ -1,18 +1,33 @@
 import { useState, useRef } from 'react'
-import { Paperclip, Upload, FileText, Image, Download, X } from 'lucide-react'
+import { Paperclip, Upload, FileText, Image, Download, Eye, X } from 'lucide-react'
 
 /**
  * File sharing panel for conference attachments.
  */
 export default function FileSharePanel({
   attachments,
+  caseAttachments,
   onUpload,
   isOpen,
   onToggle,
   isUploading,
 }) {
   const [dragActive, setDragActive] = useState(false)
+  const [previewItem, setPreviewItem] = useState(null)
   const fileInputRef = useRef(null)
+
+  const normalizeAttachment = (attachment, source) => ({
+    id: `${source}-${attachment.id}`,
+    name: attachment.original_filename || attachment.display_name || 'Attachment',
+    url: attachment.file,
+    fileType: attachment.file_type || '',
+    size: attachment.file_size || null,
+    uploadedByName: attachment.uploaded_by_name || 'Unknown',
+    source,
+  })
+
+  const conferenceFiles = attachments.map((attachment) => normalizeAttachment(attachment, 'meeting'))
+  const medicalCaseFiles = (caseAttachments || []).map((attachment) => normalizeAttachment(attachment, 'case'))
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -51,10 +66,14 @@ export default function FileSharePanel({
   }
 
   const formatFileSize = (bytes) => {
+    if (bytes == null) return ''
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
     return `${(bytes / 1048576).toFixed(1)} MB`
   }
+
+  const isPreviewable = (file) => file.fileType?.startsWith('image/') || file.fileType === 'PDF' || file.fileType === 'application/pdf'
+  const previewType = (file) => (file.fileType?.startsWith('image/') ? 'image' : 'pdf')
 
   if (!isOpen) return null
 
@@ -68,7 +87,6 @@ export default function FileSharePanel({
         <button className="sidebar-close" onClick={onToggle}>×</button>
       </div>
       <div className="sidebar-content">
-        {/* Drop zone */}
         <div
           className={`drop-zone ${dragActive ? 'drag-active' : ''}`}
           onDragEnter={handleDrag}
@@ -88,37 +106,78 @@ export default function FileSharePanel({
           />
         </div>
 
-        {/* File list */}
-        <div className="file-list">
-          {attachments.length === 0 && (
-            <p className="no-files">No files shared yet</p>
-          )}
-          {attachments.map((att) => (
-            <div key={att.id} className="file-item">
-              <div className="file-icon">
-                {getFileIcon(att.file_type)}
+        <div className="file-section">
+          <div className="file-section-title">Medical case attachments</div>
+          <div className="file-list">
+            {medicalCaseFiles.length === 0 && <p className="no-files">No case attachments available</p>}
+            {medicalCaseFiles.map((file) => (
+              <div key={file.id} className="file-item">
+                <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                <div className="file-info">
+                  <span className="file-name" title={file.name}>{file.name}</span>
+                  <span className="file-meta">{file.fileType || 'Unknown type'} · {file.uploadedByName}</span>
+                </div>
+                <div className="file-actions-inline">
+                  {isPreviewable(file) && (
+                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Preview">
+                      <Eye size={16} />
+                    </button>
+                  )}
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Download">
+                    <Download size={16} />
+                  </a>
+                </div>
               </div>
-              <div className="file-info">
-                <span className="file-name" title={att.original_filename}>
-                  {att.original_filename}
-                </span>
-                <span className="file-meta">
-                  {formatFileSize(att.file_size)} · {att.uploaded_by_name}
-                </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="file-section">
+          <div className="file-section-title">Files shared during meeting</div>
+          <div className="file-list">
+            {conferenceFiles.length === 0 && <p className="no-files">No files shared yet</p>}
+            {conferenceFiles.map((file) => (
+              <div key={file.id} className="file-item">
+                <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                <div className="file-info">
+                  <span className="file-name" title={file.name}>{file.name}</span>
+                  <span className="file-meta">{[formatFileSize(file.size), file.uploadedByName].filter(Boolean).join(' · ')}</span>
+                </div>
+                <div className="file-actions-inline">
+                  {isPreviewable(file) && (
+                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Preview">
+                      <Eye size={16} />
+                    </button>
+                  )}
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Download">
+                    <Download size={16} />
+                  </a>
+                </div>
               </div>
-              <a
-                href={att.file}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="file-download"
-                title="Download"
-              >
-                <Download size={16} />
-              </a>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
+
+      {previewItem && (
+        <div className="file-preview-modal" onClick={() => setPreviewItem(null)}>
+          <div className="file-preview-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="file-preview-header">
+              <strong>{previewItem.name}</strong>
+              <button className="sidebar-close" onClick={() => setPreviewItem(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="file-preview-body">
+              {previewType(previewItem) === 'image' ? (
+                <img src={previewItem.url} alt={previewItem.name} className="file-preview-image" />
+              ) : (
+                <iframe src={previewItem.url} title={previewItem.name} className="file-preview-frame" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -10,13 +10,15 @@ import {
   endConference,
   uploadConferenceAttachment,
   removeParticipant,
+  updateConferenceNotes,
 } from '../api/conferenceApi'
 import VideoGrid from '../components/conference/VideoGrid'
 import ConferenceControls from '../components/conference/ConferenceControls'
 import ParticipantList from '../components/conference/ParticipantList'
 import ChatSidebar from '../components/conference/ChatSidebar'
 import FileSharePanel from '../components/conference/FileSharePanel'
-import { Users, MessageSquare, Paperclip, Clock } from 'lucide-react'
+import MeetingNotesSidebar from '../components/conference/MeetingNotesSidebar'
+import { Users, MessageSquare, Paperclip, Clock, FileText } from 'lucide-react'
 import '../conference.css'
 
 export default function VideoConferenceRoom() {
@@ -31,10 +33,13 @@ export default function VideoConferenceRoom() {
   const [showParticipants, setShowParticipants] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [showFiles, setShowFiles] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [elapsedTime, setElapsedTime] = useState(0)
   const [joined, setJoined] = useState(false)
+  const [notes, setNotes] = useState('')
+  const [notesSaveStatus, setNotesSaveStatus] = useState('idle')
 
   const handleChatMessage = useCallback((msg) => {
     setChatMessages((prev) => [...prev, msg])
@@ -42,13 +47,14 @@ export default function VideoConferenceRoom() {
 
   const {
     localStream,
+    screenStream,
     remoteStreams,
     participants,
-    isConnected,
     isMuted,
     isCameraOff,
     isScreenSharing,
     screenSharer,
+    isHandRaised,
     connect,
     disconnect,
     toggleMute,
@@ -60,14 +66,12 @@ export default function VideoConferenceRoom() {
     muteRemoteParticipant,
   } = useWebRTC(roomId, user?.id, handleChatMessage)
 
-  // Load conference data
   useEffect(() => {
     loadConference()
   }, [roomId])
 
-  // Meeting timer
   useEffect(() => {
-    if (!conference?.started_at || conference?.status === 'ENDED') return
+    if (!conference?.started_at || conference?.status === 'ENDED') return undefined
     const start = new Date(conference.started_at).getTime()
     const timer = setInterval(() => {
       setElapsedTime(Math.floor((Date.now() - start) / 1000))
@@ -75,19 +79,46 @@ export default function VideoConferenceRoom() {
     return () => clearInterval(timer)
   }, [conference?.started_at, conference?.status])
 
+  useEffect(() => {
+    if (!conference?.can_edit_notes || !joined) return undefined
+    if (notes === (conference.notes || '')) {
+      setNotesSaveStatus('idle')
+      return undefined
+    }
+
+    setNotesSaveStatus('unsaved')
+    const timer = setTimeout(async () => {
+      try {
+        setNotesSaveStatus('saving')
+        const result = await updateConferenceNotes(conference.id, notes)
+        setConference((prev) => ({
+          ...prev,
+          notes: result.notes,
+          notes_updated_at: result.notes_updated_at,
+          notes_updated_by_name: result.notes_updated_by_name,
+        }))
+        setNotesSaveStatus('idle')
+      } catch (err) {
+        console.error('Notes save failed:', err)
+        setNotesSaveStatus('error')
+      }
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [conference?.can_edit_notes, conference?.id, conference?.notes, joined, notes])
+
   const loadConference = async () => {
     try {
       setLoading(true)
       const data = await getConferenceByRoom(roomId)
       setConference(data)
+      setNotes(data.notes || '')
 
-      // Check if the chat history came with the response
       if (data.recent_messages) {
         setChatMessages(data.recent_messages.reverse())
       }
 
-      // Check if user is host
-      const me = data.participants?.find((p) => p.user === user?.id)
+      const me = data.participants?.find((participant) => participant.user === user?.id)
       setIsHost(me?.role === 'HOST')
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load conference')
@@ -170,9 +201,8 @@ export default function VideoConferenceRoom() {
     return `${m}:${String(s).padStart(2, '0')}`
   }
 
-  const unreadCount = chatMessages.filter(
-    (m) => m.message_type !== 'SYSTEM' && !showChat
-  ).length
+  const unreadCount = chatMessages.filter((message) => message.message_type !== 'SYSTEM' && !showChat).length
+  const raisedHands = participants.filter((participant) => participant.hand_raised)
 
   if (loading) {
     return (
@@ -203,12 +233,11 @@ export default function VideoConferenceRoom() {
     )
   }
 
-  // Pre-join lobby
   if (!joined) {
     return (
       <div className="conference-lobby">
         <div className="lobby-card">
-          <h2>Join Conference</h2>
+          <h2>{conference?.meeting_title || 'Join Conference'}</h2>
           <p className="lobby-room">Room: <strong>{roomId}</strong></p>
           {conference?.meeting_date && (
             <p className="lobby-date">
@@ -243,10 +272,9 @@ export default function VideoConferenceRoom() {
 
   return (
     <div className="conference-room">
-      {/* Header */}
       <div className="conference-header">
         <div className="header-left">
-          <h2 className="conference-title">RCP Conference</h2>
+          <h2 className="conference-title">{conference?.meeting_title || 'RCP Conference'}</h2>
           {conference?.medical_case_id && (
             <span className="case-badge">
               Case: {String(conference.medical_case_id).slice(0, 8)}...
@@ -267,7 +295,7 @@ export default function VideoConferenceRoom() {
         <div className="header-right">
           <button
             className={`toolbar-btn ${showParticipants ? 'active' : ''}`}
-            onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); setShowFiles(false) }}
+            onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); setShowFiles(false); setShowNotes(false) }}
             title="Participants"
           >
             <Users size={18} />
@@ -275,26 +303,43 @@ export default function VideoConferenceRoom() {
           </button>
           <button
             className={`toolbar-btn ${showChat ? 'active' : ''}`}
-            onClick={() => { setShowChat(!showChat); setShowParticipants(false); setShowFiles(false) }}
+            onClick={() => { setShowChat(!showChat); setShowParticipants(false); setShowFiles(false); setShowNotes(false) }}
             title="Chat"
           >
             <MessageSquare size={18} />
+            {!!unreadCount && <span className="toolbar-count">{unreadCount}</span>}
           </button>
           <button
             className={`toolbar-btn ${showFiles ? 'active' : ''}`}
-            onClick={() => { setShowFiles(!showFiles); setShowParticipants(false); setShowChat(false) }}
+            onClick={() => { setShowFiles(!showFiles); setShowParticipants(false); setShowChat(false); setShowNotes(false) }}
             title="Files"
           >
             <Paperclip size={18} />
           </button>
+          <button
+            className={`toolbar-btn ${showNotes ? 'active' : ''}`}
+            onClick={() => { setShowNotes(!showNotes); setShowParticipants(false); setShowChat(false); setShowFiles(false) }}
+            title="Meeting Notes"
+          >
+            <FileText size={18} />
+          </button>
         </div>
       </div>
 
-      {/* Main content */}
+      {!!raisedHands.length && (
+        <div className="raised-hands-banner">
+          <span className="raised-hands-icon">✋</span>
+          <span>
+            Raised hands: {raisedHands.map((participant) => participant.first_name ? `${participant.first_name} ${participant.last_name || ''}`.trim() : participant.username).join(', ')}
+          </span>
+        </div>
+      )}
+
       <div className="conference-body">
-        <div className={`video-area ${showParticipants || showChat || showFiles ? 'with-sidebar' : ''}`}>
+        <div className={`video-area ${showParticipants || showChat || showFiles || showNotes ? 'with-sidebar' : ''}`}>
           <VideoGrid
             localStream={localStream}
+            screenStream={screenStream}
             remoteStreams={remoteStreams}
             participants={participants}
             currentUserId={user?.id}
@@ -324,18 +369,30 @@ export default function VideoConferenceRoom() {
 
         <FileSharePanel
           attachments={conference?.attachments || []}
+          caseAttachments={conference?.medical_case_attachments || []}
           onUpload={handleUpload}
           isOpen={showFiles}
           onToggle={() => setShowFiles(false)}
           isUploading={isUploading}
         />
+
+        <MeetingNotesSidebar
+          isOpen={showNotes}
+          onToggle={() => setShowNotes(false)}
+          notes={notes}
+          onChange={setNotes}
+          canEdit={conference?.can_edit_notes}
+          saveStatus={notesSaveStatus}
+          updatedAt={conference?.notes_updated_at}
+          updatedByName={conference?.notes_updated_by_name}
+        />
       </div>
 
-      {/* Controls */}
       <ConferenceControls
         isMuted={isMuted}
         isCameraOff={isCameraOff}
         isScreenSharing={isScreenSharing}
+        isHandRaised={isHandRaised}
         isHost={isHost}
         onToggleMute={toggleMute}
         onToggleCamera={toggleCamera}
