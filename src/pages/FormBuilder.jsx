@@ -62,16 +62,18 @@ export default function FormBuilder() {
     }
   }
 
-  const handleAddSection = async () => {
+  const handleAddSection = async (parentId = null) => {
     if (!form.id) {
       alert('Please save the form first')
       return
     }
     try {
+      const order = sections.filter(s => s.parent === parentId).length
       const newSection = await createSection({
         form: form.id,
-        name: 'New Section',
-        order: sections.length
+        parent: parentId,
+        name: parentId ? 'New Sub-section' : 'New Section',
+        order: order
       })
       setSections([...sections, newSection])
     } catch (err) {
@@ -115,22 +117,24 @@ export default function FormBuilder() {
         <div className="sections-container">
           <div className="sections-header">
             <h3>Sections</h3>
-            <button onClick={handleAddSection} className="btn-secondary">+ Add Section</button>
+            <button onClick={() => handleAddSection()} className="btn-secondary">+ Add Section</button>
           </div>
 
           {sections.length === 0 ? (
             <p className="empty">No sections yet. Add one to get started.</p>
           ) : (
             <div className="sections-list">
-              {sections.map(section => (
+              {sections.filter(s => !s.parent).sort((a,b) => a.order - b.order).map(section => (
                 <SectionBuilder
                   key={section.id}
                   section={section}
+                  allSections={sections}
                   onUpdate={(updated) => {
                     setSections(sections.map(s => s.id === updated.id ? updated : s))
                   }}
-                  onDelete={(sectionId) => {
-                    setSections(sections.filter(s => s.id !== sectionId))
+                  onDelete={() => loadForm()} // Reload to handle recursive deletion cleanly
+                  onAddSection={(newSection) => {
+                    setSections([...sections, newSection])
                   }}
                 />
               ))}

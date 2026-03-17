@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { updateSection, deleteSection } from '../api/sectionsApi'
+import { updateSection, deleteSection, createSection } from '../api/sectionsApi'
 import { createField } from '../api/fieldsApi'
 import FieldBuilder from './FieldBuilder'
 
-export default function SectionBuilder({ section, onUpdate, onDelete }) {
+export default function SectionBuilder({ section, allSections, onUpdate, onDelete, onAddSection }) {
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(section.name)
   const [fields, setFields] = useState(section.fields || [])
   const [saving, setSaving] = useState(false)
+
+  const childSections = allSections ? allSections.filter(s => s.parent === section.id).sort((a,b) => a.order - b.order) : []
 
   const handleSaveSection = async () => {
     try {
@@ -29,7 +31,7 @@ export default function SectionBuilder({ section, onUpdate, onDelete }) {
   }
 
   const handleDelete = async () => {
-    if (confirm('Delete this section and all its fields?')) {
+    if (confirm('Delete this section and all its contents?')) {
       try {
         await deleteSection(section.id)
         onDelete(section.id)
@@ -53,8 +55,23 @@ export default function SectionBuilder({ section, onUpdate, onDelete }) {
     }
   }
 
+  const handleAddSubSection = async () => {
+    try {
+      const order = childSections.length
+      const newSection = await createSection({
+        form: section.form,
+        parent: section.id,
+        name: 'New Sub-section',
+        order: order
+      })
+      onAddSection(newSection)
+    } catch (err) {
+      alert('Failed to create sub-section')
+    }
+  }
+
   return (
-    <div className="section-builder">
+    <div className={`section-builder ${section.parent ? 'nested' : ''}`}>
       <div className="section-header">
         {isEditing ? (
           <div className="edit-section">
@@ -74,24 +91,44 @@ export default function SectionBuilder({ section, onUpdate, onDelete }) {
               <button onClick={() => setIsEditing(true)} className="btn-small">Edit</button>
               <button onClick={handleDelete} className="btn-small btn-danger">Delete</button>
               <button onClick={handleAddField} className="btn-small btn-secondary">+ Field</button>
+              <button onClick={handleAddSubSection} className="btn-small btn-primary">+ Sub-section</button>
             </div>
           </>
         )}
       </div>
 
-      {fields.length === 0 ? (
-        <p className="empty">No fields. Add one above.</p>
-      ) : (
-        <div className="fields-list">
-          {fields.map(field => (
-            <FieldBuilder
-              key={field.id}
-              field={field}
-              onDelete={(fieldId) => setFields(fields.filter(f => f.id !== fieldId))}
-            />
-          ))}
-        </div>
-      )}
+      <div className="section-contents">
+        {fields.length > 0 && (
+          <div className="fields-list">
+            {fields.map(field => (
+              <FieldBuilder
+                key={field.id}
+                field={field}
+                onDelete={(fieldId) => setFields(fields.filter(f => f.id !== fieldId))}
+              />
+            ))}
+          </div>
+        )}
+
+        {childSections.length > 0 && (
+          <div className="child-sections-list">
+            {childSections.map(child => (
+              <SectionBuilder
+                key={child.id}
+                section={child}
+                allSections={allSections}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+                onAddSection={onAddSection}
+              />
+            ))}
+          </div>
+        )}
+
+        {fields.length === 0 && childSections.length === 0 && (
+          <p className="empty-small">No fields or sub-sections.</p>
+        )}
+      </div>
     </div>
   )
 }

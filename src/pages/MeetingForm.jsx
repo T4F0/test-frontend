@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMeeting, createMeeting, updateMeeting } from '../api/meetingsApi'
 import { getMedicalCases } from '../api/medicalCasesApi'
 import { getUsers } from '../api/authApi'
+import { useAuth } from '../context/AuthContext'
 
 const STATUS_CHOICES = [
   { value: 'PLANNED', label: 'Planned' },
@@ -13,6 +14,7 @@ const STATUS_CHOICES = [
 export default function MeetingForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const isEdit = !!id
 
   const [form, setForm] = useState({
@@ -30,11 +32,83 @@ export default function MeetingForm() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [participantSearch, setParticipantSearch] = useState('')
 
   useEffect(() => {
     loadCasesAndUsers()
     if (isEdit) loadMeeting()
   }, [id])
+
+  const formatUserName = (candidate) => {
+    if (!candidate) return 'Unknown user'
+
+    const fullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim()
+    return fullName || candidate.username || candidate.email || 'Unknown user'
+  }
+
+  const formatUserMeta = (candidate) => {
+    if (!candidate) return ''
+
+    return [candidate.email, candidate.role, candidate.specialty].filter(Boolean).join(' • ')
+  }
+
+  const getInitials = (candidate) => {
+    const source = `${candidate?.first_name || ''} ${candidate?.last_name || ''}`.trim()
+    if (!source) {
+      return (candidate?.username || candidate?.email || '?').slice(0, 2).toUpperCase()
+    }
+
+    return source
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('')
+  }
+
+  const normalizedCoordinatorId = isEdit ? form.coordinator : user?.id || ''
+  const usersById = useMemo(
+    () => new Map(users.map((candidate) => [candidate.id, candidate])),
+    [users],
+  )
+  const selectedParticipantIds = useMemo(() => new Set(form.participants), [form.participants])
+  const coordinatorUser = useMemo(() => {
+    if (!normalizedCoordinatorId) return user || null
+    return usersById.get(normalizedCoordinatorId) || (user?.id === normalizedCoordinatorId ? user : null)
+  }, [normalizedCoordinatorId, user, usersById])
+  const selectedParticipants = useMemo(
+    () => form.participants.map((participantId) => usersById.get(participantId)).filter(Boolean),
+    [form.participants, usersById],
+  )
+  const filteredUsers = useMemo(() => {
+    const query = participantSearch.trim().toLowerCase()
+
+    return [...users]
+      .filter((candidate) => {
+        if (!query) return true
+
+        return [
+          formatUserName(candidate),
+          candidate.email,
+          candidate.username,
+          candidate.role,
+          candidate.specialty,
+          candidate.hospital,
+        ]
+          .filter(Boolean)
+          .some((value) => value.toLowerCase().includes(query))
+      })
+      .sort((left, right) => {
+        const leftSelected = selectedParticipantIds.has(left.id)
+        const rightSelected = selectedParticipantIds.has(right.id)
+
+        if (leftSelected !== rightSelected) {
+          return leftSelected ? -1 : 1
+        }
+
+        return formatUserName(left).localeCompare(formatUserName(right))
+      })
+  }, [participantSearch, selectedParticipantIds, users])
 
   const loadCasesAndUsers = async () => {
     try {
@@ -56,13 +130,13 @@ export default function MeetingForm() {
       const dt = data.scheduled_date ? new Date(data.scheduled_date) : new Date()
       setForm({
         medical_case: data.medical_case || '',
-        coordinator: data.coordinator || '',
+        coordinator: data.coordinator?.id || data.coordinator || '',
         scheduled_date: dt.toISOString().slice(0, 10),
         scheduled_time: dt.toTimeString().slice(0, 5),
         status: data.status || 'PLANNED',
         meeting_link: data.meeting_link || '',
         specialty: data.specialty || '',
-        participants: data.participants || [],
+        participants: (data.participants || []).map((participant) => participant?.id || participant),
       })
     } catch (err) {
       setError('Failed to load meeting')
@@ -93,7 +167,6 @@ export default function MeetingForm() {
       const scheduled_date = `${form.scheduled_date}T${form.scheduled_time}:00`
       const payload = {
         medical_case: form.medical_case || null,
-        coordinator: form.coordinator || null,
         scheduled_date,
         status: form.status,
         meeting_link: form.meeting_link || null,
@@ -137,15 +210,15 @@ export default function MeetingForm() {
         </div>
         <div className="form-group">
           <label>Coordinator</label>
-          <select
-            value={form.coordinator}
-            onChange={(e) => handleChange('coordinator', e.target.value)}
-          >
-            <option value="">—</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
-            ))}
-          </select>
+          <div className="readonly-field">
+            <div className="readonly-field-title">{formatUserName(coordinatorUser || user)}</div>
+            <div className="readonly-field-meta">
+              {isEdit
+                ? 'Coordinator assigned to this meeting'
+                : 'Automatically set to the connected user creating this meeting'}
+              {formatUserMeta(coordinatorUser || user) ? ` • ${formatUserMeta(coordinatorUser || user)}` : ''}
+            </div>
+          </div>
         </div>
         <div className="form-row">
           <div className="form-group">
@@ -196,17 +269,81 @@ export default function MeetingForm() {
         </div>
         <div className="form-group">
           <label>Participants</label>
-          <div className="checkbox-group">
-            {users.map((u) => (
-              <label key={u.id} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={form.participants.includes(u.id)}
-                  onChange={() => handleParticipantToggle(u.id)}
-                />
-                {u.first_name} {u.last_name}
-              </label>
-            ))}
+          <div className="participant-picker">
+            <div className="participant-picker-toolbar">
+              <div className="participant-picker-summary">
+                <span>{form.participants.length} selected</span>
+                <span>{filteredUsers.length} shown</span>
+              </div>
+              {!!form.participants.length && (
+                <button
+                  type="button"
+                  className="btn-small btn-secondary"
+                  onClick={() => handleChange('participants', [])}
+                >
+                  Clear selection
+                </button>
+              )}
+            </div>
+
+            <input
+              type="search"
+              value={participantSearch}
+              onChange={(e) => setParticipantSearch(e.target.value)}
+              className="participant-search-input"
+              placeholder="Search by name, email, role, specialty..."
+            />
+
+            <div className="selected-participants-panel">
+              <div className="selected-participants-header">Selected participants</div>
+              {selectedParticipants.length ? (
+                <div className="selected-participants-list">
+                  {selectedParticipants.map((participant) => (
+                    <button
+                      key={participant.id}
+                      type="button"
+                      className="selected-participant-chip"
+                      onClick={() => handleParticipantToggle(participant.id)}
+                      title={`Remove ${formatUserName(participant)}`}
+                    >
+                      <span className="selected-participant-avatar">{getInitials(participant)}</span>
+                      <span className="selected-participant-name">{formatUserName(participant)}</span>
+                      <span className="selected-participant-remove">×</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-inline">No participants selected yet.</p>
+              )}
+            </div>
+
+            <div className="participant-results" role="listbox" aria-label="Participants list">
+              {filteredUsers.length ? (
+                filteredUsers.map((candidate) => {
+                  const isSelected = selectedParticipantIds.has(candidate.id)
+
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      className={`participant-option ${isSelected ? 'selected' : ''}`}
+                      onClick={() => handleParticipantToggle(candidate.id)}
+                    >
+                      <span className="participant-avatar">{getInitials(candidate)}</span>
+                      <span className="participant-option-text">
+                        <span className="participant-option-name">{formatUserName(candidate)}</span>
+                        <span className="participant-option-meta">
+                          {formatUserMeta(candidate) || candidate.username || 'No additional details'}
+                        </span>
+                      </span>
+                      <span className="participant-option-state">{isSelected ? 'Selected' : 'Add'}</span>
+                    </button>
+                  )
+                })
+              ) : (
+                <p className="empty-inline">No users match your search.</p>
+              )}
+            </div>
           </div>
         </div>
         <div className="form-actions">

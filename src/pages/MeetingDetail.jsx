@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMeeting, deleteMeeting } from '../api/meetingsApi'
 import { createConference, getConferenceByRoom } from '../api/conferenceApi'
-import { useAuth } from '../context/AuthContext'
 import { Video } from 'lucide-react'
 
 const STATUS_LABELS = { PLANNED: 'Planned', LIVE: 'Live', FINISHED: 'Finished' }
@@ -10,11 +9,16 @@ const STATUS_LABELS = { PLANNED: 'Planned', LIVE: 'Live', FINISHED: 'Finished' }
 export default function MeetingDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [meeting, setMeeting] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [creatingConference, setCreatingConference] = useState(false)
+
+  const formatUserName = (candidate) => {
+    if (!candidate) return '—'
+    const fullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim()
+    return fullName || candidate.username || candidate.email || '—'
+  }
 
   useEffect(() => {
     loadMeeting()
@@ -138,11 +142,15 @@ export default function MeetingDetail() {
           </div>
           <div className="detail-item">
             <label>Coordinator</label>
-            <p>{meeting.coordinator ? String(meeting.coordinator) : '—'}</p>
+            <p>{formatUserName(meeting.coordinator_details)}</p>
           </div>
           <div className="detail-item">
             <label>Participants</label>
-            <p>{meeting.participants?.length ? meeting.participants.join(', ') : '—'}</p>
+            <p>
+              {meeting.participant_details?.length
+                ? meeting.participant_details.map((participant) => formatUserName(participant)).join(', ')
+                : '—'}
+            </p>
           </div>
         </div>
       </div>

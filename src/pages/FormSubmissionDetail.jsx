@@ -3,23 +3,47 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { getSubmission } from '../api/submissionsApi'
 
-function collectFieldLabels(form) {
-  const labels = {}
-  function walk(sections) {
-    if (!sections) return
-    for (const section of sections) {
-      section.fields?.forEach(f => { labels[f.id] = f.name })
-      walk(section.children)
-    }
-  }
-  walk(form?.sections || [])
-  return labels
-}
-
 function formatValue(value) {
   if (value === true) return 'Yes'
   if (value === false) return 'No'
-  return value == null ? '—' : String(value)
+  return value == null || value === '' ? '—' : String(value)
+}
+
+function SectionDataRenderer({ section, submissionData }) {
+  const hasFields = section.fields?.some(f => submissionData[f.id] !== undefined)
+  const hasChildData = section.children?.some(child => hasDataInChildren(child, submissionData))
+
+  if (!hasFields && !hasChildData) return null
+
+  return (
+    <div key={section.id} className={`submission-section ${section.parent ? 'nested' : ''}`}>
+      <h3 className="submission-section-title">{section.name}</h3>
+      
+      {section.fields?.map(field => {
+        const value = submissionData[field.id]
+        if (value === undefined) return null
+        return (
+          <div key={field.id} className="submission-detail-field">
+            <span className="submission-detail-field-label">{field.name}</span>
+            <span className="submission-detail-field-value">{formatValue(value)}</span>
+          </div>
+        )
+      })}
+
+      {section.children?.map(child => (
+        <SectionDataRenderer 
+          key={child.id} 
+          section={child} 
+          submissionData={submissionData} 
+        />
+      ))}
+    </div>
+  )
+}
+
+function hasDataInChildren(section, submissionData) {
+  if (section.fields?.some(f => submissionData[f.id] !== undefined)) return true
+  return section.children?.some(child => hasDataInChildren(child, submissionData)) || false
 }
 
 export default function FormSubmissionDetail() {
@@ -56,15 +80,14 @@ export default function FormSubmissionDetail() {
   if (error) return <div className="error">{error}</div>
   if (!form || !submission) return <div className="error">Submission not found</div>
 
-  const fieldLabels = collectFieldLabels(form)
-  const data = submission.data || {}
+  const submissionData = submission.data || {}
 
   return (
     <div className="submission-detail-fullscreen">
       <div className="submission-detail-inner">
         <header className="submission-detail-header">
           <h1 className="submission-detail-title">{form.name}</h1>
-          <p className="submission-detail-subtitle">Form submission</p>
+          <p className="submission-detail-subtitle">Form submission details</p>
           <button
             className="btn-secondary submission-detail-back"
             onClick={() => navigate(`/forms/${formId}/submissions`)}
@@ -89,20 +112,18 @@ export default function FormSubmissionDetail() {
         </section>
 
         <section className="submission-detail-data">
-          <h2 className="submission-detail-data-title">Submitted values</h2>
-          {Object.keys(data).length === 0 ? (
-            <p className="submission-detail-empty">No submitted values.</p>
+          <h2 className="submission-detail-data-title">Submitted Values</h2>
+          {Object.keys(submissionData).length === 0 ? (
+            <p className="submission-detail-empty">No values were submitted.</p>
           ) : (
-            <div className="submission-detail-fields">
-              {Object.entries(data).map(([fieldId, value]) => {
-                const label = fieldLabels[fieldId] ?? `Field ${fieldId}`
-                return (
-                  <div key={fieldId} className="submission-detail-field">
-                    <span className="submission-detail-field-label">{label}</span>
-                    <span className="submission-detail-field-value">{formatValue(value)}</span>
-                  </div>
-                )
-              })}
+            <div className="submission-detail-sections">
+              {form.sections?.sort((a,b) => a.order - b.order).map(section => (
+                <SectionDataRenderer 
+                  key={section.id} 
+                  section={section} 
+                  submissionData={submissionData} 
+                />
+              ))}
             </div>
           )}
         </section>
