@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient } from '../api/patientsApi'
 import { getMedicalCases, createMedicalCase } from '../api/medicalCasesApi'
+import { getSubmissionsByPatient } from '../api/submissionsApi'
 
 const CASE_STATUS_LABELS = { DRAFT: 'Draft', SUBMITTED: 'Submitted', VALIDATED: 'Validated', DISCUSSED: 'Discussed', CLOSED: 'Closed' }
 
@@ -10,6 +11,7 @@ export default function PatientDetail() {
   const navigate = useNavigate()
   const [patient, setPatient] = useState(null)
   const [cases, setCases] = useState([])
+  const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [creatingCase, setCreatingCase] = useState(false)
@@ -19,8 +21,20 @@ export default function PatientDetail() {
   }, [id])
 
   useEffect(() => {
-    if (id) loadCases()
+    if (id) {
+      loadCases()
+      loadSubmissions()
+    }
   }, [id])
+
+  const loadSubmissions = async () => {
+    try {
+      const data = await getSubmissionsByPatient(id)
+      setSubmissions(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('Failed to load submissions:', e)
+    }
+  }
 
   const loadCases = async () => {
     try {
@@ -150,6 +164,35 @@ export default function PatientDetail() {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+
+        <div className="detail-section">
+          <h2>Form Submissions</h2>
+          <div className="detail-actions" style={{ marginBottom: '1rem' }}>
+            <button className="btn-primary" onClick={() => navigate('/forms')}>
+              + New Submission
+            </button>
+          </div>
+          {submissions.length === 0 ? (
+            <div className="empty-inline-card">
+              <p>No form submissions found for this patient.</p>
+            </div>
+          ) : (
+            <div className="submissions-grid">
+              {submissions.map((sub) => (
+                <div key={sub.id} className="submission-card-mini" onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}>
+                  <div className="sub-icon">📝</div>
+                  <div className="sub-info">
+                    <span className="sub-form-name">{sub.form_name}</span>
+                    <span className="sub-date">
+                      Submitted on {new Date(sub.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="sub-arrow">→</div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

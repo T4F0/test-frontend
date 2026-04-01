@@ -93,6 +93,15 @@ export default function FieldBuilder({ field, onDelete }) {
             Required
           </label>
 
+          <label>
+            <input
+              type="checkbox"
+              checked={data.show_rdv || false}
+              onChange={(e) => setData({ ...data, show_rdv: e.target.checked })}
+            />
+            Show RDV
+          </label>
+
           <div className="form-actions-inline">
             <button onClick={handleSave} disabled={saving}>Save</button>
             <button onClick={() => setIsEditing(false)}>Cancel</button>
@@ -104,6 +113,7 @@ export default function FieldBuilder({ field, onDelete }) {
             <span className="field-name">{field.name}</span>
             <span className="field-type">{field.field_type}</span>
             {field.required && <span className="badge">Required</span>}
+            {field.show_rdv && <span className="badge badge-info">Show RDV</span>}
           </div>
           <div className="field-controls">
             <button onClick={() => setIsEditing(true)} className="btn-small">Edit</button>

@@ -8,6 +8,12 @@ export const getSubmissions = async (formId) => {
   return data.results ?? data
 }
 
+export const getSubmissionsByPatient = async (patientId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/submissions/?patient=${patientId}`)
+  return data.results ?? data
+}
+
 export const getSubmission = async (id) => {
   const authAxios = getAuthAxios()
   const { data } = await authAxios.get(`${API_BASE}/submissions/${id}/`)

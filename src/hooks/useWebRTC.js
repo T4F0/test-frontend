@@ -5,7 +5,7 @@ import { getToken } from "../api/authApi";
 /**
  * Custom hook for managing WebRTC peer connections and WebSocket signaling.
  */
-export default function useWebRTC(roomId, userId, onChatMessage) {
+export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) {
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState({});
@@ -132,6 +132,9 @@ export default function useWebRTC(roomId, userId, onChatMessage) {
       case "chat_message":
         if (onChatMessage) onChatMessage(data);
         break;
+      case "notes_update":
+        if (onNotesUpdate && data.user_id !== userId) onNotesUpdate(data.notes);
+        break;
       default:
         break;
     }
@@ -241,6 +244,13 @@ export default function useWebRTC(roomId, userId, onChatMessage) {
     connect, disconnect: () => { cleanupPeers(); wsRef.current?.close(); },
     toggleMute, toggleCamera, startScreenShare, stopScreenShare,
     sendChatMessage: (c) => wsRef.current?.send(JSON.stringify({ type: "chat_message", content: c })),
+    broadcastNotes: (n) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "notes_update", notes: n }));
+        return true;
+      }
+      return false;
+    },
     raiseHand: () => wsRef.current?.send(JSON.stringify({ type: "raise_hand" }))
   };
 }

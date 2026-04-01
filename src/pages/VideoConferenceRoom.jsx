@@ -45,6 +45,10 @@ export default function VideoConferenceRoom() {
     setChatMessages((prev) => [...prev, msg])
   }, [])
 
+  const handleNotesSync = useCallback((newNotes) => {
+    setNotes(newNotes)
+  }, [])
+
   const {
     localStream,
     screenStream,
@@ -62,9 +66,10 @@ export default function VideoConferenceRoom() {
     startScreenShare,
     stopScreenShare,
     sendChatMessage,
+    broadcastNotes,
     raiseHand,
     muteRemoteParticipant,
-  } = useWebRTC(roomId, user?.id, handleChatMessage)
+  } = useWebRTC(roomId, user?.id, handleChatMessage, handleNotesSync)
 
   useEffect(() => {
     loadConference()
@@ -86,26 +91,23 @@ export default function VideoConferenceRoom() {
       return undefined
     }
 
-    setNotesSaveStatus('unsaved')
-    const timer = setTimeout(async () => {
-      try {
-        setNotesSaveStatus('saving')
-        const result = await updateConferenceNotes(conference.id, notes)
-        setConference((prev) => ({
-          ...prev,
-          notes: result.notes,
-          notes_updated_at: result.notes_updated_at,
-          notes_updated_by_name: result.notes_updated_by_name,
-        }))
+    setNotesSaveStatus('saving')
+    const timer = setTimeout(() => {
+      // Broadcast to WebSocket - the Consumer will handle DB saving
+      console.log('Debouncing notes broadcast...', notes.length);
+      const success = broadcastNotes(notes)
+      if (success) {
+        console.log('Notes broadcasted successfully');
         setNotesSaveStatus('idle')
-      } catch (err) {
-        console.error('Notes save failed:', err)
-        setNotesSaveStatus('error')
+      } else {
+        console.warn('WebSocket not ready, notes not sent');
+        // If WebSocket fails, we should ideally fallback to an API call or just reset status
+        setNotesSaveStatus('idle') 
       }
-    }, 1500)
+    }, 1000)
 
     return () => clearTimeout(timer)
-  }, [conference?.can_edit_notes, conference?.id, conference?.notes, joined, notes])
+  }, [conference?.can_edit_notes, conference?.notes, joined, notes, broadcastNotes])
 
   const loadConference = async () => {
     try {

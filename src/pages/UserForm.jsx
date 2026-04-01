@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { createUser, updateUser, getUsers } from '../api/authApi'
 
 const ROLE_CHOICES = [
-  { value: 'MEDECIN', label: 'Physician' },
+  { value: 'MEDECIN', label: 'Medecin' },
   { value: 'COORDINATEUR', label: 'Coordinator' },
   { value: 'ADMIN', label: 'Administrator' }
 ]
@@ -53,7 +53,7 @@ export default function UserForm() {
     try {
       setSaving(true)
       setError(null)
-      
+
       if (isEdit) {
         delete user.password // Don't update password if empty
         if (!user.password) {
@@ -65,7 +65,7 @@ export default function UserForm() {
       } else {
         await createUser(user)
       }
-      
+
       navigate('/users')
     } catch (err) {
       const errorData = err.response?.data
@@ -140,7 +140,7 @@ export default function UserForm() {
           <div className="form-group">
             <label>Password *</label>
             <input
-              type="password"
+              type="text"
               value={user.password}
               onChange={(e) => setUser({ ...user, password: e.target.value })}
               required

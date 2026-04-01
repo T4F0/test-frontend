@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getUsers, deleteUser } from '../api/authApi'
 
 const ROLE_LABELS = {
-  'MEDECIN': 'Physician',
+  'MEDECIN': 'Medecin',
   'COORDINATEUR': 'Coordinator',
   'ADMIN': 'Administrator'
 }

@@ -117,7 +117,13 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
 
   return (
     <div className={`video-tile ${isScreenSharer ? 'screen-sharer' : ''} ${handRaised ? 'hand-raised' : ''}`}>
-      <video ref={videoRef} autoPlay playsInline muted={isLocal} className={isCameraOff ? 'camera-off' : ''} />
+      <video 
+        ref={videoRef} 
+        autoPlay 
+        playsInline 
+        muted={isLocal} 
+        className={`${isCameraOff ? 'camera-off' : ''} ${isLocal && !isScreenSharer ? 'mirrored' : ''}`} 
+      />
       {(isCameraOff || !stream) && (
         <div className="video-placeholder">
           <div className="avatar-circle">{(label || '?')[0].toUpperCase()}</div>

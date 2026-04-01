@@ -357,3 +357,82 @@
     padding: 0.75rem 0.5rem;
   }
 }
+
+/* ===== SUBMISSIONS GRID IN PATIENT DETAIL ===== */
+.submissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.submission-card-mini {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submission-card-mini:hover {
+  background: white;
+  border-color: var(--primary);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.sub-icon {
+  font-size: 1.5rem;
+  background: white;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.sub-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sub-form-name {
+  font-weight: 700;
+  color: var(--gray-900);
+  font-size: 1rem;
+}
+
+.sub-date {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+}
+
+.sub-arrow {
+  color: var(--gray-300);
+  font-weight: 700;
+  font-size: 1.25rem;
+  transition: transform 0.3s ease;
+}
+
+.submission-card-mini:hover .sub-arrow {
+  color: var(--primary);
+  transform: translateX(5px);
+}
+
+.empty-inline-card {
+  padding: 2rem;
+  text-align: center;
+  background: var(--gray-50);
+  border-radius: var(--border-radius);
+  color: var(--gray-500);
+  font-style: italic;
+  border: 2px dashed var(--gray-200);
+}

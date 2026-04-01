@@ -414,6 +414,10 @@
   display: none;
 }
 
+.video-tile video.mirrored {
+  transform: rotateY(180deg);
+}
+
 .video-placeholder {
   position: absolute;
   top: 0;
