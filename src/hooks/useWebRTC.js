@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import SimplePeer from "simple-peer";
+import SimplePeer from "simple-peer/simplepeer.min.js";
 import { getToken } from "../api/authApi";
 
 /**
@@ -55,13 +55,18 @@ export default function useWebRTC(roomId, userId, onChatMessage) {
     });
 
     peer.on("stream", (stream) => {
-      console.log(`WebRTC: Received stream from ${peerId}`);
+      console.log(`WebRTC: Received stream with ${stream.getTracks().length} tracks from ${peerId}`);
       setRemoteStreams((prev) => ({ ...prev, [peerId]: stream }));
     });
 
     peer.on("track", (track, stream) => {
-      console.log(`WebRTC: Received track from ${peerId}`);
+      console.log(`WebRTC: Received track (${track.kind}) from ${peerId}`);
+      // Force React state update by copying to new object
       setRemoteStreams((prev) => ({ ...prev, [peerId]: stream }));
+    });
+
+    peer.on("error", (err) => {
+      console.error(`WebRTC: Peer connection error for ${peerId}`, err);
     });
 
     peer.on("close", () => {

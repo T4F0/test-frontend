@@ -5,12 +5,6 @@ import { getMedicalCases } from '../api/medicalCasesApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 
-const STATUS_CHOICES = [
-  { value: 'PLANNED', label: 'Planned' },
-  { value: 'LIVE', label: 'Live' },
-  { value: 'FINISHED', label: 'Finished' },
-]
-
 export default function MeetingForm() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -22,7 +16,6 @@ export default function MeetingForm() {
     coordinator: '',
     scheduled_date: '',
     scheduled_time: '09:00',
-    status: 'PLANNED',
     meeting_link: '',
     specialty: '',
     participants: [],
@@ -133,7 +126,6 @@ export default function MeetingForm() {
         coordinator: data.coordinator?.id || data.coordinator || '',
         scheduled_date: dt.toISOString().slice(0, 10),
         scheduled_time: dt.toTimeString().slice(0, 5),
-        status: data.status || 'PLANNED',
         meeting_link: data.meeting_link || '',
         specialty: data.specialty || '',
         participants: (data.participants || []).map((participant) => participant?.id || participant),
@@ -168,7 +160,6 @@ export default function MeetingForm() {
       const payload = {
         medical_case: form.medical_case || null,
         scheduled_date,
-        status: form.status,
         specialty: form.specialty || null,
         participants: form.participants,
       }
@@ -237,17 +228,6 @@ export default function MeetingForm() {
               onChange={(e) => handleChange('scheduled_time', e.target.value)}
             />
           </div>
-        </div>
-        <div className="form-group">
-          <label>Status</label>
-          <select
-            value={form.status}
-            onChange={(e) => handleChange('status', e.target.value)}
-          >
-            {STATUS_CHOICES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
         </div>
         <div className="form-group">
           <label>Meeting link</label>

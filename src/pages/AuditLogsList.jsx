@@ -3,7 +3,7 @@ import { getAuditLogs } from '../api/auditLogsApi'
 
 const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'VIEW']
 const OBJECT_TYPES = [
-  'Patient', 'RCPMeeting', 'RCPReport', 'MedicalDocument',
+  'User', 'Patient', 'RCPMeeting', 'RCPReport', 'MedicalDocument',
   'Form', 'FormSubmission'
 ]
 
@@ -16,9 +16,18 @@ export default function AuditLogsList() {
   const [objectType, setObjectType] = useState('')
   const [search, setSearch] = useState('')
 
+  const [page, setPage] = useState(1)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
+
+  // Reset to first page when filtering
+  useEffect(() => {
+    setPage(1)
+  }, [action, objectType])
+
   useEffect(() => {
     loadLogs()
-  }, [action, objectType])
+  }, [action, objectType, page])
 
   const loadLogs = async () => {
     try {
@@ -26,9 +35,12 @@ export default function AuditLogsList() {
       const filters = {}
       if (action) filters.action = action
       if (objectType) filters.object_type = objectType
+      if (page > 1) filters.page = page
       
       const data = await getAuditLogs(filters)
-      setLogs(Array.isArray(data) ? data : [])
+      setLogs(Array.isArray(data.logs) ? data.logs : [])
+      setHasNext(data.hasNext)
+      setHasPrev(data.hasPrev)
       setError(null)
     } catch (err) {
       setError('Failed to load audit logs. Admin access required.')
@@ -116,6 +128,26 @@ export default function AuditLogsList() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {logs.length > 0 && (
+        <div className="pagination-controls" style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center' }}>
+          <button 
+            className="btn-small btn-secondary" 
+            disabled={!hasPrev || loading} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </button>
+          <span style={{ display: 'flex', alignItems: 'center' }}>Page {page}</span>
+          <button 
+            className="btn-small btn-secondary" 
+            disabled={!hasNext || loading} 
+            onClick={() => setPage(p => p + 1)}
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

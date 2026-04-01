@@ -92,9 +92,23 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.srcObject = stream || null
+      // Prevent redundant assignment which causes AbortError 'interrupted by a new load request'
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream || null;
+      }
+      
       if (stream) {
-        const playVideo = () => videoRef.current?.play().catch(() => {});
+        const playVideo = async () => {
+          try {
+            await videoRef.current?.play();
+          } catch (err) {
+            // Ignore AbortError as it's common during stream setup, log others
+            if (err.name !== 'AbortError') {
+              console.warn('WebRTC: Autoplay prevented or playback interrupted', err);
+            }
+          }
+        };
+        playVideo();
         stream.addEventListener('addtrack', playVideo);
         return () => stream.removeEventListener('addtrack', playVideo);
       }
