@@ -3,15 +3,15 @@
   "rewrites": [
     {
       "source": "/api/:path*/",
-      "destination": "https://app.alpha.openscaler.net/api/:path*/"
+      "destination": "http://app.alpha.openscaler.net:9077/api/:path*/"
     },
     {
       "source": "/api/:path*",
-      "destination": "https://app.alpha.openscaler.net/api/:path*"
+      "destination": "http://app.alpha.openscaler.net:9077/api/:path*"
     },
     {
       "source": "/media/:path*",
-      "destination": "https://app.alpha.openscaler.net/media/:path*"
+      "destination": "http://app.alpha.openscaler.net:9077/media/:path*"
     },
     {
       "source": "/(.*)",
