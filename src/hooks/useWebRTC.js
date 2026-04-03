@@ -43,6 +43,21 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         iceServers: [
           { urls: "stun:stun.l.google.com:19302" },
           { urls: "stun:stun1.l.google.com:19302" },
+          {
+            urls: "turn:a.relay.metered.ca:80",
+            username: "e8dd65b92f89d2dda8e15833",
+            credential: "5VoJmOBz/KZjpJf6",
+          },
+          {
+            urls: "turn:a.relay.metered.ca:443",
+            username: "e8dd65b92f89d2dda8e15833",
+            credential: "5VoJmOBz/KZjpJf6",
+          },
+          {
+            urls: "turn:a.relay.metered.ca:443?transport=tcp",
+            username: "e8dd65b92f89d2dda8e15833",
+            credential: "5VoJmOBz/KZjpJf6",
+          },
         ],
       },
     });
@@ -160,8 +175,11 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         });
       } catch (e) { console.warn("WebRTC: Media access failed", e); }
 
-      const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws/conference/${roomId}/?token=${getToken()}`);
+      const wsProtocol = import.meta.env.PROD ? 'wss' : (window.location.protocol === "https:" ? "wss" : "ws");
+      const wsHost = import.meta.env.PROD
+        ? 'app.alpha.openscaler.net'
+        : window.location.host;
+      const ws = new WebSocket(`${wsProtocol}://${wsHost}/ws/conference/${roomId}/?token=${getToken()}`);
       wsRef.current = ws;
 
       ws.onopen = () => setIsConnected(true);
