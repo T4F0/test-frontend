@@ -1,8 +1,6 @@
 import axios from 'axios'
 
-const API_BASE = import.meta.env.PROD 
-  ? 'http://app.alpha.openscaler.net:9077/api' 
-  : '/api'
+const API_BASE = '/api'
 
 const authAxios = axios.create()
 
