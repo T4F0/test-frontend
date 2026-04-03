@@ -1,5 +1,10 @@
 {
+  "trailingSlash": true,
   "rewrites": [
+    {
+      "source": "/api/:path*/",
+      "destination": "http://app.alpha.openscaler.net:9077/api/:path*/"
+    },
     {
       "source": "/api/:path*",
       "destination": "http://app.alpha.openscaler.net:9077/api/:path*"
