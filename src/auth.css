@@ -212,21 +212,41 @@
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
 }
 
 .badge-medecin {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #10b981;
+}
+
+.badge-medecin:hover {
+  background: #10b981;
+  color: white;
 }
 
 .badge-coordinateur {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #f59e0b;
+}
+
+.badge-coordinateur:hover {
+  background: #f59e0b;
+  color: white;
 }
 
 .badge-admin {
-  background: #fef3c7;
-  color: #92400e;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #6366f1;
+}
+
+.badge-admin:hover {
+  background: #6366f1;
+  color: white;
 }
 
 /* ===== USER FORM ===== */

@@ -659,6 +659,22 @@ button:disabled {
   color: #075985;
 }
 
+.badge-admin {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.badge-coordinateur {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.badge-medecin {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+
 .field-controls {
   display: flex;
   gap: 0.5rem;
@@ -1378,4 +1394,38 @@ button:disabled {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ===== ROLE-BASED THEMES ===== */
+body.theme-admin {
+  --primary: #4338ca; /* Indigo 700 */
+  --primary-dark: #3730a3;
+  --primary-light: #e0e7ff;
+  background-color: #f1f5f9; /* Slate 100 */
+}
+
+body.theme-admin .navbar {
+  border-bottom: 4px solid var(--primary);
+}
+
+body.theme-coordinateur {
+  --primary: #ea580c; /* Orange 600 */
+  --primary-dark: #c2410c;
+  --primary-light: #ffedd5;
+  background-color: #fff7ed; /* Orange 50 */
+}
+
+body.theme-coordinateur .navbar {
+  border-bottom: 4px solid var(--primary);
+}
+
+body.theme-medecin {
+  --primary: #047857; /* Emerald 700 */
+  --primary-dark: #065f46;
+  --primary-light: #d1fae5;
+  background-color: #f0fdf4; /* Green 50 */
+}
+
+body.theme-medecin .navbar {
+  border-bottom: 4px solid var(--primary);
 }

@@ -1,4 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut } from 'lucide-react'
 
@@ -6,6 +7,17 @@ export default function Layout() {
   const { user, authenticated, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  useEffect(() => {
+    if (user?.role) {
+      document.body.className = `theme-${user.role.toLowerCase()}`
+    } else {
+      document.body.className = ''
+    }
+    return () => {
+      document.body.className = ''
+    }
+  }, [user?.role])
 
   const handleLogout = () => {
     logout()
@@ -18,8 +30,8 @@ export default function Layout() {
     { to: '/meetings', label: 'Meetings', icon: Calendar },
     { to: '/attachments', label: 'Attachments', icon: Paperclip },
     { to: '/reports', label: 'Reports', icon: FileText },
-    { to: '/users', label: 'Users', icon: Users },
-  ]
+    { to: '/users', label: 'Users', icon: Users, roles: ['ADMIN', 'COORDINATEUR'] },
+  ].filter(link => !link.roles || link.roles.includes(user?.role))
 
   return (
     <div className="layout">
@@ -61,7 +73,7 @@ export default function Layout() {
                         user?.username || 'User'
                       )}
                     </span>
-                    <span className="user-role" style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginTop: '2px', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>
+                    <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.65rem', padding: '2px 6px', marginTop: '2px' }}>
                       {user?.role}
                     </span>
                   </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { createUser, updateUser, getUsers } from '../api/authApi'
+import { useAuth } from '../context/AuthContext'
 
 const ROLE_CHOICES = [
   { value: 'MEDECIN', label: 'Medecin' },
@@ -9,9 +10,16 @@ const ROLE_CHOICES = [
 ]
 
 export default function UserForm() {
+  const { user: currentUser } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
   const isEdit = !!id
+
+  useEffect(() => {
+    if (currentUser?.role === 'MEDECIN') {
+      navigate('/')
+    }
+  }, [currentUser, navigate])
 
   const [user, setUser] = useState({
     username: '',

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getUsers, deleteUser } from '../api/authApi'
+import { useAuth } from '../context/AuthContext'
 
 const ROLE_LABELS = {
   'MEDECIN': 'Medecin',
@@ -9,6 +10,7 @@ const ROLE_LABELS = {
 }
 
 export default function UserManagement() {
+  const { user: currentUser } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -88,12 +90,14 @@ export default function UserManagement() {
                   >
                     Edit
                   </button>
-                  <button 
-                    onClick={() => handleDelete(user.id)}
-                    className="btn-small btn-danger"
-                  >
-                    Delete
-                  </button>
+                  {currentUser?.role === 'ADMIN' && (
+                    <button 
+                      onClick={() => handleDelete(user.id)}
+                      className="btn-small btn-danger"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
