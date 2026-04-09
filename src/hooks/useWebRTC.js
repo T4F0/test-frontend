@@ -41,22 +41,21 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
       trickle: true,
       config: {
         iceServers: [
+          // 1. Google's Free STUN Server (Discovers Public IP)
           { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
+          
+          // 2. Your Custom Coturn TURN Server (Relays Video when direct connection fails)
           {
-            urls: "turn:a.relay.metered.ca:80",
-            username: "e8dd65b92f89d2dda8e15833",
-            credential: "5VoJmOBz/KZjpJf6",
+            urls: "turn:154.241.51.169:3478",
+            username: "admin",
+            credential: "admin",
           },
+          
+          // 3. TCP Fallback for Strict Corporate Firewalls
           {
-            urls: "turn:a.relay.metered.ca:443",
-            username: "e8dd65b92f89d2dda8e15833",
-            credential: "5VoJmOBz/KZjpJf6",
-          },
-          {
-            urls: "turn:a.relay.metered.ca:443?transport=tcp",
-            username: "e8dd65b92f89d2dda8e15833",
-            credential: "5VoJmOBz/KZjpJf6",
+            urls: "turn:154.241.51.169:3478?transport=tcp",
+            username: "admin",
+            credential: "admin",
           },
         ],
       },
