@@ -174,10 +174,8 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         });
       } catch (e) { console.warn("WebRTC: Media access failed", e); }
 
-      const wsProtocol = import.meta.env.PROD ? 'wss' : (window.location.protocol === "https:" ? "wss" : "ws");
-      const wsHost = import.meta.env.PROD
-        ? 'app.alpha.openscaler.net'
-        : window.location.host;
+      const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const wsHost = window.location.host;
       const ws = new WebSocket(`${wsProtocol}://${wsHost}/ws/conference/${roomId}/?token=${getToken()}`);
       wsRef.current = ws;
 
