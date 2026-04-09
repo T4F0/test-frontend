@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMeeting, createMeeting, updateMeeting } from '../api/meetingsApi'
 import { getMedicalCases } from '../api/medicalCasesApi'
+import { getPatients } from '../api/patientsApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 
@@ -10,6 +11,13 @@ export default function MeetingForm() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isEdit = !!id
+
+  useEffect(() => {
+    // Restrict access for Medecins - they cannot create or edit meetings
+    if (user && user.role === 'MEDECIN') {
+      navigate('/meetings')
+    }
+  }, [user, navigate])
 
   const [form, setForm] = useState({
     medical_case: '',
@@ -21,6 +29,8 @@ export default function MeetingForm() {
     participants: [],
   })
   const [cases, setCases] = useState([])
+  const [patients, setPatients] = useState([])
+  const [selectedPatientId, setSelectedPatientId] = useState('')
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -105,12 +115,19 @@ export default function MeetingForm() {
 
   const loadCasesAndUsers = async () => {
     try {
-      const [casesData, usersData] = await Promise.all([
+      const [casesData, usersData, patientsData] = await Promise.all([
         getMedicalCases(),
         getUsers(),
+        getPatients(),
       ])
       setCases(Array.isArray(casesData) ? casesData : [])
       setUsers(Array.isArray(usersData) ? usersData : [])
+      const sortedPatients = Array.isArray(patientsData) 
+        ? [...patientsData].sort((a, b) => 
+            `${a.first_name || ''} ${a.last_name || ''}`.localeCompare(`${b.first_name || ''} ${b.last_name || ''}`)
+          )
+        : []
+      setPatients(sortedPatients)
     } catch (e) {
       console.error(e)
     }
@@ -135,6 +152,32 @@ export default function MeetingForm() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Set selected patient when form.medical_case changes (useful for loading existing meeting)
+  useEffect(() => {
+    if (form.medical_case && cases.length > 0 && !selectedPatientId) {
+      const selectedCase = cases.find((c) => c.id === form.medical_case)
+      if (selectedCase) {
+        setSelectedPatientId(selectedCase.patient)
+      }
+    }
+  }, [form.medical_case, cases, selectedPatientId])
+
+  const filteredCases = useMemo(() => {
+    if (!selectedPatientId) return []
+    return cases.filter((c) => c.patient === selectedPatientId)
+  }, [cases, selectedPatientId])
+
+  const handlePatientChange = (patientId) => {
+    setSelectedPatientId(patientId)
+    // Clear case if it doesn't belong to the patient
+    if (form.medical_case) {
+      const currentCase = cases.find(c => c.id === form.medical_case)
+      if (currentCase && currentCase.patient !== patientId) {
+        setForm(f => ({ ...f, medical_case: '' }))
+      }
     }
   }
 
@@ -186,15 +229,33 @@ export default function MeetingForm() {
       {error && <div className="error">{error}</div>}
       <form onSubmit={handleSubmit} className="submission-form">
         <div className="form-group">
+          <label>Patient *</label>
+          <select
+            value={selectedPatientId}
+            onChange={(e) => handlePatientChange(e.target.value)}
+            required
+          >
+            <option value="">Select patient first</option>
+            {patients.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.first_name} {p.last_name} {p.anonymized_code ? `(${p.anonymized_code})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
           <label>Medical case *</label>
           <select
             value={form.medical_case}
             onChange={(e) => handleChange('medical_case', e.target.value)}
             required
+            disabled={!selectedPatientId}
           >
-            <option value="">Select case</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>{c.id}</option>
+            <option value="">{selectedPatientId ? 'Select case' : 'Select patient first'}</option>
+            {filteredCases.map((c) => (
+              <option key={c.id} value={c.id}>
+                Case {c.id.slice(0, 8)}... ({c.status})
+              </option>
             ))}
           </select>
         </div>

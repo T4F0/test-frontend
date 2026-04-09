@@ -1429,3 +1429,328 @@ body.theme-medecin {
 body.theme-medecin .navbar {
   border-bottom: 4px solid var(--primary);
 }
+
+/* ===== CASE RESUME ===== */
+.case-resume-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid var(--gray-200);
+}
+
+.case-resume-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.case-resume-title-block {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.case-resume-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.case-resume-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.case-resume-subtitle {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin: 0.15rem 0 0;
+}
+
+/* Patient Card */
+.case-resume-patient-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, var(--primary-light), rgba(255,255,255,0.8));
+  border: 1px solid var(--gray-200);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--border-radius);
+  margin-bottom: 1.5rem;
+}
+
+.case-resume-patient-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.case-resume-patient-info {
+  min-width: 0;
+}
+
+.case-resume-patient-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.case-resume-patient-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.case-resume-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--gray-600);
+}
+
+/* Form Cards */
+.case-resume-forms {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.case-resume-form-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+
+.case-resume-form-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.case-resume-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: var(--gray-50);
+  border: none;
+  border-bottom: 1px solid var(--gray-200);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: none;
+  transition: background 0.2s ease;
+}
+
+.case-resume-form-header:hover {
+  background: var(--gray-100);
+  transform: none;
+  box-shadow: none;
+}
+
+.case-resume-form-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.case-resume-form-icon {
+  color: var(--secondary);
+  flex-shrink: 0;
+}
+
+.case-resume-form-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0;
+  text-align: left;
+}
+
+.case-resume-form-date {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  text-align: left;
+  display: block;
+}
+
+.case-resume-form-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--gray-500);
+}
+
+.case-resume-field-count {
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  padding: 0.2rem 0.65rem;
+  border-radius: 12px;
+}
+
+/* Form Body */
+.case-resume-form-body {
+  padding: 1.25rem;
+  animation: resumeSlideIn 0.2s ease;
+}
+
+@keyframes resumeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section Groups */
+.case-resume-section-group {
+  margin-bottom: 1.25rem;
+}
+
+.case-resume-section-group:last-child {
+  margin-bottom: 0;
+}
+
+.case-resume-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+/* Fields Grid */
+.case-resume-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.case-resume-field {
+  padding: 0.85rem 1rem;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.case-resume-field:hover {
+  background: white;
+  border-color: var(--gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.case-resume-field-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.35rem;
+}
+
+.case-resume-field-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--gray-900);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.case-resume-field-value.empty {
+  color: var(--gray-400);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Loading & Empty States */
+.case-resume-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--gray-500);
+  font-size: 0.95rem;
+}
+
+.case-resume-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: resumeSpin 0.7s linear infinite;
+}
+
+@keyframes resumeSpin {
+  to { transform: rotate(360deg); }
+}
+
+.case-resume-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  color: var(--gray-400);
+  text-align: center;
+}
+
+.case-resume-empty p {
+  font-size: 0.95rem;
+  margin: 0;
+  max-width: 320px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .case-resume-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .case-resume-patient-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .case-resume-patient-meta {
+    justify-content: center;
+  }
+
+  .case-resume-form-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .case-resume-form-toggle {
+    align-self: flex-end;
+  }
+}

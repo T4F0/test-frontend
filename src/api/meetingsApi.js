@@ -32,3 +32,9 @@ export const deleteMeeting = async (id) => {
   const authAxios = getAuthAxios()
   await authAxios.delete(`${API_BASE}/meetings/${id}/`)
 }
+
+export const getCaseResume = async (meetingId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/meetings/${meetingId}/case_resume/`)
+  return data
+}

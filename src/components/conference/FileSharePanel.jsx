@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Paperclip, Upload, FileText, Image, Download, Eye, X } from 'lucide-react'
+import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save } from 'lucide-react'
 
 /**
  * File sharing panel for conference attachments.
@@ -8,6 +8,7 @@ export default function FileSharePanel({
   attachments,
   caseAttachments,
   onUpload,
+  onPromote,
   isOpen,
   onToggle,
   isUploading,
@@ -16,15 +17,25 @@ export default function FileSharePanel({
   const [previewItem, setPreviewItem] = useState(null)
   const fileInputRef = useRef(null)
 
-  const normalizeAttachment = (attachment, source) => ({
-    id: `${source}-${attachment.id}`,
-    name: attachment.original_filename || attachment.display_name || 'Attachment',
-    url: attachment.file,
-    fileType: attachment.file_type || '',
-    size: attachment.file_size || null,
-    uploadedByName: attachment.uploaded_by_name || 'Unknown',
-    source,
-  })
+  const normalizeAttachment = (attachment, source) => {
+    // Ensure the URL is relative to the current host to avoid cross-origin iframe issues
+    // or pointing to the wrong domain (like production Vercel while in development).
+    let fileUrl = attachment.file || ''
+    if (fileUrl.includes('/media/')) {
+      fileUrl = fileUrl.substring(fileUrl.indexOf('/media/'))
+    }
+
+    return {
+      id: `${source}-${attachment.id}`,
+      name: attachment.original_filename || attachment.display_name || 'Attachment',
+      url: fileUrl,
+      fileType: attachment.file_type || '',
+      size: attachment.file_size || null,
+      uploadedByName: attachment.uploaded_by_name || 'Unknown',
+      source,
+      originalId: attachment.id,
+    }
+  }
 
   const conferenceFiles = attachments.map((attachment) => normalizeAttachment(attachment, 'meeting'))
   const medicalCaseFiles = (caseAttachments || []).map((attachment) => normalizeAttachment(attachment, 'case'))
@@ -149,6 +160,13 @@ export default function FileSharePanel({
                       <Eye size={16} />
                     </button>
                   )}
+                  <button 
+                    className="file-action-btn" 
+                    onClick={() => onPromote(file.originalId)} 
+                    title="Add to Medical Case"
+                  >
+                    <Save size={16} />
+                  </button>
                   <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Download">
                     <Download size={16} />
                   </a>

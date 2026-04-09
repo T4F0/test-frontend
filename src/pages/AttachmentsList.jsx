@@ -101,6 +101,13 @@ export default function AttachmentsList() {
     else navigate('/attachments')
   }
 
+  const getRelativeUrl = (url) => {
+    if (url && url.includes('/media/')) {
+      return url.substring(url.indexOf('/media/'))
+    }
+    return url || ''
+  }
+
   if (loading && attachments.length === 0) return <div className="loading">Loading attachments...</div>
 
   return (
@@ -153,7 +160,7 @@ export default function AttachmentsList() {
                 <td>{new Date(a.uploaded_at).toLocaleString()}</td>
                 <td className="actions">
                   {a.file && (
-                    <a href={a.file} target="_blank" rel="noopener noreferrer" className="btn-small btn-secondary">Open</a>
+                    <a href={getRelativeUrl(a.file)} target="_blank" rel="noopener noreferrer" className="btn-small btn-secondary">Open</a>
                   )}
                   <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Delete</button>
                 </td>

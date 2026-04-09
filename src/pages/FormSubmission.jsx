@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { submitForm } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
+import { getMedicalCases } from '../api/medicalCasesApi'
 import FormField from '../components/FormField'
 
 function SectionRenderer({ section, formData, onFieldChange }) {
@@ -45,7 +46,9 @@ export default function FormSubmission() {
   const [form, setForm] = useState(null)
   const [formData, setFormData] = useState({})
   const [patients, setPatients] = useState([])
+  const [medicalCases, setMedicalCases] = useState([])
   const [selectedPatient, setSelectedPatient] = useState('')
+  const [selectedCase, setSelectedCase] = useState('')
   const [loading, setLoading] = useState(true)
   const [patientsLoading, setPatientsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -56,6 +59,15 @@ export default function FormSubmission() {
     loadPatients()
   }, [id])
 
+  useEffect(() => {
+    if (selectedPatient) {
+      loadMedicalCases(selectedPatient)
+    } else {
+      setMedicalCases([])
+      setSelectedCase('')
+    }
+  }, [selectedPatient])
+
   const loadPatients = async () => {
     try {
       const data = await getPatients()
@@ -65,6 +77,16 @@ export default function FormSubmission() {
       setPatients([])
     } finally {
       setPatientsLoading(false)
+    }
+  }
+
+  const loadMedicalCases = async (patientId) => {
+    try {
+      const data = await getMedicalCases({ patient: patientId })
+      setMedicalCases(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('Failed to load medical cases:', err)
+      setMedicalCases([])
     }
   }
 
@@ -99,7 +121,7 @@ export default function FormSubmission() {
     e.preventDefault()
     try {
       setSubmitting(true)
-      await submitForm(id, formData, selectedPatient || null)
+      await submitForm(id, formData, selectedPatient || null, selectedCase || null)
       alert('Form submitted successfully!')
       navigate('/')
     } catch (err) {
@@ -121,7 +143,7 @@ export default function FormSubmission() {
 
       <form onSubmit={handleSubmit} className="submission-form">
         <div className="patient-selector">
-          <label htmlFor="patient-select">Select Patient (Optional)</label>
+          <label htmlFor="patient-select">Select Patient</label>
           <select
             id="patient-select"
             value={selectedPatient}
@@ -136,6 +158,29 @@ export default function FormSubmission() {
             ))}
           </select>
         </div>
+
+        {selectedPatient && (
+          <div className="patient-selector" style={{ borderColor: 'var(--secondary)' }}>
+            <label htmlFor="case-select">Select Medical Case</label>
+            <select
+              id="case-select"
+              value={selectedCase}
+              onChange={(e) => setSelectedCase(e.target.value)}
+            >
+              <option value="">-- No Case --</option>
+              {medicalCases.map(mc => (
+                <option key={mc.id} value={mc.id}>
+                  Case {String(mc.id).slice(0, 8)}... — {mc.status}
+                </option>
+              ))}
+            </select>
+            {medicalCases.length === 0 && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginTop: '0.5rem' }}>
+                No medical cases found for this patient.
+              </p>
+            )}
+          </div>
+        )}
 
         {form.sections?.map(section => (
           <SectionRenderer 

@@ -120,3 +120,14 @@ export const updateConferenceNotes = async (conferenceId, notes) => {
   );
   return data;
 };
+
+export const promoteConferenceAttachment = async (conferenceId, attachmentId) => {
+  const authAxios = getAuthAxios();
+  const { data } = await authAxios.post(
+    `${API_BASE}/conferences/${conferenceId}/promote-attachment/`,
+    {
+      attachment_id: attachmentId,
+    },
+  );
+  return data;
+};

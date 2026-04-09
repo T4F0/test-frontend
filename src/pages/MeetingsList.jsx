@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getMeetings, deleteMeeting } from '../api/meetingsApi'
+import { useAuth } from '../context/AuthContext'
 
 const STATUS_LABELS = { PLANNED: 'Planned', LIVE: 'Live', FINISHED: 'Finished' }
 
@@ -12,6 +13,8 @@ export default function MeetingsList() {
   const [searchParams] = useSearchParams()
   const filterCase = searchParams.get('medical_case') || ''
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canManage = user?.role === 'ADMIN' || user?.role === 'COORDINATEUR'
 
   useEffect(() => {
     loadMeetings()

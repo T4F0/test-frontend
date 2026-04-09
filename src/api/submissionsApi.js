@@ -20,12 +20,14 @@ export const getSubmission = async (id) => {
   return data
 }
 
-export const submitForm = async (formId, submissionData, patientId = null) => {
+export const submitForm = async (formId, submissionData, patientId = null, medicalCaseId = null) => {
   const authAxios = getAuthAxios()
-  const { data } = await authAxios.post(`${API_BASE}/submissions/`, {
+  const payload = {
     form: formId,
     patient: patientId,
+    medical_case: medicalCaseId,
     data: submissionData
-  })
+  }
+  const { data } = await authAxios.post(`${API_BASE}/submissions/`, payload)
   return data
 }

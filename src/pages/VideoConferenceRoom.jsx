@@ -11,6 +11,7 @@ import {
   uploadConferenceAttachment,
   removeParticipant,
   updateConferenceNotes,
+  promoteConferenceAttachment,
 } from '../api/conferenceApi'
 import VideoGrid from '../components/conference/VideoGrid'
 import ConferenceControls from '../components/conference/ConferenceControls'
@@ -18,7 +19,8 @@ import ParticipantList from '../components/conference/ParticipantList'
 import ChatSidebar from '../components/conference/ChatSidebar'
 import FileSharePanel from '../components/conference/FileSharePanel'
 import MeetingNotesSidebar from '../components/conference/MeetingNotesSidebar'
-import { Users, MessageSquare, Paperclip, Clock, FileText } from 'lucide-react'
+import CaseResumeSidebar from '../components/conference/CaseResumeSidebar'
+import { Users, MessageSquare, Paperclip, Clock, FileText, ClipboardList } from 'lucide-react'
 import '../conference.css'
 
 export default function VideoConferenceRoom() {
@@ -34,6 +36,7 @@ export default function VideoConferenceRoom() {
   const [showChat, setShowChat] = useState(false)
   const [showFiles, setShowFiles] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
+  const [showResume, setShowResume] = useState(false)
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [elapsedTime, setElapsedTime] = useState(0)
@@ -194,6 +197,17 @@ export default function VideoConferenceRoom() {
       console.error('Remove failed:', err)
     }
   }
+  const handlePromoteAttachment = async (attachmentId) => {
+    try {
+      await promoteConferenceAttachment(conference.id, attachmentId)
+      // Reload conference to show the new attachment in the "Medical case attachments" section
+      loadConference()
+      alert('File has been successfully added to the medical case.')
+    } catch (err) {
+      console.error('Promotion failed:', err)
+      alert('Failed to add file to medical case: ' + (err.response?.data?.detail || err.message))
+    }
+  }
 
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600)
@@ -297,7 +311,7 @@ export default function VideoConferenceRoom() {
         <div className="header-right">
           <button
             className={`toolbar-btn ${showParticipants ? 'active' : ''}`}
-            onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); setShowFiles(false); setShowNotes(false) }}
+            onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); setShowFiles(false); setShowNotes(false); setShowResume(false) }}
             title="Participants"
           >
             <Users size={18} />
@@ -305,7 +319,7 @@ export default function VideoConferenceRoom() {
           </button>
           <button
             className={`toolbar-btn ${showChat ? 'active' : ''}`}
-            onClick={() => { setShowChat(!showChat); setShowParticipants(false); setShowFiles(false); setShowNotes(false) }}
+            onClick={() => { setShowChat(!showChat); setShowParticipants(false); setShowFiles(false); setShowNotes(false); setShowResume(false) }}
             title="Chat"
           >
             <MessageSquare size={18} />
@@ -313,17 +327,24 @@ export default function VideoConferenceRoom() {
           </button>
           <button
             className={`toolbar-btn ${showFiles ? 'active' : ''}`}
-            onClick={() => { setShowFiles(!showFiles); setShowParticipants(false); setShowChat(false); setShowNotes(false) }}
+            onClick={() => { setShowFiles(!showFiles); setShowParticipants(false); setShowChat(false); setShowNotes(false); setShowResume(false) }}
             title="Files"
           >
             <Paperclip size={18} />
           </button>
           <button
             className={`toolbar-btn ${showNotes ? 'active' : ''}`}
-            onClick={() => { setShowNotes(!showNotes); setShowParticipants(false); setShowChat(false); setShowFiles(false) }}
+            onClick={() => { setShowNotes(!showNotes); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowResume(false) }}
             title="Meeting Notes"
           >
             <FileText size={18} />
+          </button>
+          <button
+            className={`toolbar-btn ${showResume ? 'active' : ''}`}
+            onClick={() => { setShowResume(!showResume); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowNotes(false) }}
+            title="Case Resume"
+          >
+            <ClipboardList size={18} />
           </button>
         </div>
       </div>
@@ -338,7 +359,7 @@ export default function VideoConferenceRoom() {
       )}
 
       <div className="conference-body">
-        <div className={`video-area ${showParticipants || showChat || showFiles || showNotes ? 'with-sidebar' : ''}`}>
+        <div className={`video-area ${showParticipants || showChat || showFiles || showNotes || showResume ? 'with-sidebar' : ''}`}>
           <VideoGrid
             localStream={localStream}
             screenStream={screenStream}
@@ -373,6 +394,7 @@ export default function VideoConferenceRoom() {
           attachments={conference?.attachments || []}
           caseAttachments={conference?.medical_case_attachments || []}
           onUpload={handleUpload}
+          onPromote={handlePromoteAttachment}
           isOpen={showFiles}
           onToggle={() => setShowFiles(false)}
           isUploading={isUploading}
@@ -387,6 +409,12 @@ export default function VideoConferenceRoom() {
           saveStatus={notesSaveStatus}
           updatedAt={conference?.notes_updated_at}
           updatedByName={conference?.notes_updated_by_name}
+        />
+
+        <CaseResumeSidebar
+          isOpen={showResume}
+          onToggle={() => setShowResume(false)}
+          meetingId={conference?.meeting}
         />
       </div>
 
