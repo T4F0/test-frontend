@@ -49,12 +49,15 @@ export default function PatientDetail() {
     const caseName = window.prompt('Enter a name for the new medical case (optional):')
     if (caseName === null) return // User cancelled
 
+    const patientName = `${patient.first_name} ${patient.last_name}`
+    const finalName = caseName.trim() ? `${patientName} - ${caseName.trim()}` : patientName
+
     try {
       setCreatingCase(true)
       await createMedicalCase({ 
         patient: id, 
         status: 'DRAFT',
-        name: caseName.trim() || null
+        name: finalName
       })
       loadCases()
     } catch (err) {

@@ -46,8 +46,17 @@ export default function MedicalCaseDetail() {
   const handleUpdateName = async () => {
     try {
       setUpdating(true)
-      const updated = await updateMedicalCase(id, { name: newName })
+      const patientName = medicalCase.patient_name
+      let finalName = newName.trim()
+      
+      // If the user's input doesn't already start with the patient's name, prepend it.
+      if (!finalName.startsWith(patientName)) {
+        finalName = finalName ? `${patientName} - ${finalName}` : patientName
+      }
+
+      const updated = await updateMedicalCase(id, { name: finalName })
       setMedicalCase(updated)
+      setNewName(updated.name)
       setEditingName(false)
     } catch (err) {
       alert('Failed to update case name')
@@ -130,8 +139,8 @@ export default function MedicalCaseDetail() {
           <p>{new Date(medicalCase.created_at).toLocaleString()}</p>
         </div>
         <div className="meta-item">
-          <label>Patient ID</label>
-          <p>{medicalCase.patient}</p>
+          <label>Patient</label>
+          <p>{medicalCase.patient_name}</p>
         </div>
       </div>
 

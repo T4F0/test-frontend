@@ -109,6 +109,12 @@ export default function FormSubmissionDetail() {
               {submission.patient_name ?? '—'}
             </span>
           </div>
+          <div className="submission-detail-meta-item">
+            <span className="submission-detail-meta-label">Medical Case</span>
+            <span className="submission-detail-meta-value">
+              {submission.medical_case_name ?? '—'}
+            </span>
+          </div>
         </section>
 
         <section className="submission-detail-data">

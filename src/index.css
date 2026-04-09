@@ -1754,3 +1754,23 @@ body.theme-medecin .navbar {
     align-self: flex-end;
   }
 }
+
+/* Searchable Select Premium Styling */
+.searchable-select-container { position: relative; width: 100%; }
+.searchable-select-label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--gray-700); font-size: 0.9rem; }
+.searchable-select-input-wrapper { position: relative; display: flex; align-items: center; background: white; border: 1px solid var(--gray-300); border-radius: var(--border-radius); transition: all 0.2s ease; cursor: pointer; }
+.searchable-select-input-wrapper:hover { border-color: var(--gray-400); }
+.searchable-select-input-wrapper.open { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.searchable-select-input-wrapper.error { border-color: var(--danger); }
+.searchable-select-input { width: 100%; padding: 0.75rem 1rem; border: none; background: transparent; font-size: 1rem; color: var(--gray-900); cursor: pointer; }
+.searchable-select-input:focus { outline: none; }
+.searchable-select-arrow { padding: 0 1rem; color: var(--gray-400); font-size: 0.8rem; pointer-events: none; }
+.searchable-select-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--primary); border-top: none; border-radius: 0 0 var(--border-radius) var(--border-radius); box-shadow: var(--shadow-lg); z-index: 1000; max-height: 300px; overflow-y: auto; }
+.dropdown-item { padding: 0.75rem 1rem; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--gray-100); }
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:hover { background: var(--primary-light); }
+.dropdown-item.selected { background: var(--primary); color: white; }
+.dropdown-item.selected .item-sublabel { color: rgba(255, 255, 255, 0.8); }
+.item-label { font-weight: 600; font-size: 0.95rem; }
+.item-sublabel { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.1rem; }
+.dropdown-info { padding: 1rem; text-align: center; color: var(--gray-500); font-style: italic; font-size: 0.9rem; }

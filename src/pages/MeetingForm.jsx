@@ -5,6 +5,7 @@ import { getMedicalCases } from '../api/medicalCasesApi'
 import { getPatients } from '../api/patientsApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
+import SearchableSelect from '../components/SearchableSelect'
 
 export default function MeetingForm() {
   const { id } = useParams()
@@ -36,11 +37,23 @@ export default function MeetingForm() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [participantSearch, setParticipantSearch] = useState('')
+  const [patientSearch, setPatientSearch] = useState('')
+  const [patientsLoading, setPatientsLoading] = useState(false)
 
   useEffect(() => {
-    loadCasesAndUsers()
-    if (isEdit) loadMeeting()
+    if (id) loadMeeting()
   }, [id])
+
+  useEffect(() => {
+    loadUsersAndCases()
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadPatients(patientSearch)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [patientSearch])
 
   const formatUserName = (candidate) => {
     if (!candidate) return 'Unknown user'
@@ -113,23 +126,32 @@ export default function MeetingForm() {
       })
   }, [participantSearch, selectedParticipantIds, users])
 
-  const loadCasesAndUsers = async () => {
+  const loadUsersAndCases = async () => {
     try {
-      const [casesData, usersData, patientsData] = await Promise.all([
+      const [casesData, usersData] = await Promise.all([
         getMedicalCases(),
         getUsers(),
-        getPatients(),
       ])
       setCases(Array.isArray(casesData) ? casesData : [])
       setUsers(Array.isArray(usersData) ? usersData : [])
-      const sortedPatients = Array.isArray(patientsData) 
-        ? [...patientsData].sort((a, b) => 
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const loadPatients = async (query = '') => {
+    try {
+      setPatientsLoading(true)
+      const data = await getPatients(1, query)
+      const patientsData = Array.isArray(data) ? data : []
+      const sortedPatients = [...patientsData].sort((a, b) => 
             `${a.first_name || ''} ${a.last_name || ''}`.localeCompare(`${b.first_name || ''} ${b.last_name || ''}`)
           )
-        : []
       setPatients(sortedPatients)
     } catch (e) {
       console.error(e)
+    } finally {
+      setPatientsLoading(false)
     }
   }
 
@@ -228,21 +250,20 @@ export default function MeetingForm() {
       <h2>{isEdit ? 'Edit Meeting' : 'New Meeting'}</h2>
       {error && <div className="error">{error}</div>}
       <form onSubmit={handleSubmit} className="submission-form">
-        <div className="form-group">
-          <label>Patient *</label>
-          <select
-            value={selectedPatientId}
-            onChange={(e) => handlePatientChange(e.target.value)}
-            required
-          >
-            <option value="">Select patient first</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.first_name} {p.last_name} {p.anonymized_code ? `(${p.anonymized_code})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SearchableSelect 
+          label="Patient"
+          placeholder="Search patient by name..."
+          options={patients.map(p => ({
+            value: p.id,
+            label: `${p.first_name} ${p.last_name}`,
+            subLabel: p.anonymized_code ? `Code: ${p.anonymized_code}` : `DOB: ${new Date(p.birth_date).toLocaleDateString()}`
+          }))}
+          value={selectedPatientId}
+          onChange={handlePatientChange}
+          onSearch={setPatientSearch}
+          loading={patientsLoading}
+          required
+        />
         <div className="form-group">
           <label>Medical case *</label>
           <select

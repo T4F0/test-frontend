@@ -122,7 +122,7 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
         autoPlay 
         playsInline 
         muted={isLocal} 
-        className={`${isCameraOff ? 'camera-off' : ''} ${isLocal && !isScreenSharer ? 'mirrored' : ''}`} 
+        className={`${isCameraOff ? 'camera-off' : ''} ${!isScreenSharer ? 'mirrored' : ''}`} 
       />
       {(isCameraOff || !stream) && (
         <div className="video-placeholder">

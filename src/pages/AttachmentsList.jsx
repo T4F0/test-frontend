@@ -33,9 +33,14 @@ export default function AttachmentsList() {
   }
 
   const loadAttachments = async () => {
+    if (!filterCase) {
+      setAttachments([])
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
-      const params = filterCase ? { medical_case: filterCase } : {}
+      const params = { medical_case: filterCase }
       const data = await getAttachments(params)
       setAttachments(Array.isArray(data) ? data : [])
       setError(null)
@@ -98,7 +103,6 @@ export default function AttachmentsList() {
 
   const handleFilterChange = (caseId) => {
     if (caseId) navigate(`/attachments?medical_case=${caseId}`)
-    else navigate('/attachments')
   }
 
   const getRelativeUrl = (url) => {
@@ -107,6 +111,29 @@ export default function AttachmentsList() {
     }
     return url || ''
   }
+
+  if (!filterCase && !loading) return (
+    <div className="list-container">
+      <div className="list-header">
+        <h1>Attachments</h1>
+        <div className="list-header-actions">
+          <select
+            value={filterCase}
+            onChange={(e) => handleFilterChange(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">-- Select a case --</option>
+            {cases.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name || `Case ${String(c.id).slice(0, 8)}…`}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <p className="empty">Please select a medical case to view its attachments.</p>
+    </div>
+  )
 
   if (loading && attachments.length === 0) return <div className="loading">Loading attachments...</div>
 
@@ -120,7 +147,7 @@ export default function AttachmentsList() {
             onChange={(e) => handleFilterChange(e.target.value)}
             className="filter-select"
           >
-            <option value="">All cases</option>
+            <option value="">-- Select a case --</option>
             {cases.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name || `Case ${String(c.id).slice(0, 8)}…`}

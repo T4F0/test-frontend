@@ -58,6 +58,7 @@ export default function FormSubmissionsList() {
               <tr>
                 <th>ID</th>
                 <th>Patient</th>
+                <th>Medical Case</th>
                 <th>Submitted</th>
                 <th>Actions</th>
               </tr>
@@ -67,6 +68,7 @@ export default function FormSubmissionsList() {
                 <tr key={sub.id}>
                   <td>{sub.id}</td>
                   <td>{sub.patient_name ?? '—'}</td>
+                  <td>{sub.medical_case_name ?? '—'}</td>
                   <td>{new Date(sub.created_at).toLocaleString()}</td>
                   <td>
                     <button

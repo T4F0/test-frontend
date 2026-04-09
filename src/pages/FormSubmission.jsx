@@ -5,6 +5,7 @@ import { submitForm } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
 import { getMedicalCases } from '../api/medicalCasesApi'
 import FormField from '../components/FormField'
+import SearchableSelect from '../components/SearchableSelect'
 
 function SectionRenderer({ section, formData, onFieldChange }) {
   const isNested = !!section.parent;
@@ -53,11 +54,18 @@ export default function FormSubmission() {
   const [patientsLoading, setPatientsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [patientSearch, setPatientSearch] = useState('')
 
   useEffect(() => {
     loadForm()
-    loadPatients()
   }, [id])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadPatients(patientSearch)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [patientSearch])
 
   useEffect(() => {
     if (selectedPatient) {
@@ -68,9 +76,9 @@ export default function FormSubmission() {
     }
   }, [selectedPatient])
 
-  const loadPatients = async () => {
+  const loadPatients = async (search = '') => {
     try {
-      const data = await getPatients()
+      const data = await getPatients(1, search)
       setPatients(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error('Failed to load patients:', err)
@@ -145,22 +153,20 @@ export default function FormSubmission() {
       {form.description && <p className="description">{form.description}</p>}
 
       <form onSubmit={handleSubmit} className="submission-form">
-        <div className="patient-selector">
-          <label htmlFor="patient-select">Select Patient</label>
-          <select
-            id="patient-select"
-            value={selectedPatient}
-            onChange={(e) => setSelectedPatient(e.target.value)}
-            required
-          >
-            <option value="">-- Select Patient --</option>
-            {patients.map(patient => (
-              <option key={patient.id} value={patient.id}>
-                {patient.first_name} {patient.last_name} (DOB: {new Date(patient.birth_date).toLocaleDateString()})
-              </option>
-            ))}
-          </select>
-        </div>
+        <SearchableSelect
+          label="Patient"
+          placeholder="Search patient by name..."
+          options={patients.map(p => ({
+            value: p.id,
+            label: `${p.first_name} ${p.last_name}`,
+            subLabel: `DOB: ${new Date(p.birth_date).toLocaleDateString()}`
+          }))}
+          value={selectedPatient}
+          onChange={setSelectedPatient}
+          onSearch={setPatientSearch}
+          loading={patientsLoading}
+          required
+        />
 
         {selectedPatient && (
           <div className="patient-selector" style={{ borderColor: 'var(--secondary)' }}>
