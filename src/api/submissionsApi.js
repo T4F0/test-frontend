@@ -14,6 +14,12 @@ export const getSubmissionsByPatient = async (patientId) => {
   return data.results ?? data
 }
 
+export const getSubmissionsByCase = async (caseId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/submissions/?medical_case=${caseId}`)
+  return data.results ?? data
+}
+
 export const getSubmission = async (id) => {
   const authAxios = getAuthAxios()
   const { data } = await authAxios.get(`${API_BASE}/submissions/${id}/`)

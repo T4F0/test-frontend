@@ -121,7 +121,10 @@ export default function FormSubmission() {
     e.preventDefault()
     try {
       setSubmitting(true)
-      await submitForm(id, formData, selectedPatient || null, selectedCase || null)
+      if (!selectedPatient || !selectedCase) {
+        throw new Error('Please select both a patient and a medical case.')
+      }
+      await submitForm(id, formData, selectedPatient, selectedCase)
       alert('Form submitted successfully!')
       navigate('/')
     } catch (err) {
@@ -148,9 +151,9 @@ export default function FormSubmission() {
             id="patient-select"
             value={selectedPatient}
             onChange={(e) => setSelectedPatient(e.target.value)}
-            disabled={patientsLoading}
+            required
           >
-            <option value="">-- No Patient --</option>
+            <option value="">-- Select Patient --</option>
             {patients.map(patient => (
               <option key={patient.id} value={patient.id}>
                 {patient.first_name} {patient.last_name} (DOB: {new Date(patient.birth_date).toLocaleDateString()})
@@ -166,11 +169,12 @@ export default function FormSubmission() {
               id="case-select"
               value={selectedCase}
               onChange={(e) => setSelectedCase(e.target.value)}
+              required
             >
-              <option value="">-- No Case --</option>
+              <option value="">-- Select Case --</option>
               {medicalCases.map(mc => (
                 <option key={mc.id} value={mc.id}>
-                  Case {String(mc.id).slice(0, 8)}... — {mc.status}
+                  {mc.name || `Case ${String(mc.id).slice(0, 8)}...`} — {mc.status}
                 </option>
               ))}
             </select>

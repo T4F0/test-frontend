@@ -122,7 +122,9 @@ export default function AttachmentsList() {
           >
             <option value="">All cases</option>
             {cases.map((c) => (
-              <option key={c.id} value={c.id}>{String(c.id).slice(0, 8)}…</option>
+              <option key={c.id} value={c.id}>
+                {c.name || `Case ${String(c.id).slice(0, 8)}…`}
+              </option>
             ))}
           </select>
           <label className="btn-primary" style={{ marginBottom: 0 }}>
@@ -155,7 +157,15 @@ export default function AttachmentsList() {
             {attachments.map((a) => (
               <tr key={a.id}>
                 <td>{FILE_TYPE_LABELS[a.file_type] ?? a.file_type}</td>
-                <td>{a.medical_case ? String(a.medical_case).slice(0, 8) + '…' : '—'}</td>
+                <td>
+                  {a.medical_case_name ? (
+                    <strong>{a.medical_case_name}</strong>
+                  ) : a.medical_case ? (
+                    String(a.medical_case).slice(0, 8) + '…'
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td>{a.uploaded_by_name ?? '—'}</td>
                 <td>{new Date(a.uploaded_at).toLocaleString()}</td>
                 <td className="actions">

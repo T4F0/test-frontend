@@ -46,9 +46,16 @@ export default function PatientDetail() {
   }
 
   const handleCreateCase = async () => {
+    const caseName = window.prompt('Enter a name for the new medical case (optional):')
+    if (caseName === null) return // User cancelled
+
     try {
       setCreatingCase(true)
-      await createMedicalCase({ patient: id, status: 'DRAFT' })
+      await createMedicalCase({ 
+        patient: id, 
+        status: 'DRAFT',
+        name: caseName.trim() || null
+      })
       loadCases()
     } catch (err) {
       setError('Failed to create medical case')
@@ -144,7 +151,7 @@ export default function PatientDetail() {
             <table className="forms-table">
               <thead>
                 <tr>
-                  <th>Case ID</th>
+                  <th>Case Name / ID</th>
                   <th>Status</th>
                   <th>Created</th>
                   <th>Actions</th>
@@ -153,10 +160,17 @@ export default function PatientDetail() {
               <tbody>
                 {cases.map((c) => (
                   <tr key={c.id}>
-                    <td>{String(c.id).slice(0, 8)}…</td>
+                    <td>
+                      {c.name ? (
+                        <strong>{c.name}</strong>
+                      ) : (
+                        <span className="text-muted">Case {String(c.id).slice(0, 8)}…</span>
+                      )}
+                    </td>
                     <td><span className="badge">{CASE_STATUS_LABELS[c.status] ?? c.status}</span></td>
                     <td>{new Date(c.created_at).toLocaleDateString()}</td>
                     <td className="actions">
+                      <button type="button" className="btn-small btn-primary" onClick={() => navigate(`/medical-cases/${c.id}`)}>Manage</button>
                       <button type="button" className="btn-small btn-secondary" onClick={() => navigate(`/meetings?medical_case=${c.id}`)}>Meetings</button>
                       <button type="button" className="btn-small btn-secondary" onClick={() => navigate(`/attachments?medical_case=${c.id}`)}>Attachments</button>
                     </td>

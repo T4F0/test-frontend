@@ -254,7 +254,7 @@ export default function MeetingForm() {
             <option value="">{selectedPatientId ? 'Select case' : 'Select patient first'}</option>
             {filteredCases.map((c) => (
               <option key={c.id} value={c.id}>
-                Case {c.id.slice(0, 8)}... ({c.status})
+                {c.name || `Case ${c.id.slice(0, 8)}...`} ({c.status})
               </option>
             ))}
           </select>
