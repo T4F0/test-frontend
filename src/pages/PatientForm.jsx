@@ -86,7 +86,10 @@ export default function PatientForm() {
             <input
               type="text"
               value={patient.first_name}
-              onChange={(e) => setPatient({ ...patient, first_name: e.target.value })}
+              onChange={(e) => setPatient({ ...patient, first_name: e.target.value.slice(0, 3).toUpperCase() })}
+              maxLength="3"
+              style={{ textTransform: 'uppercase' }}
+              placeholder="EX: JOH"
               required
             />
           </div>
@@ -95,7 +98,10 @@ export default function PatientForm() {
             <input
               type="text"
               value={patient.last_name}
-              onChange={(e) => setPatient({ ...patient, last_name: e.target.value })}
+              onChange={(e) => setPatient({ ...patient, last_name: e.target.value.slice(0, 3).toUpperCase() })}
+              maxLength="3"
+              style={{ textTransform: 'uppercase' }}
+              placeholder="EX: DOE"
               required
             />
           </div>
