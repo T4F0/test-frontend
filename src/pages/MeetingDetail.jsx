@@ -43,11 +43,11 @@ export default function MeetingDetail() {
     }
   }
 
-  const loadCaseResume = async () => {
+  const loadCaseResume = async (caseId = null) => {
     try {
       setResumeLoading(true)
       setResumeError(null)
-      const data = await getCaseResume(id)
+      const data = await getCaseResume(id, caseId)
       setCaseResume(data)
       // Auto-expand all forms by default
       const expanded = {}
@@ -56,6 +56,7 @@ export default function MeetingDetail() {
     } catch (err) {
       console.error('Failed to load case resume:', err)
       setResumeError('No form data available for this case.')
+      setCaseResume(null)
     } finally {
       setResumeLoading(false)
     }
@@ -174,9 +175,19 @@ export default function MeetingDetail() {
             <label>Status</label>
             <p><span className="badge">{STATUS_LABELS[meeting.status] ?? meeting.status}</span></p>
           </div>
-          <div className="detail-item">
-            <label>Medical case</label>
-            <p>{meeting.medical_case ?? '—'}</p>
+          <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+            <label>Medical cases discussed ({meeting.medical_cases?.length || 0})</label>
+            {meeting.medical_cases?.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {meeting.medical_cases.map(caseId => (
+                  <span key={caseId} className="badge" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                    {caseId}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p>—</p>
+            )}
           </div>
           <div className="detail-item">
             <label>Specialty</label>
@@ -203,6 +214,19 @@ export default function MeetingDetail() {
             </p>
           </div>
         </div>
+      </div>
+
+      <div style={{ padding: '0 2rem 1rem' }}>
+        <label style={{ fontSize: '0.9rem', fontWeight: '600', color: '#64748b', marginBottom: '0.5rem', display: 'block' }}>View Resume for Case:</label>
+        <select 
+          value={caseResume?.medical_case_id || ''} 
+          onChange={(e) => loadCaseResume(e.target.value)}
+          style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', width: '100%', maxWidth: '400px' }}
+        >
+          {meeting.medical_cases?.map(caseId => (
+            <option key={caseId} value={caseId}>Case {caseId.slice(0, 8)}...</option>
+          ))}
+        </select>
       </div>
 
       {/* === CASE RESUME SECTION === */}

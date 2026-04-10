@@ -4,23 +4,23 @@ import { getCaseResume } from '../../api/meetingsApi'
 
 const GENDER_LABELS = { M: 'Male', F: 'Female', O: 'Other' }
 
-export default function CaseResumeSidebar({ isOpen, onToggle, meetingId }) {
+export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeCaseId }) {
   const [caseResume, setCaseResume] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [expandedForms, setExpandedForms] = useState({})
 
   useEffect(() => {
-    if (isOpen && meetingId && !caseResume) {
+    if (isOpen && meetingId) {
       loadCaseResume()
     }
-  }, [isOpen, meetingId])
+  }, [isOpen, meetingId, activeCaseId])
 
   const loadCaseResume = async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getCaseResume(meetingId)
+      const data = await getCaseResume(meetingId, activeCaseId)
       setCaseResume(data)
       const expanded = {}
       data.forms?.forEach((_, idx) => { expanded[idx] = true })

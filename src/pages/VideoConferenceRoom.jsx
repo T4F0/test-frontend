@@ -41,6 +41,7 @@ export default function VideoConferenceRoom() {
   const [isUploading, setIsUploading] = useState(false)
   const [elapsedTime, setElapsedTime] = useState(0)
   const [joined, setJoined] = useState(false)
+  const [activeCaseId, setActiveCaseId] = useState(null)
   const [notes, setNotes] = useState('')
   const [notesSaveStatus, setNotesSaveStatus] = useState('idle')
 
@@ -77,6 +78,12 @@ export default function VideoConferenceRoom() {
   useEffect(() => {
     loadConference()
   }, [roomId])
+
+  useEffect(() => {
+    if (conference?.medical_cases?.length > 0 && !activeCaseId) {
+      setActiveCaseId(conference.medical_cases[0].id)
+    }
+  }, [conference, activeCaseId])
 
   useEffect(() => {
     if (!conference?.started_at || conference?.status === 'ENDED') return undefined
@@ -176,7 +183,7 @@ export default function VideoConferenceRoom() {
   const handleUpload = async (file) => {
     try {
       setIsUploading(true)
-      const attachment = await uploadConferenceAttachment(conference.id, file)
+      const attachment = await uploadConferenceAttachment(conference.id, file, '', activeCaseId)
       setConference((prev) => ({
         ...prev,
         attachments: [...(prev.attachments || []), attachment],
@@ -198,8 +205,9 @@ export default function VideoConferenceRoom() {
     }
   }
   const handlePromoteAttachment = async (attachmentId) => {
+    if (!activeCaseId) return alert('Please select a medical case correctly.');
     try {
-      await promoteConferenceAttachment(conference.id, attachmentId)
+      await promoteConferenceAttachment(conference.id, attachmentId, activeCaseId)
       // Reload conference to show the new attachment in the "Medical case attachments" section
       loadConference()
       alert('File has been successfully added to the medical case.')
@@ -291,10 +299,21 @@ export default function VideoConferenceRoom() {
       <div className="conference-header">
         <div className="header-left">
           <h2 className="conference-title">{conference?.meeting_title || 'RCP Conference'}</h2>
-          {conference?.medical_case_id && (
-            <span className="case-badge">
-              Case: {String(conference.medical_case_id).slice(0, 8)}...
-            </span>
+          {conference?.medical_cases?.length > 0 && (
+            <div className="header-case-selector">
+              <ClipboardList size={16} />
+              <select 
+                value={activeCaseId || ''} 
+                onChange={(e) => setActiveCaseId(e.target.value)}
+                className="case-switcher"
+              >
+                {conference.medical_cases.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.patient_name} - {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
         <div className="header-center">
@@ -398,6 +417,7 @@ export default function VideoConferenceRoom() {
           isOpen={showFiles}
           onToggle={() => setShowFiles(false)}
           isUploading={isUploading}
+          activeCaseId={activeCaseId}
         />
 
         <MeetingNotesSidebar
@@ -415,6 +435,7 @@ export default function VideoConferenceRoom() {
           isOpen={showResume}
           onToggle={() => setShowResume(false)}
           meetingId={conference?.meeting}
+          activeCaseId={activeCaseId}
         />
       </div>
 

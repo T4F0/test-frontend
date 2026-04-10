@@ -12,6 +12,7 @@ export default function FileSharePanel({
   isOpen,
   onToggle,
   isUploading,
+  activeCaseId,
 }) {
   const [dragActive, setDragActive] = useState(false)
   const [previewItem, setPreviewItem] = useState(null)
@@ -38,7 +39,10 @@ export default function FileSharePanel({
   }
 
   const conferenceFiles = attachments.map((attachment) => normalizeAttachment(attachment, 'meeting'))
-  const medicalCaseFiles = (caseAttachments || []).map((attachment) => normalizeAttachment(attachment, 'case'))
+  const filteredCaseAttachments = (caseAttachments || []).filter(
+    (attachment) => !activeCaseId || attachment.medical_case_id === activeCaseId
+  )
+  const medicalCaseFiles = filteredCaseAttachments.map((attachment) => normalizeAttachment(attachment, 'case'))
 
   const handleDrag = (e) => {
     e.preventDefault()

@@ -235,6 +235,46 @@
   font-size: 0.75rem;
   font-weight: 500;
   font-family: "Courier New", monospace;
+  display: flex !important;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.header-case-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(30, 41, 59, 0.6);
+  padding: 0.35rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.header-case-selector:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.case-switcher {
+  background: transparent;
+  border: none;
+  color: #f1f5f9;
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  max-width: 180px;
+  text-overflow: ellipsis;
+  padding-right: 0.5rem;
+}
+
+.case-switcher option {
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 0.5rem;
 }
 
 .header-center {

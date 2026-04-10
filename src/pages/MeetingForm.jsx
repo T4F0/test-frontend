@@ -21,7 +21,7 @@ export default function MeetingForm() {
   }, [user, navigate])
 
   const [form, setForm] = useState({
-    medical_case: '',
+    medical_cases: [],
     coordinator: '',
     scheduled_date: '',
     scheduled_time: '09:00',
@@ -32,6 +32,7 @@ export default function MeetingForm() {
   const [cases, setCases] = useState([])
   const [patients, setPatients] = useState([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
+  const [selectedCaseId, setSelectedCaseId] = useState('')
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -87,15 +88,33 @@ export default function MeetingForm() {
     () => new Map(users.map((candidate) => [candidate.id, candidate])),
     [users],
   )
+  const casesById = useMemo(
+    () => new Map(cases.map((c) => [c.id, c])),
+    [cases],
+  )
+
   const selectedParticipantIds = useMemo(() => new Set(form.participants), [form.participants])
   const coordinatorUser = useMemo(() => {
     if (!normalizedCoordinatorId) return user || null
     return usersById.get(normalizedCoordinatorId) || (user?.id === normalizedCoordinatorId ? user : null)
   }, [normalizedCoordinatorId, user, usersById])
+  
   const selectedParticipants = useMemo(
     () => form.participants.map((participantId) => usersById.get(participantId)).filter(Boolean),
     [form.participants, usersById],
   )
+
+  const selectedCases = useMemo(
+    () => form.medical_cases.map((caseId) => {
+      const c = casesById.get(caseId);
+      if (!c) return null;
+      // Find patient name for the case
+      const patient = patients.find(p => p.id === c.patient) || { first_name: 'Patient', last_name: 'Unknown' };
+      return { ...c, patientName: `${patient.first_name} ${patient.last_name}` };
+    }).filter(Boolean),
+    [form.medical_cases, casesById, patients],
+  )
+
   const filteredUsers = useMemo(() => {
     const query = participantSearch.trim().toLowerCase()
 
@@ -161,7 +180,7 @@ export default function MeetingForm() {
       const data = await getMeeting(id)
       const dt = data.scheduled_date ? new Date(data.scheduled_date) : new Date()
       setForm({
-        medical_case: data.medical_case || '',
+        medical_cases: data.medical_cases || [],
         coordinator: data.coordinator?.id || data.coordinator || '',
         scheduled_date: dt.toISOString().slice(0, 10),
         scheduled_time: dt.toTimeString().slice(0, 5),
@@ -177,16 +196,6 @@ export default function MeetingForm() {
     }
   }
 
-  // Set selected patient when form.medical_case changes (useful for loading existing meeting)
-  useEffect(() => {
-    if (form.medical_case && cases.length > 0 && !selectedPatientId) {
-      const selectedCase = cases.find((c) => c.id === form.medical_case)
-      if (selectedCase) {
-        setSelectedPatientId(selectedCase.patient)
-      }
-    }
-  }, [form.medical_case, cases, selectedPatientId])
-
   const filteredCases = useMemo(() => {
     if (!selectedPatientId) return []
     return cases.filter((c) => c.patient === selectedPatientId)
@@ -194,13 +203,21 @@ export default function MeetingForm() {
 
   const handlePatientChange = (patientId) => {
     setSelectedPatientId(patientId)
-    // Clear case if it doesn't belong to the patient
-    if (form.medical_case) {
-      const currentCase = cases.find(c => c.id === form.medical_case)
-      if (currentCase && currentCase.patient !== patientId) {
-        setForm(f => ({ ...f, medical_case: '' }))
-      }
+    setSelectedCaseId('')
+  }
+
+  const handleAddCase = () => {
+    if (!selectedCaseId) return
+    if (form.medical_cases.includes(selectedCaseId)) {
+      alert('This case is already added to the meeting.')
+      return
     }
+    setForm(f => ({ ...f, medical_cases: [...f.medical_cases, selectedCaseId] }))
+    setSelectedCaseId('')
+  }
+
+  const handleRemoveCase = (caseId) => {
+    setForm(f => ({ ...f, medical_cases: f.medical_cases.filter(id => id !== caseId) }))
   }
 
   const handleChange = (field, value) => {
@@ -218,12 +235,16 @@ export default function MeetingForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (form.medical_cases.length === 0) {
+      setError('Please add at least one medical case to the meeting.')
+      return
+    }
     try {
       setSaving(true)
       setError(null)
       const scheduled_date = `${form.scheduled_date}T${form.scheduled_time}:00`
       const payload = {
-        medical_case: form.medical_case || null,
+        medical_cases: form.medical_cases,
         scheduled_date,
         specialty: form.specialty || null,
         participants: form.participants,
@@ -250,36 +271,80 @@ export default function MeetingForm() {
       <h2>{isEdit ? 'Edit Meeting' : 'New Meeting'}</h2>
       {error && <div className="error">{error}</div>}
       <form onSubmit={handleSubmit} className="submission-form">
-        <SearchableSelect 
-          label="Patient"
-          placeholder="Search patient by name..."
-          options={patients.map(p => ({
-            value: p.id,
-            label: `${p.first_name} ${p.last_name}`,
-            subLabel: p.anonymized_code ? `Code: ${p.anonymized_code}` : `DOB: ${new Date(p.birth_date).toLocaleDateString()}`
-          }))}
-          value={selectedPatientId}
-          onChange={handlePatientChange}
-          onSearch={setPatientSearch}
-          loading={patientsLoading}
-          required
-        />
-        <div className="form-group">
-          <label>Medical case *</label>
-          <select
-            value={form.medical_case}
-            onChange={(e) => handleChange('medical_case', e.target.value)}
-            required
-            disabled={!selectedPatientId}
-          >
-            <option value="">{selectedPatientId ? 'Select case' : 'Select patient first'}</option>
-            {filteredCases.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name || `Case ${c.id.slice(0, 8)}...`} ({c.status})
-              </option>
-            ))}
-          </select>
+        
+        {/* Medical Cases Selection Area */}
+        <div className="form-section-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Medical Cases Selection</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
+            <SearchableSelect 
+              label="Search Patient"
+              placeholder="Type to search..."
+              options={patients.map(p => ({
+                value: p.id,
+                label: `${p.first_name} ${p.last_name}`,
+                subLabel: p.anonymized_code ? `Code: ${p.anonymized_code}` : `DOB: ${new Date(p.birth_date).toLocaleDateString()}`
+              }))}
+              value={selectedPatientId}
+              onChange={handlePatientChange}
+              onSearch={setPatientSearch}
+              loading={patientsLoading}
+            />
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Select Case</label>
+              <select
+                value={selectedCaseId}
+                onChange={(e) => setSelectedCaseId(e.target.value)}
+                disabled={!selectedPatientId}
+                style={{ height: '42px' }}
+              >
+                <option value="">{selectedPatientId ? 'Pick a case...' : 'Search patient first'}</option>
+                {filteredCases.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name || `Case ${c.id.slice(0, 8)}...`} ({c.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button 
+              type="button" 
+              onClick={handleAddCase}
+              className="btn-primary"
+              disabled={!selectedCaseId}
+              style={{ height: '42px', padding: '0 1.5rem' }}
+            >
+              Add Case
+            </button>
+          </div>
+
+          <div className="selected-cases-list">
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>Selected Cases ({form.medical_cases.length})</label>
+            {selectedCases.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                {selectedCases.map(c => (
+                  <div key={c.id} className="case-selection-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #e2e8f0', padding: '0.5rem 0.75rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    <div>
+                      <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{c.patientName}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{c.name || 'Untitled Case'}</div>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveCase(c.id)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0.25rem' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: '1rem', textAlign: 'center', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
+                No cases added yet. Use the search above to add medical cases to this meeting.
+              </div>
+            )}
+          </div>
         </div>
+
         <div className="form-group">
           <label>Coordinator</label>
           <div className="readonly-field">
@@ -413,3 +478,4 @@ export default function MeetingForm() {
     </div>
   )
 }
+
