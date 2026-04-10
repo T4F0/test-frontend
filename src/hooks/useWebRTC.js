@@ -24,7 +24,7 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
 
   const cleanupPeers = useCallback(() => {
     Object.values(peersRef.current).forEach((p) => {
-      if (!p.destroyed) { try { p.destroy(); } catch (e) {} }
+      if (!p.destroyed) { try { p.destroy(); } catch (e) { } }
     });
     peersRef.current = {};
     setRemoteStreams({});
@@ -34,29 +34,26 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
     if (peersRef.current[peerId]) return;
 
     console.log(`WebRTC: Creating peer for ${peerId}, initiator: ${initiator}`);
-    
+
     const peer = new SimplePeer({
       initiator,
       stream: localStreamRef.current || undefined,
       trickle: true,
       config: {
         iceServers: [
-          // 1. Google's Free STUN Server (Discovers Public IP)
           { urls: "stun:stun.l.google.com:19302" },
-          
-          // 2. Your Custom Coturn TURN Server (Relays Video when direct connection fails)
           {
-             urls: "turn:154.241.14.18:3478",
+            // Use the EXTERNAL port mapped to 3478
+            urls: "turn:app.alpha.openscaler.net:9267",
             username: "admin",
             credential: "admin",
           },
-          
-          // 3. TCP Fallback for Strict Corporate Firewalls
           {
-            urls: "turn:154.241.14.18:3478?transport=tcp",
+            // TCP Fallback using the same external port
+            urls: "turn:app.alpha.openscaler.net:9267?transport=tcp",
             username: "admin",
             credential: "admin",
-          },
+          }
         ],
       },
     });
@@ -162,7 +159,7 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
     try {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        
+
         // Mute and Turn off camera by default
         stream.getAudioTracks().forEach(t => t.enabled = false);
         stream.getVideoTracks().forEach(t => t.enabled = false);
@@ -170,11 +167,11 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         setLocalStream(stream);
         localStreamRef.current = stream;
         currentVideoTrackRef.current = stream.getVideoTracks()[0] || null;
-        
+
         // Add stream to any existing peers that were created before media was ready
         Object.values(peersRef.current).forEach(peer => {
           if (!peer.destroyed && stream) {
-            try { peer.addStream(stream); } catch (e) {}
+            try { peer.addStream(stream); } catch (e) { }
           }
         });
       } catch (e) { console.warn("WebRTC: Media access failed", e); }
@@ -190,10 +187,10 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         setIsConnected(true);
         // Report initial state (Muted/Camera Off) to other participants
         if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ 
-            type: "media_state_update", 
-            is_muted: true, 
-            is_camera_off: true 
+          wsRef.current.send(JSON.stringify({
+            type: "media_state_update",
+            is_muted: true,
+            is_camera_off: true
           }));
         }
       };
