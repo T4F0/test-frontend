@@ -184,6 +184,7 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
       wsRef.current = ws;
 
       ws.onopen = () => {
+        console.log("WS: Connected to signaling server");
         setIsConnected(true);
         // Report initial state (Muted/Camera Off) to other participants
         if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -195,7 +196,12 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         }
       };
       ws.onmessage = (e) => handleSignalingMessageRef.current?.(JSON.parse(e.data));
-      ws.onclose = () => { setIsConnected(false); cleanupPeers(); };
+      ws.onerror = (e) => console.error("WS: Connection error", e);
+      ws.onclose = (e) => {
+        console.warn(`WS: Closed code=${e.code} reason=${e.reason} clean=${e.wasClean}`);
+        setIsConnected(false);
+        cleanupPeers();
+      };
     } catch (err) { console.error("WebRTC: Connection error", err); }
   }, [cleanupPeers, roomId]);
 
