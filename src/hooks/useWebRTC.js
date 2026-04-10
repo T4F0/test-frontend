@@ -46,14 +46,14 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
           
           // 2. Your Custom Coturn TURN Server (Relays Video when direct connection fails)
           {
-            urls: "turn:154.241.51.169:3478",
+             urls: "turn:154.241.14.18:3478",
             username: "admin",
             credential: "admin",
           },
           
           // 3. TCP Fallback for Strict Corporate Firewalls
           {
-            urls: "turn:154.241.51.169:3478?transport=tcp",
+            urls: "turn:154.241.14.18:3478?transport=tcp",
             username: "admin",
             credential: "admin",
           },
