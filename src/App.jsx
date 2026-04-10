@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import FormsList from './pages/FormsList'
 import FormBuilder from './pages/FormBuilder'
 import FormSubmission from './pages/FormSubmission'
@@ -32,6 +33,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       
       <Route element={<Layout />}>
         {authenticated ? (

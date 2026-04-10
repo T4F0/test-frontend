@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { login, getCurrentUser } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 
@@ -77,6 +77,9 @@ export default function Login() {
 
         <p className="login-footer">
           Demo credentials: Use your hospital account
+        </p>
+        <p className="login-footer" style={{ marginTop: '0.5rem' }}>
+          Don't have an account? <Link to="/register">Register here</Link>
         </p>
       </div>
     </div>

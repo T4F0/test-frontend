@@ -96,6 +96,36 @@ export const deleteUser = async (id) => {
   await authAxios.delete(`${API_BASE}/users/${id}/`)
 }
 
+export const register = async (userData) => {
+  const { data } = await axios.post(`${API_BASE}/auth/register/`, userData)
+  return data
+}
+
+export const getPendingRegistrations = async () => {
+  const { data } = await authAxios.get(`${API_BASE}/users/pending_registrations/`)
+  return data.results || data
+}
+
+export const approveRegistration = async (id) => {
+  const { data } = await authAxios.post(`${API_BASE}/users/${id}/approve/`)
+  return data
+}
+
+export const rejectRegistration = async (id) => {
+  const { data } = await authAxios.post(`${API_BASE}/users/${id}/reject/`)
+  return data
+}
+
+export const getNotifications = async () => {
+  const { data } = await authAxios.get(`${API_BASE}/notifications/`)
+  return data.results || data
+}
+
+export const markNotificationRead = async (id) => {
+  const { data } = await authAxios.patch(`${API_BASE}/notifications/${id}/read/`)
+  return data
+}
+
 export const getAuthAxios = () => authAxios
 export const getToken = () => localStorage.getItem('access_token')
 export const isAuthenticated = () => !!localStorage.getItem('access_token')

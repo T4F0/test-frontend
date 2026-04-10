@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   // Set the third parameter to '' to load all envs regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '')
   const apiTarget = env.VITE_API_URL || 'http://app.alpha.openscaler.net:9077'
+  // const apiTarget = env.VITE_API_URL || 'http://localhost:8000'
 
   return {
     plugins: [react()],
