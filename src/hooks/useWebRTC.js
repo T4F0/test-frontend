@@ -11,8 +11,8 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
   const [remoteStreams, setRemoteStreams] = useState({});
   const [participants, setParticipants] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isCameraOff, setIsCameraOff] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenSharer, setScreenSharer] = useState(null);
 
@@ -107,7 +107,7 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         if (data.user_id !== userId) {
           setParticipants((prev) => {
             if (prev.find((p) => p.user_id === data.user_id)) return prev;
-            return [...prev, { ...data.user_info, is_muted: false, is_camera_off: false }];
+            return [...prev, { ...data.user_info, is_muted: true, is_camera_off: true }];
           });
         }
         break;
@@ -162,6 +162,11 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
     try {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        
+        // Mute and Turn off camera by default
+        stream.getAudioTracks().forEach(t => t.enabled = false);
+        stream.getVideoTracks().forEach(t => t.enabled = false);
+
         setLocalStream(stream);
         localStreamRef.current = stream;
         currentVideoTrackRef.current = stream.getVideoTracks()[0] || null;
@@ -181,7 +186,17 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
       const ws = new WebSocket(`${wsProtocol}://${wsHost}/ws/conference/${roomId}/?token=${getToken()}`);
       wsRef.current = ws;
 
-      ws.onopen = () => setIsConnected(true);
+      ws.onopen = () => {
+        setIsConnected(true);
+        // Report initial state (Muted/Camera Off) to other participants
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ 
+            type: "media_state_update", 
+            is_muted: true, 
+            is_camera_off: true 
+          }));
+        }
+      };
       ws.onmessage = (e) => handleSignalingMessageRef.current?.(JSON.parse(e.data));
       ws.onclose = () => { setIsConnected(false); cleanupPeers(); };
     } catch (err) { console.error("WebRTC: Connection error", err); }
