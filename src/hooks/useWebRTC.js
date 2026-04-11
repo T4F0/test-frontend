@@ -158,7 +158,12 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
   const connect = useCallback(async () => {
     try {
       try {
+        console.log("WebRTC: Requesting Camera/Mic access...");
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log("WebRTC: Media access GRANTED", {
+          videoTracks: stream.getVideoTracks().length,
+          audioTracks: stream.getAudioTracks().length
+        });
 
         // Mute and Turn off camera by default
         stream.getAudioTracks().forEach(t => t.enabled = false);
@@ -174,7 +179,16 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
             try { peer.addStream(stream); } catch (e) { }
           }
         });
-      } catch (e) { console.warn("WebRTC: Media access failed", e); }
+      } catch (e) { 
+        console.error("WebRTC: Media access failed", e);
+        if (e.name === 'NotReadableError' || e.message.includes('in use')) {
+          alert(`Camera/Microphone is already in use by another application.\n\n1. Close other apps like Teams, Zoom, or Chrome.\n2. Ensure no other instances of this app are running.\n3. Restart the app.`);
+        } else if (e.name === 'NotAllowedError') {
+          alert("Permission denied. please check your Windows Privacy settings.");
+        } else {
+          alert(`Failed to access camera/microphone: ${e.message}\n\nPlease ensure hardware is connected.`);
+        }
+      }
 
       const wsProtocol = import.meta.env.PROD ? 'wss' : (window.location.protocol === "https:" ? "wss" : "ws");
       const wsHost = import.meta.env.PROD
@@ -227,26 +241,36 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
   }, []);
 
   const toggleMute = useCallback(() => {
+    console.log("WebRTC: toggleMute clicked", { hasStream: !!localStreamRef.current });
     if (localStreamRef.current) {
       const state = !isMuted;
+      console.log(`WebRTC: Setting Mic enabled to ${!state}`);
       localStreamRef.current.getAudioTracks().forEach(t => t.enabled = !state);
       setIsMuted(state);
       broadcastMediaState(state, isCameraOff);
+    } else {
+      alert("Microphone stream not available. Please ensure your mic is connected.");
     }
   }, [broadcastMediaState, isCameraOff, isMuted]);
 
   const toggleCamera = useCallback(() => {
+    console.log("WebRTC: toggleCamera clicked", { hasStream: !!localStreamRef.current });
     if (localStreamRef.current) {
       const state = !isCameraOff;
+      console.log(`WebRTC: Setting Camera enabled to ${!state}`);
       localStreamRef.current.getVideoTracks().forEach(t => t.enabled = !state);
       setIsCameraOff(state);
       broadcastMediaState(isMuted, state);
+    } else {
+      alert("Camera stream not available. Please ensure your camera is connected.");
     }
   }, [broadcastMediaState, isCameraOff, isMuted]);
 
   const startScreenShare = useCallback(async () => {
+    console.log("WebRTC: startScreenShare clicked");
     try {
       const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      console.log("WebRTC: Screen share stream obtained", { trackCount: screen.getTracks().length });
       const track = screen.getVideoTracks()[0];
       setScreenStream(screen);
       setIsScreenSharing(true);
@@ -256,7 +280,10 @@ export default function useWebRTC(roomId, userId, onChatMessage, onNotesUpdate) 
         track.onended = () => stopScreenShare();
       }
       wsRef.current?.send(JSON.stringify({ type: "screen_share_started" }));
-    } catch (e) { console.error("WebRTC: Screen share failed", e); }
+    } catch (e) { 
+      console.error("WebRTC: Screen share failed", e);
+      alert(`Screen sharing failed: ${e.message}`);
+    }
   }, [replaceOutgoingVideoTrack, userId]);
 
   const stopScreenShare = useCallback(() => {

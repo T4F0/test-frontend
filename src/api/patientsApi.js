@@ -1,6 +1,6 @@
 import { getAuthAxios } from './authApi'
 
-const API_BASE = '/api'
+import { API_BASE } from './config'
 
 export const getPatients = async (page = 1, search = '') => {
   const params = new URLSearchParams()

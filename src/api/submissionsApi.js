@@ -1,6 +1,6 @@
 import { getAuthAxios } from './authApi'
 
-const API_BASE = '/api'
+import { API_BASE } from './config'
 
 export const getSubmissions = async (formId) => {
   const authAxios = getAuthAxios()

@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE = '/api'
+import { API_BASE } from './config'
 
 const axiosInstance = axios.create({
   headers: {
