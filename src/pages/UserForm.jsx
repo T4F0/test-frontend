@@ -4,9 +4,9 @@ import { createUser, updateUser, getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 
 const ROLE_CHOICES = [
-  { value: 'MEDECIN', label: 'Medecin' },
-  { value: 'COORDINATEUR', label: 'Coordinator' },
-  { value: 'ADMIN', label: 'Administrator' }
+  { value: 'MEDECIN', label: 'Médecin' },
+  { value: 'COORDINATEUR', label: 'Coordinateur' },
+  { value: 'ADMIN', label: 'Administrateur' }
 ]
 
 export default function UserForm() {
@@ -49,7 +49,7 @@ export default function UserForm() {
         setUser(foundUser)
       }
     } catch (err) {
-      setError('Failed to load user')
+      setError('Échec du chargement de l\'utilisateur')
       console.error(err)
     } finally {
       setLoading(false)
@@ -82,9 +82,9 @@ export default function UserForm() {
         const fieldErrors = Object.entries(errorData)
           .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
           .join('\n')
-        setError(fieldErrors || 'Failed to save user')
+        setError(fieldErrors || 'Échec de l\'enregistrement de l\'utilisateur')
       } else {
-        setError(err.response?.data?.detail || 'Failed to save user')
+        setError(err.response?.data?.detail || 'Échec de l\'enregistrement de l\'utilisateur')
       }
       console.error('Error details:', err.response?.data)
     } finally {
@@ -92,18 +92,18 @@ export default function UserForm() {
     }
   }
 
-  if (loading) return <div className="loading">Loading user...</div>
+  if (loading) return <div className="loading">Chargement de l'utilisateur...</div>
 
   return (
     <div className="user-form-container">
-      <h2>{isEdit ? 'Edit User' : 'Create New User'}</h2>
+      <h2>{isEdit ? 'Modifier l\'utilisateur' : 'Créer un nouvel utilisateur'}</h2>
 
       {error && <div className="error">{error}</div>}
 
       <form onSubmit={handleSubmit} className="user-form">
         <div className="form-row">
           <div className="form-group">
-            <label>First Name *</label>
+            <label>Prénom *</label>
             <input
               type="text"
               value={user.first_name}
@@ -112,7 +112,7 @@ export default function UserForm() {
             />
           </div>
           <div className="form-group">
-            <label>Last Name *</label>
+            <label>Nom *</label>
             <input
               type="text"
               value={user.last_name}
@@ -133,7 +133,7 @@ export default function UserForm() {
             />
           </div>
           <div className="form-group">
-            <label>Username *</label>
+            <label>Nom d'utilisateur *</label>
             <input
               type="text"
               value={user.username}
@@ -146,7 +146,7 @@ export default function UserForm() {
 
         {!isEdit && (
           <div className="form-group">
-            <label>Password *</label>
+            <label>Mot de passe *</label>
             <input
               type="text"
               value={user.password}
@@ -158,7 +158,7 @@ export default function UserForm() {
 
         <div className="form-row">
           <div className="form-group">
-            <label>Role *</label>
+            <label>Rôle *</label>
             <select
               value={user.role}
               onChange={(e) => setUser({ ...user, role: e.target.value })}
@@ -171,32 +171,32 @@ export default function UserForm() {
             </select>
           </div>
           <div className="form-group">
-            <label>Hospital</label>
+            <label>Hôpital</label>
             <input
               type="text"
               value={user.hospital || ''}
               onChange={(e) => setUser({ ...user, hospital: e.target.value })}
-              placeholder="Hospital name"
+              placeholder="Nom de l'établissement"
             />
           </div>
         </div>
 
         <div className="form-group">
-          <label>Specialty</label>
+          <label>Spécialité</label>
           <input
             type="text"
             value={user.specialty || ''}
             onChange={(e) => setUser({ ...user, specialty: e.target.value })}
-            placeholder="Medical specialty"
+            placeholder="Spécialité médicale"
           />
         </div>
 
         <div className="form-actions">
           <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? 'Saving...' : isEdit ? 'Update User' : 'Create User'}
+            {saving ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer l\'utilisateur'}
           </button>
           <button type="button" onClick={() => navigate('/users')}>
-            Cancel
+            Annuler
           </button>
         </div>
       </form>

@@ -35,12 +35,12 @@ export default function ParticipantList({
               <div className="participant-info">
                 <span className="participant-name">
                   {p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : p.username}
-                  {p.user_id === currentUserId && <span className="you-tag">(You)</span>}
+                  {p.user_id === currentUserId && <span className="you-tag">(Vous)</span>}
                 </span>
                 <div className="participant-badges">
                   {p.role === 'HOST' && (
                     <span className="badge-host" title="Host">
-                      <Crown size={12} /> Host
+                      <Crown size={12} /> Hôte
                     </span>
                   )}
                   {p.user_role && (
@@ -50,12 +50,12 @@ export default function ParticipantList({
               </div>
               <div className="participant-actions">
                 {p.hand_raised && (
-                  <span className="hand-icon" title="Hand raised">
+                  <span className="hand-icon" title="Main levée">
                     <Hand size={16} />
                   </span>
                 )}
                 {p.is_muted && (
-                  <span className="muted-icon" title="Muted">
+                  <span className="muted-icon" title="Muet">
                     <MicOff size={14} />
                   </span>
                 )}
@@ -64,14 +64,14 @@ export default function ParticipantList({
                     <button
                       className="action-btn"
                       onClick={() => onMuteParticipant(p.user_id)}
-                      title="Mute participant"
+                      title="Désactiver le micro du participant"
                     >
                       <MicOff size={14} />
                     </button>
                     <button
                       className="action-btn danger"
                       onClick={() => onRemoveParticipant(p.user_id)}
-                      title="Remove participant"
+                      title="Retirer le participant"
                     >
                       <UserMinus size={14} />
                     </button>

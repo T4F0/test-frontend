@@ -66,12 +66,12 @@ export default function Layout() {
   }
 
   const navLinks = [
-    { to: '/', label: 'Forms', icon: ClipboardList },
+    { to: '/', label: 'Formulaires', icon: ClipboardList },
     { to: '/patients', label: 'Patients', icon: Users },
-    { to: '/meetings', label: 'Meetings', icon: Calendar },
-    { to: '/attachments', label: 'Attachments', icon: Paperclip },
-    { to: '/reports', label: 'Reports', icon: FileText },
-    { to: '/users', label: 'Users', icon: Users, roles: ['ADMIN', 'COORDINATEUR'] },
+    { to: '/meetings', label: 'Réunions', icon: Calendar },
+    { to: '/attachments', label: 'Pièces jointes', icon: Paperclip },
+    { to: '/reports', label: 'Comptes rendus', icon: FileText },
+    { to: '/users', label: 'Utilisateurs', icon: Users, roles: ['ADMIN', 'COORDINATEUR'] },
   ].filter(link => !link.roles || link.roles.includes(user?.role))
 
   const unreadCount = notifications.filter(n => !n.is_read).length
@@ -83,7 +83,7 @@ export default function Layout() {
           <h1>
             <Link to="/">
               <Activity className="brand-icon" size={28} />
-              RCP Platform
+              Plateforme RCP
             </Link>
           </h1>
           <nav>
@@ -130,7 +130,7 @@ export default function Layout() {
                           </div>
                           <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
                             {notifications.length === 0 ? (
-                              <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>No notifications</div>
+                              <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>Aucune notification</div>
                             ) : (
                               notifications.map(n => (
                                 <div key={n.id} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', background: n.is_read ? 'white' : '#f0f9ff', opacity: n.is_read ? 0.7 : 1 }}>
@@ -144,7 +144,7 @@ export default function Layout() {
                                       onClick={() => handleReadNotification(n.id)}
                                       style={{ fontSize: '0.75rem', color: '#2563eb', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontWeight: 500 }}
                                     >
-                                      Mark as read
+                                      Marquer comme lu
                                     </button>
                                   )}
                                 </div>
@@ -162,22 +162,22 @@ export default function Layout() {
                         {user?.first_name || user?.last_name ? (
                           `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
                         ) : (
-                          user?.username || 'User'
+                          user?.username || 'Utilisateur'
                         )}
                       </span>
                       <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.65rem', padding: '2px 6px', marginTop: '2px' }}>
                         {user?.role}
                       </span>
                     </div>
-                    <button onClick={handleLogout} className="btn-logout" title="Logout" style={{display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                    <button onClick={handleLogout} className="btn-logout" title="Déconnexion" style={{display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
                       <LogOut size={18} />
-                      <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Logout</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Déconnexion</span>
                     </button>
                   </div>
                 </div>
               </>
             ) : (
-              <Link to="/login" className="btn-primary">Login</Link>
+              <Link to="/login" className="btn-primary">Connexion</Link>
             )}
           </nav>
         </div>

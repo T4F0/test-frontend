@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { updateField, deleteField } from '../api/fieldsApi'
 
 const FIELD_TYPES = [
-  { value: 'text', label: 'Text' },
-  { value: 'number', label: 'Number' },
+  { value: 'text', label: 'Texte' },
+  { value: 'number', label: 'Nombre' },
   { value: 'date', label: 'Date' },
-  { value: 'select', label: 'Select' },
-  { value: 'checkbox', label: 'Checkbox' },
-  { value: 'file', label: 'File' },
+  { value: 'select', label: 'Liste déroulante' },
+  { value: 'checkbox', label: 'Case à cocher' },
+  { value: 'file', label: 'Fichier' },
 ]
 
 export default function FieldBuilder({ field, onDelete }) {
@@ -21,19 +21,19 @@ export default function FieldBuilder({ field, onDelete }) {
       await updateField(field.id, data)
       setIsEditing(false)
     } catch (err) {
-      alert('Failed to save field')
+      alert('Échec de l\'enregistrement du champ')
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async () => {
-    if (confirm(`Delete field "${field.name}"?`)) {
+    if (confirm(`Supprimer le champ "${field.name}" ?`)) {
       try {
         await deleteField(field.id)
         onDelete(field.id)
       } catch (err) {
-        alert('Failed to delete field')
+        alert('Échec de la suppression du champ')
       }
     }
   }
@@ -45,7 +45,7 @@ export default function FieldBuilder({ field, onDelete }) {
           <div className="form-row">
             <input
               type="text"
-              placeholder="Field name"
+              placeholder="Nom du champ"
               value={data.name}
               onChange={(e) => setData({ ...data, name: e.target.value })}
             />
@@ -57,7 +57,7 @@ export default function FieldBuilder({ field, onDelete }) {
           <div className="form-row">
             <input
               type="text"
-              placeholder="Placeholder"
+              placeholder="Texte d'aide (placeholder)"
               value={data.placeholder || ''}
               onChange={(e) => setData({ ...data, placeholder: e.target.value })}
             />
@@ -66,7 +66,7 @@ export default function FieldBuilder({ field, onDelete }) {
           {data.field_type === 'select' && (
             <div className="form-row">
               <textarea
-                placeholder='Options (one per line)'
+                placeholder='Options (une par ligne)'
                 value={data.options ? data.options.join('\n') : ''}
                 onChange={(e) => setData({ ...data, options: e.target.value.split('\n').filter(o => o) })}
               />
@@ -90,7 +90,7 @@ export default function FieldBuilder({ field, onDelete }) {
               checked={data.required}
               onChange={(e) => setData({ ...data, required: e.target.checked })}
             />
-            Required
+            Obligatoire
           </label>
 
           <label>
@@ -99,12 +99,12 @@ export default function FieldBuilder({ field, onDelete }) {
               checked={data.show_rdv || false}
               onChange={(e) => setData({ ...data, show_rdv: e.target.checked })}
             />
-            Show RDV
+            Afficher RDV
           </label>
 
           <div className="form-actions-inline">
-            <button onClick={handleSave} disabled={saving}>Save</button>
-            <button onClick={() => setIsEditing(false)}>Cancel</button>
+            <button onClick={handleSave} disabled={saving}>Enregistrer</button>
+            <button onClick={() => setIsEditing(false)}>Annuler</button>
           </div>
         </div>
       ) : (
@@ -112,12 +112,12 @@ export default function FieldBuilder({ field, onDelete }) {
           <div className="field-info">
             <span className="field-name">{field.name}</span>
             <span className="field-type">{field.field_type}</span>
-            {field.required && <span className="badge">Required</span>}
-            {field.show_rdv && <span className="badge badge-info">Show RDV</span>}
+            {field.required && <span className="badge">Obligatoire</span>}
+            {field.show_rdv && <span className="badge badge-info">Afficher RDV</span>}
           </div>
           <div className="field-controls">
-            <button onClick={() => setIsEditing(true)} className="btn-small">Edit</button>
-            <button onClick={handleDelete} className="btn-small btn-danger">Delete</button>
+            <button onClick={() => setIsEditing(true)} className="btn-small">Modifier</button>
+            <button onClick={handleDelete} className="btn-small btn-danger">Supprimer</button>
           </div>
         </div>
       )}

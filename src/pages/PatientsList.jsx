@@ -21,7 +21,7 @@ export default function PatientsList() {
       const data = await getPatients(1, search)
       setPatients(Array.isArray(data) ? data : [data])
     } catch (err) {
-      setError('Failed to load patients')
+      setError('Échec du chargement des patients')
       console.error(err)
     } finally {
       setLoading(false)
@@ -29,13 +29,13 @@ export default function PatientsList() {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this patient?')) {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce patient ?')) {
       try {
         setDeleting(id)
         await deletePatient(id)
         setPatients(patients.filter(p => p.id !== id))
       } catch (err) {
-        setError('Failed to delete patient')
+        setError('Échec de la suppression du patient')
         console.error(err)
       } finally {
         setDeleting(null)
@@ -43,7 +43,7 @@ export default function PatientsList() {
     }
   }
 
-  if (loading) return <div className="loading">Loading patients...</div>
+  if (loading) return <div className="loading">Chargement des patients...</div>
 
   return (
     <div className="list-container">
@@ -53,7 +53,7 @@ export default function PatientsList() {
           className="btn-primary"
           onClick={() => navigate('/patients/new')}
         >
-          + New Patient
+          + Nouveau Patient
         </button>
       </div>
 
@@ -62,7 +62,7 @@ export default function PatientsList() {
       <div className="search-bar">
         <input
           type="text"
-          placeholder="Search by name..."
+          placeholder="Rechercher par nom..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="search-input"
@@ -71,18 +71,18 @@ export default function PatientsList() {
 
       {patients.length === 0 ? (
         <div className="empty-state">
-          <p>No patients found</p>
+          <p>Aucun patient trouvé</p>
         </div>
       ) : (
         <div className="table-container">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Birth Date</th>
-                <th>Gender</th>
-                <th>Anonymized Code</th>
-                <th>Created At</th>
+                <th>Nom</th>
+                <th>Date de naissance</th>
+                <th>Sexe</th>
+                <th>Code anonymisé</th>
+                <th>Créé le</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -95,7 +95,7 @@ export default function PatientsList() {
                   <td>{new Date(patient.birth_date).toLocaleDateString()}</td>
                   <td>
                     <span className="gender-badge">
-                      {patient.gender === 'M' ? '♂ Male' : patient.gender === 'F' ? '♀ Female' : '⚪ Other'}
+                      {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : '⚪ Autre'}
                     </span>
                   </td>
                   <td>{patient.anonymized_code || '-'}</td>
@@ -105,20 +105,20 @@ export default function PatientsList() {
                       className="btn-small btn-info"
                       onClick={() => navigate(`/patients/${patient.id}`)}
                     >
-                      View
+                      Voir
                     </button>
                     <button
                       className="btn-small btn-secondary"
                       onClick={() => navigate(`/patients/${patient.id}/edit`)}
                     >
-                      Edit
+                      Modifier
                     </button>
                     <button
                       className="btn-small btn-danger"
                       onClick={() => handleDelete(patient.id)}
                       disabled={deleting === patient.id}
                     >
-                      {deleting === patient.id ? '...' : 'Delete'}
+                      {deleting === patient.id ? '...' : 'Supprimer'}
                     </button>
                   </td>
                 </tr>

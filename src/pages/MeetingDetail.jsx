@@ -4,8 +4,8 @@ import { getMeeting, deleteMeeting, getCaseResume } from '../api/meetingsApi'
 import { createConference } from '../api/conferenceApi'
 import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
 
-const STATUS_LABELS = { PLANNED: 'Planned', LIVE: 'Live', FINISHED: 'Finished' }
-const GENDER_LABELS = { M: 'Male', F: 'Female', O: 'Other' }
+const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
+const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
 
 export default function MeetingDetail() {
   const { id } = useParams()
@@ -36,7 +36,7 @@ export default function MeetingDetail() {
       setError(null)
       loadCaseResume()
     } catch (err) {
-      setError('Failed to load meeting')
+      setError('Échec du chargement de la réunion')
       console.error(err)
     } finally {
       setLoading(false)
@@ -55,7 +55,7 @@ export default function MeetingDetail() {
       setExpandedForms(expanded)
     } catch (err) {
       console.error('Failed to load case resume:', err)
-      setResumeError('No form data available for this case.')
+      setResumeError('Aucune donnée de formulaire disponible pour ce dossier.')
       setCaseResume(null)
     } finally {
       setResumeLoading(false)
@@ -63,12 +63,12 @@ export default function MeetingDetail() {
   }
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this meeting?')) return
+    if (!window.confirm('Supprimer cette réunion ?')) return
     try {
       await deleteMeeting(id)
       navigate('/meetings')
     } catch (err) {
-      setError('Failed to delete meeting')
+      setError('Échec de la suppression de la réunion')
     }
   }
 
@@ -80,9 +80,9 @@ export default function MeetingDetail() {
     } catch (err) {
       // If conference already exists, try to find it
       if (err.response?.status === 400) {
-        setError('A conference already exists for this meeting. Check below for the join link.')
+        setError('Une conférence existe déjà pour cette réunion. Vérifiez le lien ci-dessous.')
       } else {
-        setError(err.response?.data?.detail || 'Failed to create conference')
+        setError(err.response?.data?.detail || 'Échec de la création de la conférence')
       }
     } finally {
       setCreatingConference(false)
@@ -108,7 +108,7 @@ export default function MeetingDetail() {
 
   const formatValue = (value, fieldType) => {
     if (value === null || value === undefined || value === '') return '—'
-    if (fieldType === 'checkbox') return value ? '✓ Yes' : '✗ No'
+    if (fieldType === 'checkbox') return value ? '✓ Oui' : '✗ Non'
     if (fieldType === 'date') {
       try { return new Date(value).toLocaleDateString('fr-FR') } catch { return value }
     }
@@ -128,14 +128,14 @@ export default function MeetingDetail() {
     return groups
   }
 
-  if (loading) return <div className="loading">Loading meeting...</div>
+  if (loading) return <div className="loading">Chargement de la réunion...</div>
   if (error && !meeting) return <div className="error">{error}</div>
-  if (!meeting) return <div className="error">Meeting not found</div>
+  if (!meeting) return <div className="error">Réunion introuvable</div>
 
   return (
     <div className="detail-card">
       <div className="detail-header">
-        <h1>Meeting</h1>
+        <h1>Réunion</h1>
         <div className="detail-actions">
           {meeting.status !== 'FINISHED' && (
             <button
@@ -156,27 +156,27 @@ export default function MeetingDetail() {
               }}
             >
               <Video size={18} />
-              {creatingConference ? 'Opening...' : 'Open Meeting Room'}
+              {creatingConference ? 'Ouverture...' : 'Ouvrir la salle de réunion'}
             </button>
           )}
-          <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Edit</button>
-          <button className="btn-danger" onClick={handleDelete}>Delete</button>
-          <button className="btn-secondary" onClick={() => navigate('/meetings')}>Back to list</button>
+          <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Modifier</button>
+          <button className="btn-danger" onClick={handleDelete}>Supprimer</button>
+          <button className="btn-secondary" onClick={() => navigate('/meetings')}>Retour à la liste</button>
         </div>
       </div>
       {error && <div className="error" style={{ margin: '1rem 0' }}>{error}</div>}
       <div className="detail-section">
         <div className="detail-grid">
           <div className="detail-item">
-            <label>Scheduled</label>
+            <label>Planifiée le</label>
             <p>{new Date(meeting.scheduled_date).toLocaleString()}</p>
           </div>
           <div className="detail-item">
-            <label>Status</label>
+            <label>Statut</label>
             <p><span className="badge">{STATUS_LABELS[meeting.status] ?? meeting.status}</span></p>
           </div>
           <div className="detail-item" style={{ gridColumn: 'span 2' }}>
-            <label>Medical cases discussed ({meeting.medical_cases?.length || 0})</label>
+            <label>Dossiers médicaux discutés ({meeting.medical_cases?.length || 0})</label>
             {meeting.medical_cases?.length > 0 ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
                 {meeting.medical_cases.map(caseId => (
@@ -190,11 +190,11 @@ export default function MeetingDetail() {
             )}
           </div>
           <div className="detail-item">
-            <label>Specialty</label>
+            <label>Spécialité</label>
             <p>{meeting.specialty || '—'}</p>
           </div>
           <div className="detail-item">
-            <label>Meeting link</label>
+            <label>Lien de réunion</label>
             <p>
               {meeting.meeting_link ? (
                 <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer">{meeting.meeting_link}</a>
@@ -202,7 +202,7 @@ export default function MeetingDetail() {
             </p>
           </div>
           <div className="detail-item">
-            <label>Coordinator</label>
+            <label>Coordinateur</label>
             <p>{formatUserName(meeting.coordinator_details)}</p>
           </div>
           <div className="detail-item">
@@ -217,14 +217,14 @@ export default function MeetingDetail() {
       </div>
 
       <div style={{ padding: '0 2rem 1rem' }}>
-        <label style={{ fontSize: '0.9rem', fontWeight: '600', color: '#64748b', marginBottom: '0.5rem', display: 'block' }}>View Resume for Case:</label>
+        <label style={{ fontSize: '0.9rem', fontWeight: '600', color: '#64748b', marginBottom: '0.5rem', display: 'block' }}>Voir le résumé du dossier :</label>
         <select 
           value={caseResume?.medical_case_id || ''} 
           onChange={(e) => loadCaseResume(e.target.value)}
           style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', width: '100%', maxWidth: '400px' }}
         >
           {meeting.medical_cases?.map(caseId => (
-            <option key={caseId} value={caseId}>Case {caseId.slice(0, 8)}...</option>
+            <option key={caseId} value={caseId}>Dossier {caseId.slice(0, 8)}...</option>
           ))}
         </select>
       </div>
@@ -235,8 +235,8 @@ export default function MeetingDetail() {
           <div className="case-resume-title-block">
             <FileText size={22} className="case-resume-icon" />
             <div>
-              <h2 className="case-resume-title">Case Resume</h2>
-              <p className="case-resume-subtitle">Key medical information for the RCP discussion</p>
+              <h2 className="case-resume-title">Résumé du dossier</h2>
+              <p className="case-resume-subtitle">Informations médicales clés pour la discussion RCP</p>
             </div>
           </div>
         </div>
@@ -244,7 +244,7 @@ export default function MeetingDetail() {
         {resumeLoading && (
           <div className="case-resume-loading">
             <div className="case-resume-spinner" />
-            <span>Loading case resume...</span>
+            <span>Chargement du résumé du dossier...</span>
           </div>
         )}
 
@@ -300,14 +300,14 @@ export default function MeetingDetail() {
                           <div>
                             <h4 className="case-resume-form-name">{form.form_name}</h4>
                             <span className="case-resume-form-date">
-                              Submitted {new Date(form.submitted_at).toLocaleDateString('fr-FR', {
+                              Soumis le {new Date(form.submitted_at).toLocaleDateString('fr-FR', {
                                 day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
                               })}
                             </span>
                           </div>
                         </div>
                         <div className="case-resume-form-toggle">
-                          <span className="case-resume-field-count">{form.fields.length} field{form.fields.length !== 1 ? 's' : ''}</span>
+                          <span className="case-resume-field-count">{form.fields.length} champ{form.fields.length !== 1 ? 's' : ''}</span>
                           {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </div>
                       </button>
@@ -341,7 +341,7 @@ export default function MeetingDetail() {
             ) : (
               <div className="case-resume-empty">
                 <FileText size={32} />
-                <p>No form submissions with RDV fields found for this patient.</p>
+                <p>Aucune soumission de formulaire avec champs RDV trouvée pour ce patient.</p>
               </div>
             )}
           </>

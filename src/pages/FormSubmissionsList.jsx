@@ -33,24 +33,24 @@ export default function FormSubmissionsList() {
     }
   }
 
-  if (loading) return <div className="loading">Loading submissions...</div>
+  if (loading) return <div className="loading">Chargement des soumissions...</div>
   if (error) return <div className="error">{error}</div>
-  if (!form) return <div className="error">Form not found</div>
+  if (!form) return <div className="error">Formulaire introuvable</div>
 
   return (
     <div className="submissions-list">
       <div className="submissions-header">
-        <h2>Submissions: {form.name}</h2>
+        <h2>Soumissions : {form.name}</h2>
         <button
           className="btn-secondary"
           onClick={() => navigate('/')}
         >
-          ← Back to Forms
+          ← Retour aux formulaires
         </button>
       </div>
 
       {submissions.length === 0 ? (
-        <p className="empty">No submissions yet for this form.</p>
+        <p className="empty">Aucune soumission pour ce formulaire.</p>
       ) : (
         <div className="submissions-table-wrapper">
           <table className="forms-table">
@@ -58,8 +58,8 @@ export default function FormSubmissionsList() {
               <tr>
                 <th>ID</th>
                 <th>Patient</th>
-                <th>Medical Case</th>
-                <th>Submitted</th>
+                <th>Dossier médical</th>
+                <th>Soumis le</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -75,7 +75,7 @@ export default function FormSubmissionsList() {
                       className="btn-small btn-secondary"
                       onClick={() => navigate(`/forms/${id}/submissions/${sub.id}`)}
                     >
-                      View
+                      Voir
                     </button>
                   </td>
                 </tr>

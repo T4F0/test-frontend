@@ -39,7 +39,7 @@ export default function ChatSidebar({
       </div>
       <div className="sidebar-content chat-messages">
         {messages.length === 0 && (
-          <div className="chat-empty">No messages yet. Start the conversation!</div>
+          <div className="chat-empty">Aucun message pour le moment. Commencez la conversation !</div>
         )}
         {messages.map((msg, i) => (
           <div
@@ -70,10 +70,10 @@ export default function ChatSidebar({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message..."
+          placeholder="Tapez un message..."
           autoComplete="off"
         />
-        <button type="submit" disabled={!input.trim()} title="Send">
+        <button type="submit" disabled={!input.trim()} title="Envoyer">
           <Send size={18} />
         </button>
       </form>

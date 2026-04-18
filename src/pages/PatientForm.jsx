@@ -3,9 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { createPatient, updatePatient, getPatient } from '../api/patientsApi'
 
 const GENDER_CHOICES = [
-  { value: 'M', label: 'Male' },
-  { value: 'F', label: 'Female' },
-  { value: 'O', label: 'Other' }
+  { value: 'M', label: 'Homme' },
+  { value: 'F', label: 'Femme' },
+  { value: 'O', label: 'Autre' }
 ]
 
 export default function PatientForm() {
@@ -35,7 +35,7 @@ export default function PatientForm() {
       const data = await getPatient(id)
       setPatient(data)
     } catch (err) {
-      setError('Failed to load patient')
+      setError('Échec du chargement du patient')
       console.error(err)
     } finally {
       setLoading(false)
@@ -61,9 +61,9 @@ export default function PatientForm() {
         const fieldErrors = Object.entries(errorData)
           .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
           .join('\n')
-        setError(fieldErrors || 'Failed to save patient')
+        setError(fieldErrors || 'Échec de l\'enregistrement du patient')
       } else {
-        setError(err.response?.data?.detail || 'Failed to save patient')
+        setError(err.response?.data?.detail || 'Échec de l\'enregistrement du patient')
       }
       console.error('Error details:', err.response?.data)
     } finally {
@@ -71,18 +71,18 @@ export default function PatientForm() {
     }
   }
 
-  if (loading) return <div className="loading">Loading patient...</div>
+  if (loading) return <div className="loading">Chargement du patient...</div>
 
   return (
     <div className="patient-form-container">
-      <h2>{isEdit ? 'Edit Patient' : 'Create New Patient'}</h2>
+      <h2>{isEdit ? 'Modifier le patient' : 'Créer un nouveau patient'}</h2>
 
       {error && <div className="error">{error}</div>}
 
       <form onSubmit={handleSubmit} className="patient-form">
         <div className="form-row">
           <div className="form-group">
-            <label>First Name *</label>
+            <label>Prénom *</label>
             <input
               type="text"
               value={patient.first_name}
@@ -94,7 +94,7 @@ export default function PatientForm() {
             />
           </div>
           <div className="form-group">
-            <label>Last Name *</label>
+            <label>Nom *</label>
             <input
               type="text"
               value={patient.last_name}
@@ -109,7 +109,7 @@ export default function PatientForm() {
 
         <div className="form-row">
           <div className="form-group">
-            <label>Birth Date *</label>
+            <label>Date de naissance *</label>
             <input
               type="date"
               value={patient.birth_date}
@@ -118,7 +118,7 @@ export default function PatientForm() {
             />
           </div>
           <div className="form-group">
-            <label>Gender *</label>
+            <label>Sexe *</label>
             <select
               value={patient.gender}
               onChange={(e) => setPatient({ ...patient, gender: e.target.value })}
@@ -133,25 +133,25 @@ export default function PatientForm() {
         </div>
 
         <div className="form-group">
-          <label>Anonymized Code</label>
+          <label>Code anonymisé</label>
           <input
             type="text"
             value={patient.anonymized_code}
             onChange={(e) => setPatient({ ...patient, anonymized_code: e.target.value })}
-            placeholder="Optional anonymized identifier"
+            placeholder="Identifiant anonymisé optionnel"
           />
         </div>
 
         <div className="form-actions">
           <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving...' : isEdit ? 'Update Patient' : 'Create Patient'}
+            {saving ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer le patient'}
           </button>
           <button 
             type="button" 
             className="btn-secondary" 
             onClick={() => navigate('/patients')}
           >
-            Cancel
+            Annuler
           </button>
         </div>
       </form>

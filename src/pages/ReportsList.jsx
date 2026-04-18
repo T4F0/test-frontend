@@ -22,7 +22,7 @@ export default function ReportsList() {
       setReports(Array.isArray(data) ? data : [])
       setError(null)
     } catch (err) {
-      setError('Failed to load reports')
+      setError('Échec du chargement des rapports')
       console.error(err)
     } finally {
       setLoading(false)
@@ -34,23 +34,23 @@ export default function ReportsList() {
       setDownloading(id)
       await downloadReportPdf(id)
     } catch (err) {
-      setError('Download failed')
+      setError('Échec du téléchargement')
     } finally {
       setDownloading(null)
     }
   }
 
-  if (loading && reports.length === 0) return <div className="loading">Loading reports...</div>
+  if (loading && reports.length === 0) return <div className="loading">Chargement des rapports...</div>
   if (error && reports.length === 0) return <div className="error">{error}</div>
 
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>RCP Reports</h1>
+        <h1>Rapports RCP</h1>
       </div>
       {error && <div className="error">{error}</div>}
       {reports.length === 0 ? (
-        <p className="empty">No reports.</p>
+        <p className="empty">Aucun rapport.</p>
       ) : (
         <table className="forms-table">
           <thead>
@@ -71,7 +71,7 @@ export default function ReportsList() {
                     disabled={downloading === r.id}
                     onClick={() => handleDownload(r.id)}
                   >
-                    {downloading === r.id ? 'Downloading…' : 'Download PDF'}
+                    {downloading === r.id ? 'Téléchargement…' : 'Télécharger PDF'}
                   </button>
                 </td>
               </tr>

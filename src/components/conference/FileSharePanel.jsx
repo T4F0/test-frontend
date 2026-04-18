@@ -97,7 +97,7 @@ export default function FileSharePanel({
       <div className="sidebar-header">
         <h3>
           <Paperclip size={18} />
-          Files
+          Fichiers
         </h3>
         <button className="sidebar-close" onClick={onToggle}>×</button>
       </div>
@@ -111,7 +111,7 @@ export default function FileSharePanel({
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload size={24} />
-          <p>{isUploading ? 'Uploading...' : 'Drag & drop files or click to upload'}</p>
+          <p>{isUploading ? 'Téléchargement...' : 'Glissez-déposez des fichiers ou cliquez pour télécharger'}</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -122,23 +122,23 @@ export default function FileSharePanel({
         </div>
 
         <div className="file-section">
-          <div className="file-section-title">Medical case attachments</div>
+          <div className="file-section-title">Pièces jointes du dossier médical</div>
           <div className="file-list">
-            {medicalCaseFiles.length === 0 && <p className="no-files">No case attachments available</p>}
+            {medicalCaseFiles.length === 0 && <p className="no-files">Aucune pièce jointe disponible pour ce dossier</p>}
             {medicalCaseFiles.map((file) => (
               <div key={file.id} className="file-item">
                 <div className="file-icon">{getFileIcon(file.fileType)}</div>
                 <div className="file-info">
                   <span className="file-name" title={file.name}>{file.name}</span>
-                  <span className="file-meta">{file.fileType || 'Unknown type'} · {file.uploadedByName}</span>
+                  <span className="file-meta">{file.fileType || 'Type inconnu'} · {file.uploadedByName}</span>
                 </div>
                 <div className="file-actions-inline">
                   {isPreviewable(file) && (
-                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Preview">
+                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Aperçu">
                       <Eye size={16} />
                     </button>
                   )}
-                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Download">
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Télécharger">
                     <Download size={16} />
                   </a>
                 </div>
@@ -148,9 +148,9 @@ export default function FileSharePanel({
         </div>
 
         <div className="file-section">
-          <div className="file-section-title">Files shared during meeting</div>
+          <div className="file-section-title">Fichiers partagés pendant la réunion</div>
           <div className="file-list">
-            {conferenceFiles.length === 0 && <p className="no-files">No files shared yet</p>}
+            {conferenceFiles.length === 0 && <p className="no-files">Aucun fichier partagé pour le moment</p>}
             {conferenceFiles.map((file) => (
               <div key={file.id} className="file-item">
                 <div className="file-icon">{getFileIcon(file.fileType)}</div>
@@ -160,18 +160,18 @@ export default function FileSharePanel({
                 </div>
                 <div className="file-actions-inline">
                   {isPreviewable(file) && (
-                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Preview">
+                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Aperçu">
                       <Eye size={16} />
                     </button>
                   )}
                   <button 
                     className="file-action-btn" 
                     onClick={() => onPromote(file.originalId)} 
-                    title="Add to Medical Case"
+                    title="Ajouter au dossier médical"
                   >
                     <Save size={16} />
                   </button>
-                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Download">
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Télécharger">
                     <Download size={16} />
                   </a>
                 </div>

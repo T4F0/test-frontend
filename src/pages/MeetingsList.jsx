@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getMeetings, deleteMeeting } from '../api/meetingsApi'
 import { useAuth } from '../context/AuthContext'
 
-const STATUS_LABELS = { PLANNED: 'Planned', LIVE: 'Live', FINISHED: 'Finished' }
+const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 
 export default function MeetingsList() {
   const [meetings, setMeetings] = useState([])
@@ -28,7 +28,7 @@ export default function MeetingsList() {
       setMeetings(Array.isArray(data) ? data : [])
       setError(null)
     } catch (err) {
-      setError('Failed to load meetings')
+      setError('Échec du chargement des réunions')
       console.error(err)
     } finally {
       setLoading(false)
@@ -36,48 +36,48 @@ export default function MeetingsList() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this meeting?')) return
+    if (!window.confirm('Supprimer cette réunion ?')) return
     try {
       await deleteMeeting(id)
       setMeetings(meetings.filter((m) => m.id !== id))
     } catch (err) {
-      setError('Failed to delete meeting')
+      setError('Échec de la suppression de la réunion')
     }
   }
 
-  if (loading) return <div className="loading">Loading meetings...</div>
+  if (loading) return <div className="loading">Chargement des réunions...</div>
 
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>Meetings</h1>
+        <h1>Réunions</h1>
         <div className="list-header-actions">
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="filter-select"
           >
-            <option value="">All statuses</option>
-            <option value="PLANNED">Planned</option>
-            <option value="LIVE">Live</option>
-            <option value="FINISHED">Finished</option>
+            <option value="">Tous les statuts</option>
+            <option value="PLANNED">Planifiée</option>
+            <option value="LIVE">En cours</option>
+            <option value="FINISHED">Terminée</option>
           </select>
           <button className="btn-primary" onClick={() => navigate('/meetings/new')}>
-            + New Meeting
+            + Nouvelle réunion
           </button>
         </div>
       </div>
       {error && <div className="error">{error}</div>}
       {meetings.length === 0 ? (
-        <p className="empty">No meetings found.</p>
+        <p className="empty">Aucune réunion trouvée.</p>
       ) : (
         <table className="forms-table">
           <thead>
             <tr>
               <th>Date</th>
-              <th>Medical case</th>
-              <th>Status</th>
-              <th>Specialty</th>
+              <th>Dossier médical</th>
+              <th>Statut</th>
+              <th>Spécialité</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -89,9 +89,9 @@ export default function MeetingsList() {
                 <td><span className="badge">{STATUS_LABELS[m.status] ?? m.status}</span></td>
                 <td>{m.specialty || '—'}</td>
                 <td className="actions">
-                  <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>View</button>
-                  <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Edit</button>
-                  <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>Delete</button>
+                  <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Voir</button>
+                  <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
+                  <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>Supprimer</button>
                 </td>
               </tr>
             ))}

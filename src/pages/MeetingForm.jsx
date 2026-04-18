@@ -57,10 +57,10 @@ export default function MeetingForm() {
   }, [patientSearch])
 
   const formatUserName = (candidate) => {
-    if (!candidate) return 'Unknown user'
+    if (!candidate) return 'Utilisateur inconnu'
 
     const fullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim()
-    return fullName || candidate.username || candidate.email || 'Unknown user'
+    return fullName || candidate.username || candidate.email || 'Utilisateur inconnu'
   }
 
   const formatUserMeta = (candidate) => {
@@ -109,7 +109,7 @@ export default function MeetingForm() {
       const c = casesById.get(caseId);
       if (!c) return null;
       // Find patient name for the case
-      const patient = patients.find(p => p.id === c.patient) || { first_name: 'Patient', last_name: 'Unknown' };
+      const patient = patients.find(p => p.id === c.patient) || { first_name: 'Patient', last_name: 'Inconnu' };
       return { ...c, patientName: `${patient.first_name} ${patient.last_name}` };
     }).filter(Boolean),
     [form.medical_cases, casesById, patients],
@@ -189,7 +189,7 @@ export default function MeetingForm() {
         participants: (data.participants || []).map((participant) => participant?.id || participant),
       })
     } catch (err) {
-      setError('Failed to load meeting')
+      setError('Échec du chargement de la réunion')
       console.error(err)
     } finally {
       setLoading(false)
@@ -209,7 +209,7 @@ export default function MeetingForm() {
   const handleAddCase = () => {
     if (!selectedCaseId) return
     if (form.medical_cases.includes(selectedCaseId)) {
-      alert('This case is already added to the meeting.')
+      alert('Ce dossier est déjà ajouté à la réunion.')
       return
     }
     setForm(f => ({ ...f, medical_cases: [...f.medical_cases, selectedCaseId] }))
@@ -236,7 +236,7 @@ export default function MeetingForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (form.medical_cases.length === 0) {
-      setError('Please add at least one medical case to the meeting.')
+      setError('Veuillez ajouter au moins un dossier médical à la réunion.')
       return
     }
     try {
@@ -257,33 +257,33 @@ export default function MeetingForm() {
         navigate(`/meetings/${created.id}`)
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save meeting')
+      setError(err.response?.data?.detail || 'Échec de l\'enregistrement de la réunion')
       console.error(err)
     } finally {
       setSaving(false)
     }
   }
 
-  if (loading) return <div className="loading">Loading meeting...</div>
+  if (loading) return <div className="loading">Chargement de la réunion...</div>
 
   return (
     <div className="form-details">
-      <h2>{isEdit ? 'Edit Meeting' : 'New Meeting'}</h2>
+      <h2>{isEdit ? 'Modifier la réunion' : 'Nouvelle réunion'}</h2>
       {error && <div className="error">{error}</div>}
       <form onSubmit={handleSubmit} className="submission-form">
         
         {/* Medical Cases Selection Area */}
         <div className="form-section-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Medical Cases Selection</h3>
+          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Sélection des dossiers médicaux</h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
             <SearchableSelect 
-              label="Search Patient"
-              placeholder="Type to search..."
+              label="Rechercher un patient"
+              placeholder="Tapez pour rechercher..."
               options={patients.map(p => ({
                 value: p.id,
                 label: `${p.first_name} ${p.last_name}`,
-                subLabel: p.anonymized_code ? `Code: ${p.anonymized_code}` : `DOB: ${new Date(p.birth_date).toLocaleDateString()}`
+                subLabel: p.anonymized_code ? `Code : ${p.anonymized_code}` : `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
               }))}
               value={selectedPatientId}
               onChange={handlePatientChange}
@@ -291,17 +291,17 @@ export default function MeetingForm() {
               loading={patientsLoading}
             />
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Select Case</label>
+              <label>Sélectionner le dossier</label>
               <select
                 value={selectedCaseId}
                 onChange={(e) => setSelectedCaseId(e.target.value)}
                 disabled={!selectedPatientId}
                 style={{ height: '42px' }}
               >
-                <option value="">{selectedPatientId ? 'Pick a case...' : 'Search patient first'}</option>
+                <option value="">{selectedPatientId ? 'Choisir un dossier...' : 'Rechercher le patient d\'abord'}</option>
                 {filteredCases.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name || `Case ${c.id.slice(0, 8)}...`} ({c.status})
+                    {c.name || `Dossier ${c.id.slice(0, 8)}...`} ({c.status})
                   </option>
                 ))}
               </select>
@@ -313,19 +313,19 @@ export default function MeetingForm() {
               disabled={!selectedCaseId}
               style={{ height: '42px', padding: '0 1.5rem' }}
             >
-              Add Case
+              Ajouter le dossier
             </button>
           </div>
 
           <div className="selected-cases-list">
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>Selected Cases ({form.medical_cases.length})</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>Dossiers sélectionnés ({form.medical_cases.length})</label>
             {selectedCases.length > 0 ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
                 {selectedCases.map(c => (
                   <div key={c.id} className="case-selection-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #e2e8f0', padding: '0.5rem 0.75rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                     <div>
                       <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{c.patientName}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{c.name || 'Untitled Case'}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{c.name || 'Dossier sans titre'}</div>
                     </div>
                     <button 
                       type="button" 
@@ -339,20 +339,20 @@ export default function MeetingForm() {
               </div>
             ) : (
               <div style={{ padding: '1rem', textAlign: 'center', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
-                No cases added yet. Use the search above to add medical cases to this meeting.
+                Aucun dossier ajouté pour le moment. Utilisez la recherche ci-dessus pour ajouter des dossiers médicaux à cette réunion.
               </div>
             )}
           </div>
         </div>
 
         <div className="form-group">
-          <label>Coordinator</label>
+          <label>Coordinateur</label>
           <div className="readonly-field">
             <div className="readonly-field-title">{formatUserName(coordinatorUser || user)}</div>
             <div className="readonly-field-meta">
               {isEdit
-                ? 'Coordinator assigned to this meeting'
-                : 'Automatically set to the connected user creating this meeting'}
+                ? 'Coordinateur assigné à cette réunion'
+                : 'Défini automatiquement sur l\'utilisateur connecté créant cette réunion'}
               {formatUserMeta(coordinatorUser || user) ? ` • ${formatUserMeta(coordinatorUser || user)}` : ''}
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function MeetingForm() {
             />
           </div>
           <div className="form-group">
-            <label>Time</label>
+            <label>Heure</label>
             <input
               type="time"
               value={form.scheduled_time}
@@ -377,14 +377,14 @@ export default function MeetingForm() {
           </div>
         </div>
         <div className="form-group">
-          <label>Meeting link</label>
+          <label>Lien de la réunion</label>
           <div className="readonly-field">
-            <div className="readonly-field-title">{form.meeting_link || 'Generated automatically after saving the meeting'}</div>
-            <div className="readonly-field-meta">The join link is permanent and managed by the platform.</div>
+            <div className="readonly-field-title">{form.meeting_link || 'Généré automatiquement après l\'enregistrement de la réunion'}</div>
+            <div className="readonly-field-meta">Le lien de participation est permanent et géré par la plateforme.</div>
           </div>
         </div>
         <div className="form-group">
-          <label>Specialty</label>
+          <label>Spécialité</label>
           <input
             type="text"
             value={form.specialty}
@@ -396,8 +396,8 @@ export default function MeetingForm() {
           <div className="participant-picker">
             <div className="participant-picker-toolbar">
               <div className="participant-picker-summary">
-                <span>{form.participants.length} selected</span>
-                <span>{filteredUsers.length} shown</span>
+                <span>{form.participants.length} sélectionnés</span>
+                <span>{filteredUsers.length} affichés</span>
               </div>
               {!!form.participants.length && (
                 <button
@@ -405,7 +405,7 @@ export default function MeetingForm() {
                   className="btn-small btn-secondary"
                   onClick={() => handleChange('participants', [])}
                 >
-                  Clear selection
+                  Effacer la sélection
                 </button>
               )}
             </div>
@@ -415,11 +415,11 @@ export default function MeetingForm() {
               value={participantSearch}
               onChange={(e) => setParticipantSearch(e.target.value)}
               className="participant-search-input"
-              placeholder="Search by name, email, role, specialty..."
+              placeholder="Rechercher par nom, email, rôle, spécialité..."
             />
 
             <div className="selected-participants-panel">
-              <div className="selected-participants-header">Selected participants</div>
+              <div className="selected-participants-header">Participants sélectionnés</div>
               {selectedParticipants.length ? (
                 <div className="selected-participants-list">
                   {selectedParticipants.map((participant) => (
@@ -428,7 +428,7 @@ export default function MeetingForm() {
                       type="button"
                       className="selected-participant-chip"
                       onClick={() => handleParticipantToggle(participant.id)}
-                      title={`Remove ${formatUserName(participant)}`}
+                      title={`Retirer ${formatUserName(participant)}`}
                     >
                       <span className="selected-participant-avatar">{getInitials(participant)}</span>
                       <span className="selected-participant-name">{formatUserName(participant)}</span>
@@ -437,11 +437,11 @@ export default function MeetingForm() {
                   ))}
                 </div>
               ) : (
-                <p className="empty-inline">No participants selected yet.</p>
+                <p className="empty-inline">Aucun participant sélectionné pour le moment.</p>
               )}
             </div>
 
-            <div className="participant-results" role="listbox" aria-label="Participants list">
+            <div className="participant-results" role="listbox" aria-label="Liste des participants">
               {filteredUsers.length ? (
                 filteredUsers.map((candidate) => {
                   const isSelected = selectedParticipantIds.has(candidate.id)
@@ -457,22 +457,22 @@ export default function MeetingForm() {
                       <span className="participant-option-text">
                         <span className="participant-option-name">{formatUserName(candidate)}</span>
                         <span className="participant-option-meta">
-                          {formatUserMeta(candidate) || candidate.username || 'No additional details'}
+                          {formatUserMeta(candidate) || candidate.username || 'Pas de détails supplémentaires'}
                         </span>
                       </span>
-                      <span className="participant-option-state">{isSelected ? 'Selected' : 'Add'}</span>
+                      <span className="participant-option-state">{isSelected ? 'Sélectionné' : 'Ajouter'}</span>
                     </button>
                   )
                 })
               ) : (
-                <p className="empty-inline">No users match your search.</p>
+                <p className="empty-inline">Aucun utilisateur ne correspond à votre recherche.</p>
               )}
             </div>
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
-          <button type="button" onClick={() => navigate(-1)}>Cancel</button>
+          <button type="submit" disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+          <button type="button" onClick={() => navigate(-1)}>Annuler</button>
         </div>
       </form>
     </div>

@@ -114,7 +114,7 @@ export default function FormSubmission() {
       initFields(data.sections)
       setFormData(initialData)
     } catch (err) {
-      setError('Failed to load form')
+      setError('Échec du chargement du formulaire')
       console.error(err)
     } finally {
       setLoading(false)
@@ -130,22 +130,22 @@ export default function FormSubmission() {
     try {
       setSubmitting(true)
       if (!selectedPatient || !selectedCase) {
-        throw new Error('Please select both a patient and a medical case.')
+        throw new Error('Veuillez sélectionner un patient et un dossier médical.')
       }
       await submitForm(id, formData, selectedPatient, selectedCase)
-      alert('Form submitted successfully!')
+      alert('Formulaire soumis avec succès !')
       navigate('/')
     } catch (err) {
-      setError('Failed to submit form')
+      setError('Échec de la soumission du formulaire')
       console.error(err)
     } finally {
       setSubmitting(false)
     }
   }
 
-  if (loading) return <div className="loading">Loading form...</div>
+  if (loading) return <div className="loading">Chargement du formulaire...</div>
   if (error) return <div className="error">{error}</div>
-  if (!form) return <div className="error">Form not found</div>
+  if (!form) return <div className="error">Formulaire introuvable</div>
 
   return (
     <div className="form-submission">
@@ -155,11 +155,11 @@ export default function FormSubmission() {
       <form onSubmit={handleSubmit} className="submission-form">
         <SearchableSelect
           label="Patient"
-          placeholder="Search patient by name..."
+          placeholder="Rechercher un patient par nom..."
           options={patients.map(p => ({
             value: p.id,
             label: `${p.first_name} ${p.last_name}`,
-            subLabel: `DOB: ${new Date(p.birth_date).toLocaleDateString()}`
+            subLabel: `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
           }))}
           value={selectedPatient}
           onChange={setSelectedPatient}
@@ -170,23 +170,23 @@ export default function FormSubmission() {
 
         {selectedPatient && (
           <div className="patient-selector" style={{ borderColor: 'var(--secondary)' }}>
-            <label htmlFor="case-select">Select Medical Case</label>
+            <label htmlFor="case-select">Sélectionner un dossier médical</label>
             <select
               id="case-select"
               value={selectedCase}
               onChange={(e) => setSelectedCase(e.target.value)}
               required
             >
-              <option value="">-- Select Case --</option>
+              <option value="">-- Sélectionner un dossier --</option>
               {medicalCases.map(mc => (
                 <option key={mc.id} value={mc.id}>
-                  {mc.name || `Case ${String(mc.id).slice(0, 8)}...`} — {mc.status}
+                  {mc.name || `Dossier ${String(mc.id).slice(0, 8)}...`} — {mc.status}
                 </option>
               ))}
             </select>
             {medicalCases.length === 0 && (
               <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginTop: '0.5rem' }}>
-                No medical cases found for this patient.
+                Aucun dossier médical trouvé pour ce patient.
               </p>
             )}
           </div>
@@ -203,10 +203,10 @@ export default function FormSubmission() {
 
         <div className="form-actions">
           <button type="submit" disabled={submitting}>
-            {submitting ? 'Filling...' : 'Fill Form'}
+            {submitting ? 'Envoi en cours...' : 'Soumettre le formulaire'}
           </button>
           <button type="button" onClick={() => navigate('/')}>
-            Cancel
+            Annuler
           </button>
         </div>
       </form>

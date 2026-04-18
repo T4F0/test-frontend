@@ -4,9 +4,9 @@ import { getUsers, deleteUser, getPendingRegistrations, approveRegistration, rej
 import { useAuth } from '../context/AuthContext'
 
 const ROLE_LABELS = {
-  'MEDECIN': 'Medecin',
-  'COORDINATEUR': 'Coordinator',
-  'ADMIN': 'Administrator'
+  'MEDECIN': 'Médecin',
+  'COORDINATEUR': 'Coordinateur',
+  'ADMIN': 'Administrateur'
 }
 
 export default function UserManagement() {
@@ -33,7 +33,7 @@ export default function UserManagement() {
       setPendingUsers(Array.isArray(pendingData) ? pendingData : (pendingData?.results || []))
       setError(null)
     } catch (err) {
-      setError('Failed to load users data')
+      setError('Échec du chargement des données utilisateurs')
       console.error(err)
     } finally {
       setLoading(false)
@@ -41,12 +41,12 @@ export default function UserManagement() {
   }
 
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this user?')) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
         await deleteUser(id)
         setUsers(users.filter(u => u.id !== id))
       } catch (err) {
-        setError('Failed to delete user')
+        setError('Échec de la suppression de l\'utilisateur')
       }
     }
   }
@@ -56,29 +56,29 @@ export default function UserManagement() {
       await approveRegistration(id)
       loadData()
     } catch (err) {
-      setError('Failed to approve user')
+      setError('Échec de l\'approbation de l\'utilisateur')
     }
   }
 
   const handleReject = async (id) => {
-    if (confirm('Are you sure you want to reject this registration?')) {
+    if (confirm('Êtes-vous sûr de vouloir rejeter cette inscription ?')) {
       try {
         await rejectRegistration(id)
         loadData()
       } catch (err) {
-        setError('Failed to reject user')
+        setError('Échec du rejet de l\'utilisateur')
       }
     }
   }
 
-  if (loading) return <div className="loading">Loading users...</div>
+  if (loading) return <div className="loading">Chargement des utilisateurs...</div>
 
   return (
     <div className="users-management">
       <div className="users-header">
-        <h2>User Management</h2>
+        <h2>Gestion des utilisateurs</h2>
         <button onClick={() => navigate('/users/new')} className="btn-primary">
-          + Add User
+          + Ajouter un utilisateur
         </button>
       </div>
 
@@ -88,14 +88,14 @@ export default function UserManagement() {
           onClick={() => setActiveTab('active')}
           style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'active' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'active' ? 'bold' : 'normal' }}
         >
-          Active Users
+          Utilisateurs actifs
         </button>
         <button 
           className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
           onClick={() => setActiveTab('pending')}
           style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'pending' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'pending' ? 'bold' : 'normal' }}
         >
-          Pending Registrations {pendingUsers.length > 0 && `(${pendingUsers.length})`}
+          Inscriptions en attente {pendingUsers.length > 0 && `(${pendingUsers.length})`}
         </button>
       </div>
 
@@ -103,16 +103,16 @@ export default function UserManagement() {
 
       {activeTab === 'active' && (
         users.length === 0 ? (
-          <div className="empty">No users found</div>
+          <div className="empty">Aucun utilisateur trouvé</div>
         ) : (
           <table className="users-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th>Nom</th>
                 <th>Email</th>
-                <th>Role</th>
-                <th>Hospital</th>
-                <th>Specialty</th>
+                <th>Rôle</th>
+                <th>Hôpital</th>
+                <th>Spécialité</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -133,14 +133,14 @@ export default function UserManagement() {
                       onClick={() => navigate(`/users/${user.id}/edit`)}
                       className="btn-small"
                     >
-                      Edit
+                      Modifier
                     </button>
                     {currentUser?.role === 'ADMIN' && (
                       <button 
                         onClick={() => handleDelete(user.id)}
                         className="btn-small btn-danger"
                       >
-                        Delete
+                        Supprimer
                       </button>
                     )}
                   </td>
@@ -153,16 +153,16 @@ export default function UserManagement() {
 
       {activeTab === 'pending' && (
         pendingUsers.length === 0 ? (
-          <div className="empty">No pending registrations found</div>
+          <div className="empty">Aucune inscription en attente trouvée</div>
         ) : (
           <table className="users-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th>Nom</th>
                 <th>Email</th>
-                <th>Hospital</th>
-                <th>Specialty</th>
-                <th>Submitted</th>
+                <th>Hôpital</th>
+                <th>Spécialité</th>
+                <th>Soumis le</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -180,13 +180,13 @@ export default function UserManagement() {
                       className="btn-small"
                       style={{ backgroundColor: '#28a745', color: 'white', border: 'none' }}
                     >
-                      Approve
+                      Approuver
                     </button>
                     <button 
                       onClick={() => handleReject(user.id)}
                       className="btn-small btn-danger"
                     >
-                      Reject
+                      Rejeter
                     </button>
                   </td>
                 </tr>

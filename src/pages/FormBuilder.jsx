@@ -31,7 +31,7 @@ export default function FormBuilder() {
       const sectionsData = await getSections({ form: id })
       setSections(sectionsData)
     } catch (err) {
-      setError('Failed to load form')
+      setError('Échec du chargement du formulaire')
       console.error(err)
     } finally {
       setLoading(false)
@@ -52,10 +52,10 @@ export default function FormBuilder() {
       if (!isEdit) {
         navigate(`/forms/${savedForm.id}/edit`)
       } else {
-        alert('Form updated successfully')
+        alert('Formulaire mis à jour avec succès')
       }
     } catch (err) {
-      setError('Failed to save form')
+      setError('Échec de l\'enregistrement du formulaire')
       console.error(err)
     } finally {
       setSaving(false)
@@ -64,7 +64,7 @@ export default function FormBuilder() {
 
   const handleAddSection = async (parentId = null) => {
     if (!form.id) {
-      alert('Please save the form first')
+      alert('Veuillez d\'abord enregistrer le formulaire')
       return
     }
     try {
@@ -72,25 +72,25 @@ export default function FormBuilder() {
       const newSection = await createSection({
         form: form.id,
         parent: parentId,
-        name: parentId ? 'New Sub-section' : 'New Section',
+        name: parentId ? 'Nouvelle sous-section' : 'Nouvelle section',
         order: order
       })
       setSections([...sections, newSection])
     } catch (err) {
-      setError('Failed to create section')
+      setError('Échec de la création de la section')
     }
   }
 
-  if (loading) return <div className="loading">Loading form...</div>
+  if (loading) return <div className="loading">Chargement du formulaire...</div>
   if (error) return <div className="error">{error}</div>
 
   return (
     <div className="form-builder">
-      <h2>{isEdit ? 'Edit Form' : 'Create New Form'}</h2>
+      <h2>{isEdit ? 'Modifier le formulaire' : 'Créer un nouveau formulaire'}</h2>
 
       <form onSubmit={handleSaveForm} className="form-details">
         <div className="form-group">
-          <label>Form Name *</label>
+          <label>Nom du formulaire *</label>
           <input
             type="text"
             value={form.name}
@@ -109,7 +109,7 @@ export default function FormBuilder() {
         </div>
 
         <button type="submit" disabled={saving}>
-          {saving ? 'Saving...' : isEdit ? 'Update Form' : 'Create Form'}
+          {saving ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer le formulaire'}
         </button>
       </form>
 
@@ -117,11 +117,11 @@ export default function FormBuilder() {
         <div className="sections-container">
           <div className="sections-header">
             <h3>Sections</h3>
-            <button onClick={() => handleAddSection()} className="btn-secondary">+ Add Section</button>
+            <button onClick={() => handleAddSection()} className="btn-secondary">+ Ajouter une section</button>
           </div>
 
           {sections.length === 0 ? (
-            <p className="empty">No sections yet. Add one to get started.</p>
+            <p className="empty">Aucune section. Ajoutez-en une pour commencer.</p>
           ) : (
             <div className="sections-list">
               {sections.filter(s => !s.parent).sort((a,b) => a.order - b.order).map(section => (

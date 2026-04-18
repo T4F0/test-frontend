@@ -5,8 +5,8 @@ export default function SearchableSelect({
   value, 
   onChange, 
   onSearch, 
-  placeholder = "Search...", 
-  label = "Select",
+  placeholder = "Rechercher...", 
+  label = "Sélectionner",
   loading = false,
   error = null,
   required = false
@@ -65,8 +65,8 @@ export default function SearchableSelect({
 
       {isOpen && (
         <div className="searchable-select-dropdown">
-          {loading && <div className="dropdown-info">Loading...</div>}
-          {!loading && options.length === 0 && <div className="dropdown-info">No results found</div>}
+          {loading && <div className="dropdown-info">Chargement...</div>}
+          {!loading && options.length === 0 && <div className="dropdown-info">Aucun résultat trouvé</div>}
           {options.map(opt => (
             <div 
               key={opt.value} 

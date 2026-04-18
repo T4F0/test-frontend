@@ -23,37 +23,37 @@ export default function ConferenceControls({
         <button
           className={`control-btn ${isMuted ? 'active-danger' : ''}`}
           onClick={onToggleMute}
-          title={isMuted ? 'Unmute' : 'Mute'}
+          title={isMuted ? 'Activer le micro' : 'Désactiver le micro'}
         >
           {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-          <span className="control-label">{isMuted ? 'Unmute' : 'Mute'}</span>
+          <span className="control-label">{isMuted ? 'Activer micro' : 'Muet'}</span>
         </button>
 
         <button
           className={`control-btn ${isCameraOff ? 'active-danger' : ''}`}
           onClick={onToggleCamera}
-          title={isCameraOff ? 'Turn on camera' : 'Turn off camera'}
+          title={isCameraOff ? 'Activer la caméra' : 'Désactiver la caméra'}
         >
           {isCameraOff ? <VideoOff size={22} /> : <Video size={22} />}
-          <span className="control-label">{isCameraOff ? 'Start Video' : 'Stop Video'}</span>
+          <span className="control-label">{isCameraOff ? 'Vidéo' : 'Arrêter Vidéo'}</span>
         </button>
 
         <button
           className={`control-btn ${isScreenSharing ? 'active-primary' : ''}`}
           onClick={isScreenSharing ? onStopScreenShare : onStartScreenShare}
-          title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
+          title={isScreenSharing ? 'Arrêter le partage' : 'Partager l\'écran'}
         >
           {isScreenSharing ? <MonitorOff size={22} /> : <Monitor size={22} />}
-          <span className="control-label">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
+          <span className="control-label">{isScreenSharing ? 'Arrêter partage' : 'Partager écran'}</span>
         </button>
 
         <button
           className={`control-btn ${isHandRaised ? 'active-warning' : ''}`}
           onClick={onRaiseHand}
-          title={isHandRaised ? 'Lower hand' : 'Raise hand'}
+          title={isHandRaised ? 'Baisser la main' : 'Lever la main'}
         >
           <Hand size={22} />
-          <span className="control-label">{isHandRaised ? 'Lower Hand' : 'Raise Hand'}</span>
+          <span className="control-label">{isHandRaised ? 'Baisser la main' : 'Lever la main'}</span>
         </button>
       </div>
 
@@ -61,20 +61,20 @@ export default function ConferenceControls({
         <button
           className="control-btn leave-btn"
           onClick={onLeave}
-          title="Leave meeting"
+          title="Quitter la réunion"
         >
           <LogOut size={22} />
-          <span className="control-label">Leave</span>
+          <span className="control-label">Quitter</span>
         </button>
 
         {isHost && (
           <button
             className="control-btn end-btn"
             onClick={onEndMeeting}
-            title="End meeting for all"
+            title="Terminer la réunion pour tous"
           >
             <PhoneOff size={22} />
-            <span className="control-label">End Meeting</span>
+            <span className="control-label">Finir réunion</span>
           </button>
         )}
       </div>

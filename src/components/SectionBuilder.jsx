@@ -24,19 +24,19 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
       setIsEditing(false)
     } catch (err) {
       console.error('Section update error:', err.response?.data || err)
-      alert('Failed to save section: ' + (err.response?.data?.name?.[0] || err.message))
+      alert('Échec de l\'enregistrement de la section : ' + (err.response?.data?.name?.[0] || err.message))
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async () => {
-    if (confirm('Delete this section and all its contents?')) {
+    if (confirm('Supprimer cette section et tout son contenu ?')) {
       try {
         await deleteSection(section.id)
         onDelete(section.id)
       } catch (err) {
-        alert('Failed to delete section')
+        alert('Échec de la suppression de la section')
       }
     }
   }
@@ -45,13 +45,13 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
     try {
       const newField = await createField({
         section: section.id,
-        name: 'New Field',
+        name: 'Nouveau champ',
         field_type: 'text',
         order: fields.length
       })
       setFields([...fields, newField])
     } catch (err) {
-      alert('Failed to create field')
+      alert('Échec de la création du champ')
     }
   }
 
@@ -61,12 +61,12 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
       const newSection = await createSection({
         form: section.form,
         parent: section.id,
-        name: 'New Sub-section',
+        name: 'Nouvelle sous-section',
         order: order
       })
       onAddSection(newSection)
     } catch (err) {
-      alert('Failed to create sub-section')
+      alert('Échec de la création de la sous-section')
     }
   }
 
@@ -81,17 +81,17 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
               onChange={(e) => setName(e.target.value)}
               autoFocus
             />
-            <button onClick={handleSaveSection} disabled={saving}>Save</button>
-            <button onClick={() => setIsEditing(false)}>Cancel</button>
+            <button onClick={handleSaveSection} disabled={saving}>Enregistrer</button>
+            <button onClick={() => setIsEditing(false)}>Annuler</button>
           </div>
         ) : (
           <>
             <h4>{name}</h4>
             <div className="section-actions">
-              <button onClick={() => setIsEditing(true)} className="btn-small">Edit</button>
-              <button onClick={handleDelete} className="btn-small btn-danger">Delete</button>
-              <button onClick={handleAddField} className="btn-small btn-secondary">+ Field</button>
-              <button onClick={handleAddSubSection} className="btn-small btn-primary">+ Sub-section</button>
+              <button onClick={() => setIsEditing(true)} className="btn-small">Modifier</button>
+              <button onClick={handleDelete} className="btn-small btn-danger">Supprimer</button>
+              <button onClick={handleAddField} className="btn-small btn-secondary">+ Champ</button>
+              <button onClick={handleAddSubSection} className="btn-small btn-primary">+ Sous-section</button>
             </div>
           </>
         )}
@@ -126,7 +126,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
         )}
 
         {fields.length === 0 && childSections.length === 0 && (
-          <p className="empty-small">No fields or sub-sections.</p>
+          <p className="empty-small">Aucun champ ou sous-section.</p>
         )}
       </div>
     </div>

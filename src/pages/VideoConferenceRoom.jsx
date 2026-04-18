@@ -133,7 +133,7 @@ export default function VideoConferenceRoom() {
       const me = data.participants?.find((participant) => participant.user === user?.id)
       setIsHost(me?.role === 'HOST')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load conference')
+      setError(err.response?.data?.detail || 'Échec du chargement de la conférence')
     } finally {
       setLoading(false)
     }
@@ -145,7 +145,7 @@ export default function VideoConferenceRoom() {
       await connect()
       setJoined(true)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to join conference')
+      setError(err.response?.data?.detail || 'Échec de l\'accès à la conférence')
     }
   }
 
@@ -154,7 +154,7 @@ export default function VideoConferenceRoom() {
       const updated = await startConference(conference.id)
       setConference(updated)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to start meeting')
+      setError(err.response?.data?.detail || 'Échec du démarrage de la réunion')
     }
   }
 
@@ -170,13 +170,13 @@ export default function VideoConferenceRoom() {
   }
 
   const handleEndMeeting = async () => {
-    if (!window.confirm('End this meeting for all participants?')) return
+    if (!window.confirm('Terminer cette réunion pour tous les participants ?')) return
     try {
       await endConference(conference.id)
       disconnect()
       navigate('/meetings')
     } catch (err) {
-      setError('Failed to end meeting')
+      setError('Échec de la fermeture de la réunion')
     }
   }
 
@@ -196,7 +196,7 @@ export default function VideoConferenceRoom() {
   }
 
   const handleRemoveParticipant = async (userId) => {
-    if (!window.confirm('Remove this participant?')) return
+    if (!window.confirm('Supprimer ce participant ?')) return
     try {
       await removeParticipant(conference.id, userId)
       loadConference()
@@ -205,15 +205,15 @@ export default function VideoConferenceRoom() {
     }
   }
   const handlePromoteAttachment = async (attachmentId) => {
-    if (!activeCaseId) return alert('Please select a medical case correctly.');
+    if (!activeCaseId) return alert('Veuillez sélectionner un dossier médical correctement.');
     try {
       await promoteConferenceAttachment(conference.id, attachmentId, activeCaseId)
       // Reload conference to show the new attachment in the "Medical case attachments" section
       loadConference()
-      alert('File has been successfully added to the medical case.')
+      alert('Le fichier a été ajouté avec succès au dossier médical.')
     } catch (err) {
       console.error('Promotion failed:', err)
-      alert('Failed to add file to medical case: ' + (err.response?.data?.detail || err.message))
+      alert('Échec de l\'ajout du fichier au dossier médical : ' + (err.response?.data?.detail || err.message))
     }
   }
 
@@ -232,7 +232,7 @@ export default function VideoConferenceRoom() {
     return (
       <div className="conference-loading">
         <div className="loading-spinner" />
-        <p>Loading conference...</p>
+        <p>Chargement de la conférence...</p>
       </div>
     )
   }
@@ -240,9 +240,9 @@ export default function VideoConferenceRoom() {
   if (error && !conference) {
     return (
       <div className="conference-error">
-        <h2>Unable to Join</h2>
+        <h2>Impossible de rejoindre</h2>
         <p>{error}</p>
-        <button onClick={() => navigate('/meetings')}>Back to Meetings</button>
+        <button onClick={() => navigate('/meetings')}>Retour aux réunions</button>
       </div>
     )
   }
@@ -250,9 +250,9 @@ export default function VideoConferenceRoom() {
   if (conference?.status === 'ENDED') {
     return (
       <div className="conference-ended">
-        <h2>Meeting Has Ended</h2>
-        <p>This conference session has concluded.</p>
-        <button onClick={() => navigate('/meetings')}>Back to Meetings</button>
+        <h2>La réunion est terminée</h2>
+        <p>Cette session de conférence est terminée.</p>
+        <button onClick={() => navigate('/meetings')}>Retour aux réunions</button>
       </div>
     )
   }
@@ -261,32 +261,32 @@ export default function VideoConferenceRoom() {
     return (
       <div className="conference-lobby">
         <div className="lobby-card">
-          <h2>{conference?.meeting_title || 'Join Conference'}</h2>
-          <p className="lobby-room">Room: <strong>{roomId}</strong></p>
+          <h2>{conference?.meeting_title || 'Rejoindre la conférence'}</h2>
+          <p className="lobby-room">Salle : <strong>{roomId}</strong></p>
           {conference?.meeting_date && (
             <p className="lobby-date">
-              Scheduled: {new Date(conference.meeting_date).toLocaleString()}
+              Planifiée : {new Date(conference.meeting_date).toLocaleString()}
             </p>
           )}
           <p className="lobby-status">
-            Status: <span className={`status-${conference?.status?.toLowerCase()}`}>{conference?.status}</span>
+            Statut : <span className={`status-${conference?.status?.toLowerCase()}`}>{conference?.status}</span>
           </p>
           <div className="lobby-participants">
             <Users size={16} />
-            <span>{conference?.participants?.length || 0} participant(s) invited</span>
+            <span>{conference?.participants?.length || 0} participant(s) invité(s)</span>
           </div>
           {error && <div className="lobby-error">{error}</div>}
           <div className="lobby-actions">
             <button className="btn-join" onClick={handleJoin}>
-              Join Meeting
+              Rejoindre la réunion
             </button>
             {isHost && conference?.status === 'WAITING' && (
               <button className="btn-start" onClick={handleStartMeeting}>
-                Start Meeting
+                Démarrer la réunion
               </button>
             )}
             <button className="btn-back" onClick={() => navigate('/meetings')}>
-              Back to Meetings
+              Retour aux réunions
             </button>
           </div>
         </div>
@@ -298,7 +298,7 @@ export default function VideoConferenceRoom() {
     <div className="conference-room">
       <div className="conference-header">
         <div className="header-left">
-          <h2 className="conference-title">{conference?.meeting_title || 'RCP Conference'}</h2>
+          <h2 className="conference-title">{conference?.meeting_title || 'Conférence RCP'}</h2>
           {conference?.medical_cases?.length > 0 && (
             <div className="header-case-selector">
               <ClipboardList size={16} />
@@ -324,7 +324,7 @@ export default function VideoConferenceRoom() {
             </div>
           )}
           <span className={`status-indicator status-${conference?.status?.toLowerCase()}`}>
-            {conference?.status === 'ACTIVE' ? '● Live' : conference?.status}
+            {conference?.status === 'ACTIVE' ? '● En direct' : conference?.status}
           </span>
         </div>
         <div className="header-right">
@@ -347,21 +347,21 @@ export default function VideoConferenceRoom() {
           <button
             className={`toolbar-btn ${showFiles ? 'active' : ''}`}
             onClick={() => { setShowFiles(!showFiles); setShowParticipants(false); setShowChat(false); setShowNotes(false); setShowResume(false) }}
-            title="Files"
+            title="Fichiers"
           >
             <Paperclip size={18} />
           </button>
           <button
             className={`toolbar-btn ${showNotes ? 'active' : ''}`}
             onClick={() => { setShowNotes(!showNotes); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowResume(false) }}
-            title="Meeting Notes"
+            title="Notes de réunion"
           >
             <FileText size={18} />
           </button>
           <button
             className={`toolbar-btn ${showResume ? 'active' : ''}`}
             onClick={() => { setShowResume(!showResume); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowNotes(false) }}
-            title="Case Resume"
+            title="Résumé du dossier"
           >
             <ClipboardList size={18} />
           </button>
@@ -372,7 +372,7 @@ export default function VideoConferenceRoom() {
         <div className="raised-hands-banner">
           <span className="raised-hands-icon">✋</span>
           <span>
-            Raised hands: {raisedHands.map((participant) => participant.first_name ? `${participant.first_name} ${participant.last_name || ''}`.trim() : participant.username).join(', ')}
+            Mains levées : {raisedHands.map((participant) => participant.first_name ? `${participant.first_name} ${participant.last_name || ''}`.trim() : participant.username).join(', ')}
           </span>
         </div>
       )}

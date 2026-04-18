@@ -45,7 +45,7 @@ export default function AttachmentsList() {
       setAttachments(Array.isArray(data) ? data : [])
       setError(null)
     } catch (err) {
-      setError('Failed to load attachments')
+      setError('Échec du chargement des pièces jointes')
       console.error(err)
     } finally {
       setLoading(false)
@@ -67,7 +67,7 @@ export default function AttachmentsList() {
 
     const medicalCase = filterCase || (cases[0]?.id)
     if (!medicalCase) {
-      setError('Select a medical case first or filter by case.')
+      setError('Sélectionnez d\'abord un dossier médical ou filtrez par dossier.')
       return
     }
 
@@ -85,19 +85,19 @@ export default function AttachmentsList() {
       loadAttachments()
       e.target.value = ''
     } catch (err) {
-      setError(JSON.stringify(err.response?.data) || 'Upload failed')
+      setError(JSON.stringify(err.response?.data) || 'Échec du téléchargement')
     } finally {
       setUploading(false)
     }
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this attachment?')) return
+    if (!window.confirm('Supprimer cette pièce jointe ?')) return
     try {
       await deleteAttachment(id)
       setAttachments(attachments.filter((a) => a.id !== id))
     } catch (err) {
-      setError('Failed to delete')
+      setError('Échec de la suppression')
     }
   }
 
@@ -115,47 +115,47 @@ export default function AttachmentsList() {
   if (!filterCase && !loading) return (
     <div className="list-container">
       <div className="list-header">
-        <h1>Attachments</h1>
+        <h1>Pièces jointes</h1>
         <div className="list-header-actions">
           <select
             value={filterCase}
             onChange={(e) => handleFilterChange(e.target.value)}
             className="filter-select"
           >
-            <option value="">-- Select a case --</option>
+            <option value="">-- Sélectionner un dossier --</option>
             {cases.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name || `Case ${String(c.id).slice(0, 8)}…`}
+                {c.name || `Dossier ${String(c.id).slice(0, 8)}…`}
               </option>
             ))}
           </select>
         </div>
       </div>
-      <p className="empty">Please select a medical case to view its attachments.</p>
+      <p className="empty">Veuillez sélectionner un dossier médical pour voir ses pièces jointes.</p>
     </div>
   )
 
-  if (loading && attachments.length === 0) return <div className="loading">Loading attachments...</div>
+  if (loading && attachments.length === 0) return <div className="loading">Chargement des pièces jointes...</div>
 
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>Attachments</h1>
+        <h1>Pièces jointes</h1>
         <div className="list-header-actions">
           <select
             value={filterCase}
             onChange={(e) => handleFilterChange(e.target.value)}
             className="filter-select"
           >
-            <option value="">-- Select a case --</option>
+            <option value="">-- Sélectionner un dossier --</option>
             {cases.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name || `Case ${String(c.id).slice(0, 8)}…`}
+                {c.name || `Dossier ${String(c.id).slice(0, 8)}…`}
               </option>
             ))}
           </select>
           <label className="btn-primary" style={{ marginBottom: 0 }}>
-            {uploading ? 'Uploading…' : '+ Upload file'}
+            {uploading ? 'Téléchargement…' : '+ Télécharger un fichier'}
             <input
               type="file"
               accept=".pdf,image/*,video/*,.dcm"
@@ -168,15 +168,15 @@ export default function AttachmentsList() {
       </div>
       {error && <div className="error">{error}</div>}
       {attachments.length === 0 ? (
-        <p className="empty">No attachments.</p>
+        <p className="empty">Aucune pièce jointe.</p>
       ) : (
         <table className="forms-table">
           <thead>
             <tr>
               <th>Type</th>
-              <th>Medical case</th>
-              <th>Uploaded by</th>
-              <th>Uploaded at</th>
+              <th>Dossier médical</th>
+              <th>Téléchargé par</th>
+              <th>Téléchargé le</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -197,9 +197,9 @@ export default function AttachmentsList() {
                 <td>{new Date(a.uploaded_at).toLocaleString()}</td>
                 <td className="actions">
                   {a.file && (
-                    <a href={getRelativeUrl(a.file)} target="_blank" rel="noopener noreferrer" className="btn-small btn-secondary">Open</a>
+                    <a href={getRelativeUrl(a.file)} target="_blank" rel="noopener noreferrer" className="btn-small btn-secondary">Ouvrir</a>
                   )}
-                  <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Delete</button>
+                  <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
                 </td>
               </tr>
             ))}

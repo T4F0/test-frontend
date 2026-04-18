@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList } from 'lucide-react'
 import { getCaseResume } from '../../api/meetingsApi'
 
-const GENDER_LABELS = { M: 'Male', F: 'Female', O: 'Other' }
+const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
 
 export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeCaseId }) {
   const [caseResume, setCaseResume] = useState(null)
@@ -27,7 +27,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
       setExpandedForms(expanded)
     } catch (err) {
       console.error('Failed to load case resume:', err)
-      setError('No form data available for this case.')
+      setError('Aucune donnée de formulaire disponible pour ce dossier.')
     } finally {
       setLoading(false)
     }
@@ -39,7 +39,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
 
   const formatValue = (value, fieldType) => {
     if (value === null || value === undefined || value === '') return '—'
-    if (fieldType === 'checkbox') return value ? '✓ Yes' : '✗ No'
+    if (fieldType === 'checkbox') return value ? '✓ Oui' : '✗ Non'
     if (fieldType === 'date') {
       try { return new Date(value).toLocaleDateString('fr-FR') } catch { return value }
     }
@@ -66,7 +66,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
       <div className="sidebar-header">
         <h3>
           <ClipboardList size={18} />
-          Case Resume
+          Résumé du dossier
         </h3>
         <button className="sidebar-close" onClick={onToggle}>×</button>
       </div>
@@ -74,7 +74,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
         {loading && (
           <div className="cr-sidebar-loading">
             <div className="cr-sidebar-spinner" />
-            <span>Loading case data...</span>
+            <span>Chargement des données du dossier...</span>
           </div>
         )}
 
@@ -171,7 +171,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
             ) : (
               <div className="cr-sidebar-empty">
                 <FileText size={24} />
-                <p>No RDV fields found for this patient.</p>
+                <p>Aucun champ RDV trouvé pour ce patient.</p>
               </div>
             )}
           </>

@@ -29,7 +29,7 @@ export default function Register() {
       await register(formData)
       setSuccess(true)
     } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.username?.[0] || 'Registration failed')
+      setError(err.response?.data?.detail || err.response?.data?.username?.[0] || 'Échec de l\'inscription')
       console.error(err)
     } finally {
       setLoading(false)
@@ -40,17 +40,17 @@ export default function Register() {
     return (
       <div className="login-container">
         <div className="login-card" style={{ textAlign: 'center' }}>
-          <h1>🏥 Registration Submitted</h1>
+          <h1>🏥 Inscription envoyée</h1>
           <p style={{ marginTop: '1rem', color: '#666' }}>
-            Your registration request has been submitted successfully to the administrator. 
-            You will be notified once your account is approved.
+            Votre demande d'inscription a été soumise avec succès à l'administrateur. 
+            Vous serez notifié(e) une fois votre compte approuvé.
           </p>
           <button 
             className="login-button" 
             style={{ marginTop: '2rem' }}
             onClick={() => navigate('/login')}
           >
-            Back to Login
+            Retour à la connexion
           </button>
         </div>
       </div>
@@ -60,15 +60,15 @@ export default function Register() {
   return (
     <div className="login-container">
       <div className="login-card" style={{ maxWidth: '500px' }}>
-        <h1>🏥 Doctor Registration</h1>
-        <p className="login-subtitle">Join the Medical Forms platform</p>
+        <h1>🏥 Inscription Médecin</h1>
+        <p className="login-subtitle">Rejoindre la plateforme de formulaires médicaux</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="error">{error}</div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
-              <label>First Name</label>
+              <label>Prénom</label>
               <input
                 type="text"
                 name="first_name"
@@ -78,7 +78,7 @@ export default function Register() {
               />
             </div>
             <div className="form-group">
-              <label>Last Name</label>
+              <label>Nom</label>
               <input
                 type="text"
                 name="last_name"
@@ -90,7 +90,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Username</label>
+            <label>Nom d'utilisateur</label>
             <input
               type="text"
               name="username"
@@ -101,7 +101,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Email</label>
+            <label>E-mail</label>
             <input
               type="email"
               name="email"
@@ -112,7 +112,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label>Mot de passe</label>
             <input
               type="password"
               name="password"
@@ -123,7 +123,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Hospital</label>
+            <label>Hôpital</label>
             <input
               type="text"
               name="hospital"
@@ -134,7 +134,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Specialty</label>
+            <label>Spécialité</label>
             <input
               type="text"
               name="specialty"
@@ -150,12 +150,12 @@ export default function Register() {
             className="login-button"
             style={{ marginTop: '1rem' }}
           >
-            {loading ? 'Submitting...' : 'Register'}
+            {loading ? 'Envoi en cours...' : 'S\'inscrire'}
           </button>
         </form>
 
         <p className="login-footer">
-          Already have an account? <Link to="/login">Login here</Link>
+          Vous avez déjà un compte ? <Link to="/login">Connectez-vous ici</Link>
         </p>
       </div>
     </div>

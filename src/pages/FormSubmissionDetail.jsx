@@ -4,8 +4,8 @@ import { getForm } from '../api/formsApi'
 import { getSubmission } from '../api/submissionsApi'
 
 function formatValue(value) {
-  if (value === true) return 'Yes'
-  if (value === false) return 'No'
+  if (value === true) return 'Oui'
+  if (value === false) return 'Non'
   return value == null || value === '' ? '—' : String(value)
 }
 
@@ -76,9 +76,9 @@ export default function FormSubmissionDetail() {
     }
   }
 
-  if (loading) return <div className="loading">Loading submission...</div>
+  if (loading) return <div className="loading">Chargement de la soumission...</div>
   if (error) return <div className="error">{error}</div>
-  if (!form || !submission) return <div className="error">Submission not found</div>
+  if (!form || !submission) return <div className="error">Soumission introuvable</div>
 
   const submissionData = submission.data || {}
 
@@ -87,18 +87,18 @@ export default function FormSubmissionDetail() {
       <div className="submission-detail-inner">
         <header className="submission-detail-header">
           <h1 className="submission-detail-title">{form.name}</h1>
-          <p className="submission-detail-subtitle">Form submission details</p>
+          <p className="submission-detail-subtitle">Détails de la soumission</p>
           <button
             className="btn-secondary submission-detail-back"
             onClick={() => navigate(`/forms/${formId}/submissions`)}
           >
-            ← Back to Submissions
+            ← Retour aux soumissions
           </button>
         </header>
 
         <section className="submission-detail-meta">
           <div className="submission-detail-meta-item">
-            <span className="submission-detail-meta-label">Submitted</span>
+            <span className="submission-detail-meta-label">Soumis le</span>
             <span className="submission-detail-meta-value">
               {new Date(submission.created_at).toLocaleString()}
             </span>
@@ -110,7 +110,7 @@ export default function FormSubmissionDetail() {
             </span>
           </div>
           <div className="submission-detail-meta-item">
-            <span className="submission-detail-meta-label">Medical Case</span>
+            <span className="submission-detail-meta-label">Dossier médical</span>
             <span className="submission-detail-meta-value">
               {submission.medical_case_name ?? '—'}
             </span>
@@ -118,9 +118,9 @@ export default function FormSubmissionDetail() {
         </section>
 
         <section className="submission-detail-data">
-          <h2 className="submission-detail-data-title">Submitted Values</h2>
+          <h2 className="submission-detail-data-title">Valeurs soumises</h2>
           {Object.keys(submissionData).length === 0 ? (
-            <p className="submission-detail-empty">No values were submitted.</p>
+            <p className="submission-detail-empty">Aucune valeur n'a été soumise.</p>
           ) : (
             <div className="submission-detail-sections">
               {form.sections?.sort((a,b) => a.order - b.order).map(section => (

@@ -21,7 +21,7 @@ export default function VideoGrid({
   const tiles = [
     {
       id: currentUserId,
-      label: 'You',
+      label: 'Vous',
       stream: localDisplayStream,
       isMuted,
       isCameraOff: screenSharer === currentUserId ? false : isCameraOff,
@@ -130,7 +130,7 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
         </div>
       )}
       <div className="video-overlay">
-        <span className="video-name">{label}{role === 'HOST' && <span className="host-badge">Host</span>}</span>
+        <span className="video-name">{label}{role === 'HOST' && <span className="host-badge">Hôte</span>}</span>
         <div className="video-indicators">
           {isMuted && <span className="indicator muted-indicator">🔇</span>}
           {handRaised && <span className="indicator hand-indicator">✋</span>}

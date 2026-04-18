@@ -14,7 +14,7 @@ export default function FormField({ field, value, onChange }) {
         {field.required && <span className="required">*</span>}
         {field.show_rdv && (
           <span 
-            title="RDV Field"
+            title="Champ RDV"
             style={{ 
               marginLeft: '8px', 
               fontSize: '0.75em', 
@@ -25,7 +25,7 @@ export default function FormField({ field, value, onChange }) {
               fontWeight: '500',
               border: '1px solid #bae6fd'
             }}>
-            📅 RDV Field
+            📅 Champ RDV
           </span>
         )}
       </label>
@@ -44,7 +44,7 @@ export default function FormField({ field, value, onChange }) {
 
       {field.field_type === 'select' && (
         <select {...baseProps}>
-          <option value="">-- Select --</option>
+          <option value="">-- Sélectionner --</option>
           {field.options?.map((opt, i) => (
             <option key={i} value={opt}>{opt}</option>
           ))}

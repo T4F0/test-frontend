@@ -13,18 +13,18 @@ export default function MeetingNotesSidebar({
     if (!isOpen) return null
 
     const statusLabel = {
-        idle: 'All changes saved',
-        unsaved: 'Changes pending autosave',
-        saving: 'Saving notes…',
-        error: 'Autosave failed',
-    }[saveStatus] || 'All changes saved'
+        idle: 'Tous les changements enregistrés',
+        unsaved: 'Changements en attente d\'enregistrement automatique',
+        saving: 'Enregistrement des notes…',
+        error: 'Échec de l\'enregistrement automatique',
+    }[saveStatus] || 'Tous les changements enregistrés'
 
     return (
         <div className="sidebar notes-sidebar">
             <div className="sidebar-header">
                 <h3>
                     <FileText size={18} />
-                    Meeting Notes (PV)
+                    Notes de réunion (PV)
                 </h3>
                 <button className="sidebar-close" onClick={onToggle}>×</button>
             </div>
@@ -38,18 +38,18 @@ export default function MeetingNotesSidebar({
                     className="notes-editor"
                     value={notes}
                     onChange={(e) => onChange(e.target.value)}
-                    placeholder={canEdit ? 'Write the meeting report here…' : 'Meeting notes will appear here.'}
+                    placeholder={canEdit ? 'Écrivez le compte-rendu de la réunion ici…' : 'Les notes de réunion apparaîtront ici.'}
                     readOnly={!canEdit}
                 />
 
                 <div className="notes-meta">
                     {updatedAt ? (
                         <span>
-                            Last saved {new Date(updatedAt).toLocaleTimeString()}
-                            {updatedByName ? ` by ${updatedByName}` : ''}
+                            Dernier enregistrement à {new Date(updatedAt).toLocaleTimeString()}
+                            {updatedByName ? ` par ${updatedByName}` : ''}
                         </span>
                     ) : (
-                        <span>{canEdit ? 'Autosave is enabled while you type.' : 'Read-only for invited participants.'}</span>
+                        <span>{canEdit ? 'L\'enregistrement automatique est activé pendant la saisie.' : 'Lecture seule pour les participants invités.'}</span>
                     )}
                 </div>
             </div>

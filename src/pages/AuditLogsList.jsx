@@ -43,7 +43,7 @@ export default function AuditLogsList() {
       setHasPrev(data.hasPrev)
       setError(null)
     } catch (err) {
-      setError('Failed to load audit logs. Admin access required.')
+      setError('Échec du chargement des journaux d\'audit. Accès administrateur requis.')
       console.error(err)
     } finally {
       setLoading(false)
@@ -67,48 +67,48 @@ export default function AuditLogsList() {
               log.object_id?.toString().includes(searchLower));
   })
 
-  if (loading && logs.length === 0) return <div className="loading">Loading audit logs...</div>
+  if (loading && logs.length === 0) return <div className="loading">Chargement des journaux d'audit...</div>
   if (error) return <div className="error">{error}</div>
 
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>Audit records</h1>
+        <h1>Enregistrements d'audit</h1>
       </div>
 
       <div className="filters-bar">
         <select value={action} onChange={(e) => setAction(e.target.value)} className="filter-select">
-          <option value="">All actions</option>
+          <option value="">Toutes les actions</option>
           {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
 
         <select value={objectType} onChange={(e) => setObjectType(e.target.value)} className="filter-select">
-          <option value="">All object types</option>
+          <option value="">Tous les types d'objets</option>
           {OBJECT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
 
         <input 
           type="text" 
-          placeholder="Search user or ID..." 
+          placeholder="Rechercher un utilisateur ou un ID..." 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="filter-input"
         />
         
-        <button onClick={loadLogs} className="btn-small btn-secondary">Refresh</button>
+        <button onClick={loadLogs} className="btn-small btn-secondary">Actualiser</button>
       </div>
 
       {filteredLogs.length === 0 ? (
-        <p className="empty">No audit logs found.</p>
+        <p className="empty">Aucun journal d'audit trouvé.</p>
       ) : (
         <div className="table-wrapper">
           <table className="forms-table">
             <thead>
               <tr>
-                <th>Time</th>
-                <th>User</th>
+                <th>Horodatage</th>
+                <th>Utilisateur</th>
                 <th>Action</th>
-                <th>Object type</th>
+                <th>Type d'objet</th>
                 <th>ID</th>
               </tr>
             </thead>
@@ -116,7 +116,7 @@ export default function AuditLogsList() {
               {filteredLogs.map((log) => (
                 <tr key={log.id}>
                   <td>{new Date(log.timestamp).toLocaleString()}</td>
-                  <td>{log.username || log.user_email || 'System'}</td>
+                  <td>{log.username || log.user_email || 'Système'}</td>
                   <td>
                     <span className={`badge ${getActionClass(log.action)}`}>
                       {log.action}
@@ -138,7 +138,7 @@ export default function AuditLogsList() {
             disabled={!hasPrev || loading} 
             onClick={() => setPage(p => Math.max(1, p - 1))}
           >
-            Previous
+            Précédent
           </button>
           <span style={{ display: 'flex', alignItems: 'center' }}>Page {page}</span>
           <button 
@@ -146,7 +146,7 @@ export default function AuditLogsList() {
             disabled={!hasNext || loading} 
             onClick={() => setPage(p => p + 1)}
           >
-            Next
+            Suivant
           </button>
         </div>
       )}

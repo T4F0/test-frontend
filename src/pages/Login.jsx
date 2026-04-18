@@ -23,7 +23,7 @@ export default function Login() {
       setUser(userData)
       navigate('/')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed')
+      setError(err.response?.data?.detail || 'Échec de la connexion')
       console.error(err)
     } finally {
       setLoading(false)
@@ -33,20 +33,20 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>🏥 Medical Forms</h1>
-        <p className="login-subtitle">Patient Information System</p>
+        <h1>🏥 Formulaires Médicaux</h1>
+        <p className="login-subtitle">Système d'Information Patient</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="error">{error}</div>}
 
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">Nom d'utilisateur</label>
             <input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="Entrez votre nom d'utilisateur"
               required
               autoFocus
               autoComplete="username"
@@ -54,13 +54,13 @@ export default function Login() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Mot de passe</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="Entrez votre mot de passe"
               required
               autoComplete="current-password"
             />
@@ -71,15 +71,15 @@ export default function Login() {
             disabled={loading}
             className="login-button"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Connexion en cours...' : 'Se connecter'}
           </button>
         </form>
 
         <p className="login-footer">
-          Demo credentials: Use your hospital account
+          Identifiants : Utilisez votre compte hospitalier
         </p>
         <p className="login-footer" style={{ marginTop: '0.5rem' }}>
-          Don't have an account? <Link to="/register">Register here</Link>
+          Vous n'avez pas de compte ? <Link to="/register">Inscrivez-vous ici</Link>
         </p>
       </div>
     </div>
