@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getMeetings, deleteMeeting } from '../api/meetingsApi'
+import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
+import { Video, Calendar, Clock, Users, ArrowRight } from 'lucide-react'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 
@@ -11,19 +13,22 @@ export default function MeetingsList() {
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('')
   const [searchParams] = useSearchParams()
-  const filterCase = searchParams.get('medical_case') || ''
+  const filterSubmission = searchParams.get('submission') || ''
   const navigate = useNavigate()
   const { user } = useAuth()
-  const canManage = user?.role === 'ADMIN' || user?.role === 'COORDINATEUR'
+  const [joiningId, setJoiningId] = useState(null)
 
   useEffect(() => {
     loadMeetings()
-  }, [filter, filterCase])
+  }, [filter, filterSubmission])
 
   const loadMeetings = async () => {
     try {
       setLoading(true)
-      const params = { ...(filter && { status: filter }), ...(filterCase && { medical_case: filterCase }) }
+      const params = { 
+        ...(filter && { status: filter }), 
+        ...(filterSubmission && { submission: filterSubmission }) 
+      }
       const data = await getMeetings(params)
       setMeetings(Array.isArray(data) ? data : [])
       setError(null)
@@ -32,6 +37,19 @@ export default function MeetingsList() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleQuickJoin = async (meetingId) => {
+    try {
+      setJoiningId(meetingId)
+      const conference = await createConference(meetingId)
+      navigate(`/conference/${conference.room_id}`)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Échec de l\'accès à la visio')
+      console.error(err)
+    } finally {
+      setJoiningId(null)
     }
   }
 
@@ -50,7 +68,7 @@ export default function MeetingsList() {
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>Réunions</h1>
+        <h1>📅 Réunions RCP</h1>
         <div className="list-header-actions">
           <select
             value={filter}
@@ -62,36 +80,63 @@ export default function MeetingsList() {
             <option value="LIVE">En cours</option>
             <option value="FINISHED">Terminée</option>
           </select>
-          <button className="btn-primary" onClick={() => navigate('/meetings/new')}>
-            + Nouvelle réunion
-          </button>
+          {user?.role !== 'MEDECIN' && (
+            <button className="btn-primary" onClick={() => navigate('/meetings/new')}>
+              + Nouvelle réunion
+            </button>
+          )}
         </div>
       </div>
       {error && <div className="error">{error}</div>}
       {meetings.length === 0 ? (
-        <p className="empty">Aucune réunion trouvée.</p>
+        <div className="empty-inline-card">
+          <p>Aucune réunion trouvée.</p>
+        </div>
       ) : (
         <table className="forms-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Dossier médical</th>
+              <th>Date & Heure</th>
+              <th>Dossiers / Soumissions</th>
               <th>Statut</th>
-              <th>Spécialité</th>
+              <th>Visioconférence</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {meetings.map((m) => (
               <tr key={m.id}>
-                <td>{new Date(m.scheduled_date).toLocaleString()}</td>
-                <td>{m.medical_case ? String(m.medical_case).slice(0, 8) + '…' : '—'}</td>
-                <td><span className="badge">{STATUS_LABELS[m.status] ?? m.status}</span></td>
-                <td>{m.specialty || '—'}</td>
+                <td>
+                  <strong>{m.title || new Date(m.scheduled_date).toLocaleDateString()}</strong>
+                  <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                    {new Date(m.scheduled_date).toLocaleDateString()} à {new Date(m.scheduled_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </div>
+                </td>
+                <td>
+                  <span className="badge badge-neutral">
+                    {m.submissions?.length || 0} dossier(s)
+                  </span>
+                </td>
+                <td><span className={`status-badge ${m.status.toLowerCase()}`}>{STATUS_LABELS[m.status] ?? m.status}</span></td>
+                <td>
+                  {m.status !== 'FINISHED' && (
+                    <button 
+                      className="btn-small btn-primary btn-with-icon" 
+                      onClick={() => handleQuickJoin(m.id)}
+                      disabled={joiningId === m.id}
+                      style={{ padding: '0.4rem 0.8rem' }}
+                    >
+                      <Video size={14} />
+                      {joiningId === m.id ? 'Ouverture...' : (m.status === 'LIVE' ? 'Rejoindre' : 'Démarrer')}
+                    </button>
+                  )}
+                </td>
                 <td className="actions">
-                  <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Voir</button>
-                  <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
-                  <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>Supprimer</button>
+                  <div className="action-group-horizontal">
+                    <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
+                    <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
+                    <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
+                  </div>
                 </td>
               </tr>
             ))}

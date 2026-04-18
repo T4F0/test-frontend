@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getForms, deleteForm } from '../api/formsApi'
+import { useAuth } from '../context/AuthContext'
 
 export default function FormsList() {
   const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
 
   useEffect(() => {
     loadForms()
@@ -77,7 +80,9 @@ export default function FormsList() {
                   <button onClick={() => navigate(`/forms/${form.id}/submit`)}>Remplir</button>
                   <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>
                   <button onClick={() => navigate(`/forms/${form.id}/edit`)}>Modifier</button>
-                  <button onClick={() => handleDelete(form.id)} className="btn-danger">Supprimer</button>
+                  {isAdmin && (
+                    <button onClick={() => handleDelete(form.id)} className="btn-danger">Supprimer</button>
+                  )}
                 </td>
               </tr>
             ))}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMeeting, createMeeting, updateMeeting } from '../api/meetingsApi'
-import { getMedicalCases } from '../api/medicalCasesApi'
+import { getSubmissionsByPatient, getSubmissions } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
@@ -21,18 +21,18 @@ export default function MeetingForm() {
   }, [user, navigate])
 
   const [form, setForm] = useState({
-    medical_cases: [],
+    name: '',
+    submissions: [],
     coordinator: '',
     scheduled_date: '',
     scheduled_time: '09:00',
     meeting_link: '',
-    specialty: '',
     participants: [],
   })
-  const [cases, setCases] = useState([])
+  const [allSubmissions, setAllSubmissions] = useState([])
   const [patients, setPatients] = useState([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
-  const [selectedCaseId, setSelectedCaseId] = useState('')
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -46,7 +46,8 @@ export default function MeetingForm() {
   }, [id])
 
   useEffect(() => {
-    loadUsersAndCases()
+    loadUsers()
+    loadInitialSubmissions()
   }, [])
 
   useEffect(() => {
@@ -56,16 +57,20 @@ export default function MeetingForm() {
     return () => clearTimeout(timer)
   }, [patientSearch])
 
+  useEffect(() => {
+    if (selectedPatientId) {
+      loadSubmissionsForPatient(selectedPatientId)
+    }
+  }, [selectedPatientId])
+
   const formatUserName = (candidate) => {
     if (!candidate) return 'Utilisateur inconnu'
-
     const fullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim()
     return fullName || candidate.username || candidate.email || 'Utilisateur inconnu'
   }
 
   const formatUserMeta = (candidate) => {
     if (!candidate) return ''
-
     return [candidate.email, candidate.role, candidate.specialty].filter(Boolean).join(' • ')
   }
 
@@ -74,24 +79,12 @@ export default function MeetingForm() {
     if (!source) {
       return (candidate?.username || candidate?.email || '?').slice(0, 2).toUpperCase()
     }
-
-    return source
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('')
+    return source.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
   }
 
   const normalizedCoordinatorId = isEdit ? form.coordinator : user?.id || ''
-  const usersById = useMemo(
-    () => new Map(users.map((candidate) => [candidate.id, candidate])),
-    [users],
-  )
-  const casesById = useMemo(
-    () => new Map(cases.map((c) => [c.id, c])),
-    [cases],
-  )
+  const usersById = useMemo(() => new Map(users.map((u) => [String(u.id), u])), [users])
+  const submissionsById = useMemo(() => new Map(allSubmissions.map((s) => [String(s.id), s])), [allSubmissions])
 
   const selectedParticipantIds = useMemo(() => new Set(form.participants), [form.participants])
   const coordinatorUser = useMemo(() => {
@@ -100,59 +93,51 @@ export default function MeetingForm() {
   }, [normalizedCoordinatorId, user, usersById])
   
   const selectedParticipants = useMemo(
-    () => form.participants.map((participantId) => usersById.get(participantId)).filter(Boolean),
+    () => form.participants.map((pId) => usersById.get(String(pId))).filter(Boolean),
     [form.participants, usersById],
   )
 
-  const selectedCases = useMemo(
-    () => form.medical_cases.map((caseId) => {
-      const c = casesById.get(caseId);
-      if (!c) return null;
-      // Find patient name for the case
-      const patient = patients.find(p => p.id === c.patient) || { first_name: 'Patient', last_name: 'Inconnu' };
-      return { ...c, patientName: `${patient.first_name} ${patient.last_name}` };
-    }).filter(Boolean),
-    [form.medical_cases, casesById, patients],
+  const selectedSubmissions = useMemo(
+    () => form.submissions.map((sId) => submissionsById.get(String(sId))).filter(Boolean),
+    [form.submissions, submissionsById],
   )
 
-  const filteredUsers = useMemo(() => {
-    const query = participantSearch.trim().toLowerCase()
-
-    return [...users]
-      .filter((candidate) => {
-        if (!query) return true
-
-        return [
-          formatUserName(candidate),
-          candidate.email,
-          candidate.username,
-          candidate.role,
-          candidate.specialty,
-          candidate.hospital,
-        ]
-          .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(query))
-      })
-      .sort((left, right) => {
-        const leftSelected = selectedParticipantIds.has(left.id)
-        const rightSelected = selectedParticipantIds.has(right.id)
-
-        if (leftSelected !== rightSelected) {
-          return leftSelected ? -1 : 1
-        }
-
-        return formatUserName(left).localeCompare(formatUserName(right))
-      })
-  }, [participantSearch, selectedParticipantIds, users])
-
-  const loadUsersAndCases = async () => {
+  const loadUsers = async () => {
     try {
-      const [casesData, usersData] = await Promise.all([
-        getMedicalCases(),
-        getUsers(),
-      ])
-      setCases(Array.isArray(casesData) ? casesData : [])
+      const usersData = await getUsers()
       setUsers(Array.isArray(usersData) ? usersData : [])
+    } catch (e) {
+      console.error(e)
+      if (e.response?.status === 403) {
+        setError('Accès refusé : Seuls les administrateurs et les coordinateurs peuvent créer ou modifier des réunions.')
+      } else {
+        setError('Échec du chargement des utilisateurs')
+      }
+    }
+  }
+
+  const loadInitialSubmissions = async () => {
+    try {
+      const data = await getSubmissions()
+      const newSubs = Array.isArray(data) ? data : []
+      setAllSubmissions(prev => {
+        const existingIds = new Set(prev.map(s => String(s.id)))
+        return [...prev, ...newSubs.filter(s => !existingIds.has(String(s.id)))]
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const loadSubmissionsForPatient = async (patientId) => {
+    try {
+      const data = await getSubmissionsByPatient(patientId)
+      const newSubs = Array.isArray(data) ? data : []
+      setAllSubmissions(prev => {
+        const existingIds = new Set(prev.map(s => String(s.id)))
+        const combined = [...prev, ...newSubs.filter(s => !existingIds.has(String(s.id)))]
+        return combined
+      })
     } catch (e) {
       console.error(e)
     }
@@ -163,10 +148,9 @@ export default function MeetingForm() {
       setPatientsLoading(true)
       const data = await getPatients(1, query)
       const patientsData = Array.isArray(data) ? data : []
-      const sortedPatients = [...patientsData].sort((a, b) => 
-            `${a.first_name || ''} ${a.last_name || ''}`.localeCompare(`${b.first_name || ''} ${b.last_name || ''}`)
-          )
-      setPatients(sortedPatients)
+      setPatients([...patientsData].sort((a, b) => 
+        `${a.first_name || ''} ${a.last_name || ''}`.localeCompare(`${b.first_name || ''} ${b.last_name || ''}`)
+      ))
     } catch (e) {
       console.error(e)
     } finally {
@@ -174,20 +158,40 @@ export default function MeetingForm() {
     }
   }
 
+  const filteredUsers = useMemo(() => {
+    const q = participantSearch.toLowerCase()
+    return users.filter(u => 
+      u.id !== user?.id && 
+      (formatUserName(u).toLowerCase().includes(q) || 
+       u.email?.toLowerCase().includes(q) || 
+       u.role?.toLowerCase().includes(q) || 
+       u.specialty?.toLowerCase().includes(q))
+    )
+  }, [users, participantSearch, user])
+
   const loadMeeting = async () => {
     try {
-      setLoading(true)
       const data = await getMeeting(id)
       const dt = data.scheduled_date ? new Date(data.scheduled_date) : new Date()
+      
+      if (data.submission_details) {
+        setAllSubmissions(prev => {
+          const existingIds = new Set(prev.map(s => String(s.id)))
+          const newOnes = data.submission_details.filter(s => !existingIds.has(String(s.id)))
+          return [...prev, ...newOnes]
+        })
+      }
+
       setForm({
-        medical_cases: data.medical_cases || [],
+        name: data.name || '',
+        submissions: (data.submissions || []).map(id => String(id)),
         coordinator: data.coordinator?.id || data.coordinator || '',
         scheduled_date: dt.toISOString().slice(0, 10),
         scheduled_time: dt.toTimeString().slice(0, 5),
         meeting_link: data.meeting_link || '',
-        specialty: data.specialty || '',
-        participants: (data.participants || []).map((participant) => participant?.id || participant),
+        participants: (data.participants || []).map((p) => String(p?.id || p)),
       })
+      setError(null)
     } catch (err) {
       setError('Échec du chargement de la réunion')
       console.error(err)
@@ -196,28 +200,28 @@ export default function MeetingForm() {
     }
   }
 
-  const filteredCases = useMemo(() => {
+  const filteredSubmissions = useMemo(() => {
     if (!selectedPatientId) return []
-    return cases.filter((c) => c.patient === selectedPatientId)
-  }, [cases, selectedPatientId])
+    return allSubmissions.filter((s) => String(s.patient) === String(selectedPatientId))
+  }, [allSubmissions, selectedPatientId])
 
   const handlePatientChange = (patientId) => {
     setSelectedPatientId(patientId)
-    setSelectedCaseId('')
+    setSelectedSubmissionId('')
   }
 
-  const handleAddCase = () => {
-    if (!selectedCaseId) return
-    if (form.medical_cases.includes(selectedCaseId)) {
-      alert('Ce dossier est déjà ajouté à la réunion.')
+  const handleAddSubmission = () => {
+    if (!selectedSubmissionId) return
+    if (form.submissions.includes(selectedSubmissionId)) {
+      alert('Cette soumission est déjà ajoutée à la réunion.')
       return
     }
-    setForm(f => ({ ...f, medical_cases: [...f.medical_cases, selectedCaseId] }))
-    setSelectedCaseId('')
+    setForm(f => ({ ...f, submissions: [...f.submissions, selectedSubmissionId] }))
+    setSelectedSubmissionId('')
   }
 
-  const handleRemoveCase = (caseId) => {
-    setForm(f => ({ ...f, medical_cases: f.medical_cases.filter(id => id !== caseId) }))
+  const handleRemoveSubmission = (sId) => {
+    setForm(f => ({ ...f, submissions: f.submissions.filter(id => id !== sId) }))
   }
 
   const handleChange = (field, value) => {
@@ -225,18 +229,19 @@ export default function MeetingForm() {
   }
 
   const handleParticipantToggle = (userId) => {
+    const idStr = String(userId)
     setForm((f) => ({
       ...f,
-      participants: f.participants.includes(userId)
-        ? f.participants.filter((p) => p !== userId)
-        : [...f.participants, userId],
+      participants: f.participants.includes(idStr)
+        ? f.participants.filter((p) => p !== idStr)
+        : [...f.participants, idStr],
     }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (form.medical_cases.length === 0) {
-      setError('Veuillez ajouter au moins un dossier médical à la réunion.')
+    if (form.submissions.length === 0) {
+      setError('Veuillez ajouter au moins un dossier (soumission) à la réunion.')
       return
     }
     try {
@@ -244,9 +249,9 @@ export default function MeetingForm() {
       setError(null)
       const scheduled_date = `${form.scheduled_date}T${form.scheduled_time}:00`
       const payload = {
-        medical_cases: form.medical_cases,
+        name: form.name,
+        submissions: form.submissions,
         scheduled_date,
-        specialty: form.specialty || null,
         participants: form.participants,
       }
       if (isEdit) {
@@ -272,9 +277,18 @@ export default function MeetingForm() {
       {error && <div className="error">{error}</div>}
       <form onSubmit={handleSubmit} className="submission-form">
         
-        {/* Medical Cases Selection Area */}
+        <div className="form-group">
+          <label>Titre de la réunion (Optionnel)</label>
+          <input
+            type="text"
+            value={form.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            placeholder="Ex: Réunion pluridisciplinaire d'oncologie..."
+          />
+        </div>
+
         <div className="form-section-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Sélection des dossiers médicaux</h3>
+          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Sélection des dossiers (soumissions) à discuter</h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
             <SearchableSelect 
@@ -283,7 +297,7 @@ export default function MeetingForm() {
               options={patients.map(p => ({
                 value: p.id,
                 label: `${p.first_name} ${p.last_name}`,
-                subLabel: p.anonymized_code ? `Code : ${p.anonymized_code}` : `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
+                subLabel: `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
               }))}
               value={selectedPatientId}
               onChange={handlePatientChange}
@@ -293,183 +307,170 @@ export default function MeetingForm() {
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Sélectionner le dossier</label>
               <select
-                value={selectedCaseId}
-                onChange={(e) => setSelectedCaseId(e.target.value)}
+                value={selectedSubmissionId}
+                onChange={(e) => setSelectedSubmissionId(e.target.value)}
                 disabled={!selectedPatientId}
                 style={{ height: '42px' }}
               >
-                <option value="">{selectedPatientId ? 'Choisir un dossier...' : 'Rechercher le patient d\'abord'}</option>
-                {filteredCases.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name || `Dossier ${c.id.slice(0, 8)}...`} ({c.status})
+                <option value="">{selectedPatientId ? 'Choisir une soumission...' : 'Rechercher le patient d\'abord'}</option>
+                {filteredSubmissions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name || s.form_name} ({new Date(s.created_at).toLocaleDateString()})
                   </option>
                 ))}
               </select>
             </div>
             <button 
               type="button" 
-              onClick={handleAddCase}
+              onClick={handleAddSubmission}
               className="btn-primary"
-              disabled={!selectedCaseId}
+              disabled={!selectedSubmissionId}
               style={{ height: '42px', padding: '0 1.5rem' }}
             >
-              Ajouter le dossier
+              Ajouter
             </button>
           </div>
 
           <div className="selected-cases-list">
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>Dossiers sélectionnés ({form.medical_cases.length})</label>
-            {selectedCases.length > 0 ? (
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>Dossiers sélectionnés ({form.submissions.length})</label>
+            {form.submissions.length > 0 ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                {selectedCases.map(c => (
-                  <div key={c.id} className="case-selection-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #e2e8f0', padding: '0.5rem 0.75rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                    <div>
-                      <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{c.patientName}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{c.name || 'Dossier sans titre'}</div>
+                {form.submissions.map(sId => {
+                  const s = submissionsById.get(String(sId))
+                  return (
+                    <div key={sId} className="case-selection-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #e2e8f0', padding: '0.5rem 0.75rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                      <div>
+                        {s ? (
+                          <>
+                            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{s.patient_name}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{s.name || s.form_name}</div>
+                          </>
+                        ) : (
+                          <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Dossier ID: {String(sId).substring(0,8)}... (Chargement)</div>
+                        )}
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveSubmission(sId)}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0.25rem' }}
+                      >
+                        ×
+                      </button>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveCase(c.id)}
-                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0.25rem' }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div style={{ padding: '1rem', textAlign: 'center', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
-                Aucun dossier ajouté pour le moment. Utilisez la recherche ci-dessus pour ajouter des dossiers médicaux à cette réunion.
+                Aucun dossier ajouté pour le moment.
               </div>
             )}
           </div>
         </div>
 
-        <div className="form-group">
-          <label>Coordinateur</label>
-          <div className="readonly-field">
-            <div className="readonly-field-title">{formatUserName(coordinatorUser || user)}</div>
-            <div className="readonly-field-meta">
-              {isEdit
-                ? 'Coordinateur assigné à cette réunion'
-                : 'Défini automatiquement sur l\'utilisateur connecté créant cette réunion'}
-              {formatUserMeta(coordinatorUser || user) ? ` • ${formatUserMeta(coordinatorUser || user)}` : ''}
+        <div className="form-section-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Participants</h3>
+            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+              {selectedParticipants.length} sélectionnés • {filteredUsers.length} affichés
             </div>
           </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Date *</label>
-            <input
-              type="date"
-              value={form.scheduled_date}
-              onChange={(e) => handleChange('scheduled_date', e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Heure</label>
-            <input
-              type="time"
-              value={form.scheduled_time}
-              onChange={(e) => handleChange('scheduled_time', e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Lien de la réunion</label>
-          <div className="readonly-field">
-            <div className="readonly-field-title">{form.meeting_link || 'Généré automatiquement après l\'enregistrement de la réunion'}</div>
-            <div className="readonly-field-meta">Le lien de participation est permanent et géré par la plateforme.</div>
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Spécialité</label>
-          <input
-            type="text"
-            value={form.specialty}
-            onChange={(e) => handleChange('specialty', e.target.value)}
-          />
-        </div>
-        <div className="form-group">
-          <label>Participants</label>
-          <div className="participant-picker">
-            <div className="participant-picker-toolbar">
-              <div className="participant-picker-summary">
-                <span>{form.participants.length} sélectionnés</span>
-                <span>{filteredUsers.length} affichés</span>
-              </div>
-              {!!form.participants.length && (
-                <button
-                  type="button"
-                  className="btn-small btn-secondary"
-                  onClick={() => handleChange('participants', [])}
-                >
-                  Effacer la sélection
-                </button>
-              )}
-            </div>
 
-            <input
-              type="search"
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <input 
+              type="text" 
+              placeholder="Rechercher par nom, email, rôle, spécialité..." 
               value={participantSearch}
               onChange={(e) => setParticipantSearch(e.target.value)}
-              className="participant-search-input"
-              placeholder="Rechercher par nom, email, rôle, spécialité..."
+              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
             />
+          </div>
 
-            <div className="selected-participants-panel">
-              <div className="selected-participants-header">Participants sélectionnés</div>
-              {selectedParticipants.length ? (
-                <div className="selected-participants-list">
-                  {selectedParticipants.map((participant) => (
-                    <button
-                      key={participant.id}
-                      type="button"
-                      className="selected-participant-chip"
-                      onClick={() => handleParticipantToggle(participant.id)}
-                      title={`Retirer ${formatUserName(participant)}`}
-                    >
-                      <span className="selected-participant-avatar">{getInitials(participant)}</span>
-                      <span className="selected-participant-name">{formatUserName(participant)}</span>
-                      <span className="selected-participant-remove">×</span>
-                    </button>
-                  ))}
+          <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '60px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '0.5rem' }}>Participants sélectionnés</div>
+            {selectedParticipants.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {selectedParticipants.map(p => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.85rem' }}>
+                    <span>{formatUserName(p)}</span>
+                    <button type="button" onClick={() => handleParticipantToggle(p.id)} style={{ border: 'none', background: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>Aucun participant sélectionné pour le moment.</div>
+            )}
+          </div>
+
+          <div className="participants-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', overflowY: 'auto' }}>
+            {filteredUsers.map(u => (
+              <div 
+                key={u.id} 
+                className="participant-row"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  padding: '1rem', 
+                  background: 'white', 
+                  borderRadius: '8px', 
+                  border: '1px solid #e2e8f0',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: '#f1f5f9', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  color: '#3b82f6',
+                  marginRight: '1rem',
+                  fontSize: '0.85rem',
+                  flexShrink: 0
+                }}>
+                  {getInitials(u)}
                 </div>
-              ) : (
-                <p className="empty-inline">Aucun participant sélectionné pour le moment.</p>
-              )}
-            </div>
-
-            <div className="participant-results" role="listbox" aria-label="Liste des participants">
-              {filteredUsers.length ? (
-                filteredUsers.map((candidate) => {
-                  const isSelected = selectedParticipantIds.has(candidate.id)
-
-                  return (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      className={`participant-option ${isSelected ? 'selected' : ''}`}
-                      onClick={() => handleParticipantToggle(candidate.id)}
-                    >
-                      <span className="participant-avatar">{getInitials(candidate)}</span>
-                      <span className="participant-option-text">
-                        <span className="participant-option-name">{formatUserName(candidate)}</span>
-                        <span className="participant-option-meta">
-                          {formatUserMeta(candidate) || candidate.username || 'Pas de détails supplémentaires'}
-                        </span>
-                      </span>
-                      <span className="participant-option-state">{isSelected ? 'Sélectionné' : 'Ajouter'}</span>
-                    </button>
-                  )
-                })
-              ) : (
-                <p className="empty-inline">Aucun utilisateur ne correspond à votre recherche.</p>
-              )}
-            </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', color: '#1e293b' }}>{formatUserName(u)}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{formatUserMeta(u)}</div>
+                </div>
+                <button 
+                  type="button" 
+                  className={selectedParticipantIds.has(String(u.id)) ? 'btn-danger-outline' : 'btn-primary-outline'}
+                  onClick={() => handleParticipantToggle(u.id)}
+                  style={{ 
+                    padding: '0.4rem 1rem', 
+                    borderRadius: '6px', 
+                    fontSize: '0.85rem',
+                    border: '1px solid',
+                    borderColor: selectedParticipantIds.has(String(u.id)) ? '#ef4444' : '#2563eb',
+                    color: selectedParticipantIds.has(String(u.id)) ? '#ef4444' : '#2563eb',
+                    background: 'transparent',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {selectedParticipantIds.has(String(u.id)) ? 'Retirer' : 'Ajouter'}
+                </button>
+              </div>
+            ))}
+            {filteredUsers.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>Aucun utilisateur trouvé.</div>
+            )}
           </div>
         </div>
+
+        <div className="form-group">
+          <label>Date *</label>
+          <input type="date" value={form.scheduled_date} onChange={(e) => handleChange('scheduled_date', e.target.value)} required />
+        </div>
+        <div className="form-group">
+          <label>Heure</label>
+          <input type="time" value={form.scheduled_time} onChange={(e) => handleChange('scheduled_time', e.target.value)} />
+        </div>
+
         <div className="form-actions">
           <button type="submit" disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
           <button type="button" onClick={() => navigate(-1)}>Annuler</button>
@@ -478,4 +479,3 @@ export default function MeetingForm() {
     </div>
   )
 }
-

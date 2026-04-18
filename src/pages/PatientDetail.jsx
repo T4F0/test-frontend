@@ -1,30 +1,33 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient } from '../api/patientsApi'
-import { getMedicalCases, createMedicalCase } from '../api/medicalCasesApi'
-import { getSubmissionsByPatient } from '../api/submissionsApi'
+import { getSubmissionsByPatient, updateSubmission } from '../api/submissionsApi'
 
-const CASE_STATUS_LABELS = { DRAFT: 'Brouillon', SUBMITTED: 'Soumis', VALIDATED: 'Validé', DISCUSSED: 'Discuté', CLOSED: 'Clôturé' }
+const STATUS_LABELS = { 
+  SUBMITTED: 'Soumis', 
+  VALIDATED: 'Validé', 
+  DISCUSSED: 'Discuté', 
+  CLOSED: 'Clôturé' 
+}
+
+const STATUS_COLORS = {
+  SUBMITTED: '#3b82f6', // blue
+  VALIDATED: '#10b981', // green
+  DISCUSSED: '#f59e0b', // amber
+  CLOSED: '#6b7280'    // gray
+}
 
 export default function PatientDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [patient, setPatient] = useState(null)
-  const [cases, setCases] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [creatingCase, setCreatingCase] = useState(false)
 
   useEffect(() => {
     loadPatient()
-  }, [id])
-
-  useEffect(() => {
-    if (id) {
-      loadCases()
-      loadSubmissions()
-    }
+    loadSubmissions()
   }, [id])
 
   const loadSubmissions = async () => {
@@ -33,38 +36,6 @@ export default function PatientDetail() {
       setSubmissions(Array.isArray(data) ? data : [])
     } catch (e) {
       console.error('Failed to load submissions:', e)
-    }
-  }
-
-  const loadCases = async () => {
-    try {
-      const data = await getMedicalCases({ patient: id })
-      setCases(Array.isArray(data) ? data : [])
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  const handleCreateCase = async () => {
-    const caseName = window.prompt('Saisissez un nom pour le nouveau dossier médical (optionnel) :')
-    if (caseName === null) return // User cancelled
-
-    const patientName = `${patient.first_name} ${patient.last_name}`
-    const finalName = caseName.trim() ? `${patientName} - ${caseName.trim()}` : patientName
-
-    try {
-      setCreatingCase(true)
-      await createMedicalCase({ 
-        patient: id, 
-        status: 'DRAFT',
-        name: finalName
-      })
-      loadCases()
-    } catch (err) {
-      setError('Échec de la création du dossier médical')
-      console.error(err)
-    } finally {
-      setCreatingCase(false)
     }
   }
 
@@ -82,6 +53,16 @@ export default function PatientDetail() {
     }
   }
 
+  const handleStatusChange = async (submissionId, newStatus) => {
+    try {
+      await updateSubmission(submissionId, { status: newStatus })
+      loadSubmissions()
+    } catch (err) {
+      alert('Échec de la mise à jour du statut')
+      console.error(err)
+    }
+  }
+
   if (loading) return <div className="loading">Chargement du patient...</div>
   if (error) return <div className="error">{error}</div>
   if (!patient) return <div className="error">Patient introuvable</div>
@@ -89,33 +70,33 @@ export default function PatientDetail() {
   return (
     <div className="patient-detail-container">
       <div className="detail-header">
-        <h1>👤 Détails du patient</h1>
+        <h1>👤 Dossier Patient : {patient.first_name} {patient.last_name}</h1>
         <div className="detail-actions">
           <button 
             className="btn-secondary"
             onClick={() => navigate(`/patients/${id}/edit`)}
           >
-            Modifier
+            Modifier le profil
           </button>
           <button 
             className="btn-secondary"
             onClick={() => navigate('/patients')}
           >
-            Retour
+            Retour à la liste
           </button>
         </div>
       </div>
 
       <div className="detail-card">
-        <div className="detail-section">
-          <h2>Informations personnelles</h2>
+        <div className="detail-section info-card">
+          <h2>Informations administratives</h2>
           <div className="detail-grid">
             <div className="detail-item">
-              <label>Prénom</label>
+              <label>Prénom / Code</label>
               <p>{patient.first_name}</p>
             </div>
             <div className="detail-item">
-              <label>Nom</label>
+              <label>Nom / Code</label>
               <p>{patient.last_name}</p>
             </div>
             <div className="detail-item">
@@ -130,85 +111,91 @@ export default function PatientDetail() {
                 </span>
               </p>
             </div>
-            <div className="detail-item">
-              <label>Code anonymisé</label>
-              <p>{patient.anonymized_code || '-'}</p>
-            </div>
-            <div className="detail-item">
-              <label>Créé le</label>
-              <p>{new Date(patient.created_at).toLocaleDateString()}</p>
-            </div>
           </div>
         </div>
 
-        <div className="detail-section">
-          <h2>Dossiers médicaux</h2>
-          <div className="detail-actions" style={{ marginBottom: '1rem' }}>
-            <button className="btn-primary" onClick={handleCreateCase} disabled={creatingCase}>
-              {creatingCase ? 'Création…' : '+ Nouveau dossier médical'}
-            </button>
-          </div>
-          {cases.length === 0 ? (
-            <p className="empty-inline">Aucun dossier médical pour le moment.</p>
-          ) : (
-            <table className="forms-table">
-              <thead>
-                <tr>
-                  <th>Nom / ID du dossier</th>
-                  <th>Statut</th>
-                  <th>Créé</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cases.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      {c.name ? (
-                        <strong>{c.name}</strong>
-                      ) : (
-                        <span className="text-muted">Dossier {String(c.id).slice(0, 8)}…</span>
-                      )}
-                    </td>
-                    <td><span className="badge">{CASE_STATUS_LABELS[c.status] ?? c.status}</span></td>
-                    <td>{new Date(c.created_at).toLocaleDateString()}</td>
-                    <td className="actions">
-                      <button type="button" className="btn-small btn-primary" onClick={() => navigate(`/medical-cases/${c.id}`)}>Gérer</button>
-                      <button type="button" className="btn-small btn-secondary" onClick={() => navigate(`/meetings?medical_case=${c.id}`)}>Réunions</button>
-                      <button type="button" className="btn-small btn-secondary" onClick={() => navigate(`/attachments?medical_case=${c.id}`)}>Pièces jointes</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        <div className="detail-section">
-          <h2>Soumissions de formulaires</h2>
-          <div className="detail-actions" style={{ marginBottom: '1rem' }}>
+        <div className="detail-section submissions-section">
+          <div className="section-header-row">
+            <h2>📑 Dossiers RCP & Soumissions</h2>
             <button className="btn-primary" onClick={() => navigate('/forms')}>
-              + Nouvelle soumission
+              + Nouveau Dossier / Soumission
             </button>
           </div>
+          
           {submissions.length === 0 ? (
             <div className="empty-inline-card">
-              <p>Aucune soumission de formulaire trouvée pour ce patient.</p>
+              <p>Aucun dossier ou soumission de formulaire pour ce patient.</p>
             </div>
           ) : (
-            <div className="submissions-grid">
-              {submissions.map((sub) => (
-                <div key={sub.id} className="submission-card-mini" onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}>
-                  <div className="sub-icon">📝</div>
-                  <div className="sub-info">
-                    <span className="sub-form-name">{sub.form_name}</span>
-                    <span className="sub-date">
-                      Soumis le {new Date(sub.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="sub-arrow">→</div>
-                </div>
-              ))}
+            <div className="submissions-list-container">
+              <table className="forms-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Formulaire / Titre</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissions.map((sub) => (
+                    <tr key={sub.id}>
+                      <td className="date-cell">
+                        {new Date(sub.created_at).toLocaleDateString()}
+                        <div className="time-sub">{new Date(sub.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                      </td>
+                      <td>
+                        <div className="sub-title-main">
+                          {sub.name ? <strong>{sub.name}</strong> : <span className="text-muted">Sans titre</span>}
+                          {sub.submitted_by_name && <span className="text-muted" style={{ fontSize: '0.8rem', marginLeft: '0.5rem', fontWeight: '500' }}>({sub.submitted_by_name})</span>}
+                        </div>
+                        <div className="sub-form-type">{sub.form_name}</div>
+                      </td>
+                      <td>
+                        <select 
+                          className="status-select-mini"
+                          value={sub.status}
+                          onChange={(e) => handleStatusChange(sub.id, e.target.value)}
+                          style={{ 
+                            backgroundColor: STATUS_COLORS[sub.status] + '20',
+                            color: STATUS_COLORS[sub.status],
+                            borderColor: STATUS_COLORS[sub.status] + '40'
+                          }}
+                        >
+                          {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                            <option key={val} value={val}>{label}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="actions">
+                        <div className="action-group-horizontal">
+                          <button 
+                            className="btn-small btn-outline" 
+                            onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}
+                            title="Voir les détails"
+                          >
+                            👁️ Voir
+                          </button>
+                          <button 
+                            className="btn-small btn-outline" 
+                            onClick={() => navigate(`/attachments?submission=${sub.id}`)}
+                            title="Gérer les pièces jointes"
+                          >
+                            📎 Fichiers
+                          </button>
+                          <button 
+                            className="btn-small btn-outline" 
+                            onClick={() => navigate(`/meetings?submission=${sub.id}`)}
+                            title="Voir les réunions"
+                          >
+                            📅 RCP
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

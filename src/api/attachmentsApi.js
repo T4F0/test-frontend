@@ -16,9 +16,9 @@ export const getAttachment = async (id) => {
   return data
 }
 
-export const uploadAttachment = async (formData) => {
+export const uploadAttachment = async (formData, signal = null) => {
   const authAxios = getAuthAxios()
-  const { data } = await authAxios.post(`${API_BASE}/attachments/`, formData) // Axios sets multipart automatically
+  const { data } = await authAxios.post(`${API_BASE}/attachments/`, formData, { signal })
   return data
 }
 

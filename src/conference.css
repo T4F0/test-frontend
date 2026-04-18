@@ -1110,7 +1110,9 @@
 }
 
 .file-preview-dialog {
-  width: min(960px, 100%);
+  width: fit-content;
+  min-width: 320px;
+  max-width: 960px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -1130,17 +1132,29 @@
 }
 
 .file-preview-body {
-  min-height: 420px;
   background: #020617;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .file-preview-image,
-.file-preview-frame {
-  width: 100%;
-  height: min(70vh, 720px);
-  border: none;
+.file-preview-video {
+  max-width: 100%;
+  max-height: 75vh;
+  width: auto;
+  height: auto;
   display: block;
   object-fit: contain;
+  background: #020617;
+}
+
+.file-preview-frame {
+  width: 90vw;
+  max-width: 960px;
+  height: min(75vh, 720px);
+  border: none;
+  display: block;
   background: #020617;
 }
 

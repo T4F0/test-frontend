@@ -20,7 +20,7 @@ export default function FormSubmissionsList() {
       setLoading(true)
       const [formData, subsData] = await Promise.all([
         getForm(id),
-        getSubmissions(id),
+        getSubmissions({ formId: id }),
       ])
       setForm(formData)
       setSubmissions(Array.isArray(subsData) ? subsData : [])
@@ -56,9 +56,9 @@ export default function FormSubmissionsList() {
           <table className="forms-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Patient</th>
-                <th>Dossier médical</th>
+                <th>Titre de la soumission</th>
+                <th>Statut</th>
                 <th>Soumis le</th>
                 <th>Actions</th>
               </tr>
@@ -66,16 +66,16 @@ export default function FormSubmissionsList() {
             <tbody>
               {submissions.map((sub) => (
                 <tr key={sub.id}>
-                  <td>{sub.id}</td>
                   <td>{sub.patient_name ?? '—'}</td>
-                  <td>{sub.medical_case_name ?? '—'}</td>
+                  <td>{sub.name || <span className="text-muted">Sans titre</span>}</td>
+                  <td><span className="badge">{sub.status}</span></td>
                   <td>{new Date(sub.created_at).toLocaleString()}</td>
                   <td>
                     <button
                       className="btn-small btn-secondary"
                       onClick={() => navigate(`/forms/${id}/submissions/${sub.id}`)}
                     >
-                      Voir
+                      Voir le détail
                     </button>
                   </td>
                 </tr>

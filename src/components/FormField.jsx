@@ -61,12 +61,28 @@ export default function FormField({ field, value, onChange }) {
       )}
 
       {field.field_type === 'file' && (
-        <input
-          type="file"
-          {...baseProps}
-          accept={field.accepted_file_types}
-          onChange={(e) => onChange(e.target.files[0])}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input
+            id={`field-${field.id}`}
+            name={`field-${field.id}`}
+            type="file"
+            accept={field.accepted_file_types || "*"}
+            required={field.required}
+            onChange={(e) => onChange(e.target.files[0])}
+            style={{ flex: 1 }}
+          />
+          {value && (
+            <button 
+              type="button"
+              className="btn-small btn-secondary" 
+              onClick={() => onChange(null)}
+              title="Effacer le fichier"
+              style={{ padding: '0.4rem' }}
+            >
+              ×
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

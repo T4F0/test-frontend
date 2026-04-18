@@ -8,16 +8,16 @@ export default function ReportsList() {
   const [error, setError] = useState(null)
   const [downloading, setDownloading] = useState(null)
   const [searchParams] = useSearchParams()
-  const filterCase = searchParams.get('medical_case') || ''
+  const filterSubmission = searchParams.get('submission') || ''
 
   useEffect(() => {
     loadReports()
-  }, [filterCase])
+  }, [filterSubmission])
 
   const loadReports = async () => {
     try {
       setLoading(true)
-      const params = filterCase ? { medical_case: filterCase } : {}
+      const params = filterSubmission ? { submission: filterSubmission } : {}
       const data = await getReports(params)
       setReports(Array.isArray(data) ? data : [])
       setError(null)
@@ -46,24 +46,29 @@ export default function ReportsList() {
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>Rapports RCP</h1>
+        <h1>📑 Rapports RCP</h1>
       </div>
       {error && <div className="error">{error}</div>}
       {reports.length === 0 ? (
-        <p className="empty">Aucun rapport.</p>
+        <div className="empty-inline-card">
+          <p>Aucun rapport généré pour le moment.</p>
+        </div>
       ) : (
         <table className="forms-table">
           <thead>
             <tr>
-              <th>Medical case</th>
-              <th>Created</th>
+              <th>Dossier / Soumission</th>
+              <th>Date de création</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {reports.map((r) => (
               <tr key={r.id}>
-                <td>{r.medical_case ? String(r.medical_case).slice(0, 8) + '…' : '—'}</td>
+                <td>
+                  <strong>{r.submission_name || 'Sans titre'}</strong>
+                  <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name}</div>
+                </td>
                 <td>{new Date(r.created_at).toLocaleString()}</td>
                 <td>
                   <button
@@ -71,7 +76,7 @@ export default function ReportsList() {
                     disabled={downloading === r.id}
                     onClick={() => handleDownload(r.id)}
                   >
-                    {downloading === r.id ? 'Téléchargement…' : 'Télécharger PDF'}
+                    {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
                   </button>
                 </td>
               </tr>

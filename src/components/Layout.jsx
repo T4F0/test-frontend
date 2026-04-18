@@ -66,11 +66,11 @@ export default function Layout() {
   }
 
   const navLinks = [
-    { to: '/', label: 'Formulaires', icon: ClipboardList },
+    { to: '/forms', label: 'Formulaires', icon: ClipboardList },
     { to: '/patients', label: 'Patients', icon: Users },
-    { to: '/meetings', label: 'Réunions', icon: Calendar },
     { to: '/attachments', label: 'Pièces jointes', icon: Paperclip },
-    { to: '/reports', label: 'Comptes rendus', icon: FileText },
+    { to: '/meetings', label: 'Réunions', icon: Calendar },
+    // { to: '/reports', label: 'Comptes rendus', icon: FileText },
     { to: '/users', label: 'Utilisateurs', icon: Users, roles: ['ADMIN', 'COORDINATEUR'] },
   ].filter(link => !link.roles || link.roles.includes(user?.role))
 

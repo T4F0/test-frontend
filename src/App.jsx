@@ -21,7 +21,7 @@ import AttachmentsList from './pages/AttachmentsList'
 import AuditLogsList from './pages/AuditLogsList'
 import ReportsList from './pages/ReportsList'
 import VideoConferenceRoom from './pages/VideoConferenceRoom'
-import MedicalCaseDetail from './pages/MedicalCaseDetail'
+
 
 function AppRoutes() {
   const { loading, authenticated } = useAuth()
@@ -38,7 +38,8 @@ function AppRoutes() {
       <Route element={<Layout />}>
         {authenticated ? (
           <>
-            <Route path="/" element={<FormsList />} />
+            <Route path="/" element={<Navigate to="/patients" replace />} />
+            <Route path="/forms" element={<FormsList />} />
             <Route path="/forms/new" element={<FormBuilder />} />
             <Route path="/forms/:id/edit" element={<FormBuilder />} />
             <Route path="/forms/:id/submit" element={<FormSubmission />} />
@@ -56,7 +57,7 @@ function AppRoutes() {
             <Route path="/meetings/:id" element={<MeetingDetail />} />
             <Route path="/meetings/:id/edit" element={<MeetingForm />} />
             <Route path="/attachments" element={<AttachmentsList />} />
-            <Route path="/medical-cases/:id" element={<MedicalCaseDetail />} />
+
             <Route path="/reports" element={<ReportsList />} />
             <Route path="/audit-logs" element={<AuditLogsList />} />
             <Route path="/conference/:roomId" element={<VideoConferenceRoom />} />

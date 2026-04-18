@@ -1,32 +1,33 @@
 import { useState, useEffect } from 'react'
 import { FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList } from 'lucide-react'
-import { getCaseResume } from '../../api/meetingsApi'
+import { getSubmissionResume } from '../../api/meetingsApi'
 
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
 
-export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeCaseId }) {
-  const [caseResume, setCaseResume] = useState(null)
+export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeSubmissionId }) {
+  const [submissionResume, setSubmissionResume] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [expandedForms, setExpandedForms] = useState({})
 
   useEffect(() => {
     if (isOpen && meetingId) {
-      loadCaseResume()
+      loadSubmissionResume()
     }
-  }, [isOpen, meetingId, activeCaseId])
+  }, [isOpen, meetingId, activeSubmissionId])
 
-  const loadCaseResume = async () => {
+  const loadSubmissionResume = async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getCaseResume(meetingId, activeCaseId)
-      setCaseResume(data)
+      // The API call expects submission_id
+      const data = await getSubmissionResume(meetingId, activeSubmissionId)
+      setSubmissionResume(data)
       const expanded = {}
       data.forms?.forEach((_, idx) => { expanded[idx] = true })
       setExpandedForms(expanded)
     } catch (err) {
-      console.error('Failed to load case resume:', err)
+      console.error('Failed to load submission resume:', err)
       setError('Aucune donnée de formulaire disponible pour ce dossier.')
     } finally {
       setLoading(false)
@@ -66,7 +67,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
       <div className="sidebar-header">
         <h3>
           <ClipboardList size={18} />
-          Résumé du dossier
+          Résumé Clinique
         </h3>
         <button className="sidebar-close" onClick={onToggle}>×</button>
       </div>
@@ -74,18 +75,18 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
         {loading && (
           <div className="cr-sidebar-loading">
             <div className="cr-sidebar-spinner" />
-            <span>Chargement des données du dossier...</span>
+            <span>Chargement des données...</span>
           </div>
         )}
 
-        {error && !caseResume && (
+        {error && !submissionResume && (
           <div className="cr-sidebar-empty">
             <AlertCircle size={24} />
             <p>{error}</p>
           </div>
         )}
 
-        {caseResume && (
+        {submissionResume && (
           <>
             {/* Patient Banner */}
             <div className="cr-patient-banner">
@@ -94,27 +95,29 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
               </div>
               <div className="cr-patient-details">
                 <span className="cr-patient-name">
-                  {caseResume.patient.first_name} {caseResume.patient.last_name}
+                  {submissionResume.patient.first_name} {submissionResume.patient.last_name}
                 </span>
                 <div className="cr-patient-meta-row">
                   <span className="cr-meta-chip">
                     <Calendar size={12} />
-                    {new Date(caseResume.patient.birth_date).toLocaleDateString('fr-FR')}
+                    {new Date(submissionResume.patient.birth_date).toLocaleDateString('fr-FR')}
                   </span>
                   <span className="cr-meta-chip">
-                    {GENDER_LABELS[caseResume.patient.gender] || caseResume.patient.gender}
+                    {GENDER_LABELS[submissionResume.patient.gender] || submissionResume.patient.gender}
                   </span>
-                  <span className={`cr-status-chip cr-status-${caseResume.medical_case_status?.toLowerCase()}`}>
-                    {caseResume.medical_case_status}
-                  </span>
+                  {submissionResume.submission_status && (
+                    <span className={`cr-status-chip cr-status-${submissionResume.submission_status.toLowerCase()}`}>
+                      {submissionResume.submission_status}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Forms */}
-            {caseResume.forms?.length > 0 ? (
+            {submissionResume.forms?.length > 0 ? (
               <div className="cr-forms-list">
-                {caseResume.forms.map((form, idx) => {
+                {submissionResume.forms.map((form, idx) => {
                   const sectionGroups = groupFieldsBySection(form.fields)
                   const isExpanded = expandedForms[idx]
 
@@ -128,7 +131,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
                         <div className="cr-form-header-left">
                           <FileText size={15} className="cr-form-icon" />
                           <div>
-                            <div className="cr-form-name">{form.form_name}</div>
+                            <div className="cr-form-name">{form.submission_name || form.form_name}</div>
                             <div className="cr-form-date">
                               {new Date(form.submitted_at).toLocaleDateString('fr-FR', {
                                 day: 'numeric', month: 'short', year: 'numeric'
@@ -171,7 +174,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeC
             ) : (
               <div className="cr-sidebar-empty">
                 <FileText size={24} />
-                <p>Aucun champ RDV trouvé pour ce patient.</p>
+                <p>Aucune donnée de formulaire trouvée.</p>
               </div>
             )}
           </>

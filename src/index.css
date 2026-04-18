@@ -1774,3 +1774,40 @@ body.theme-medecin .navbar {
 .item-label { font-weight: 600; font-size: 0.95rem; }
 .item-sublabel { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.1rem; }
 .dropdown-info { padding: 1rem; text-align: center; color: var(--gray-500); font-style: italic; font-size: 0.9rem; }
+
+/* ===== STATUS BADGES FOR MEETINGS ===== */
+.status-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
+  letter-spacing: 0.025em;
+  border: 1px solid transparent;
+}
+
+.status-badge.planned {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+.status-badge.live {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+  animation: pulse-red 2s infinite;
+}
+
+.status-badge.finished {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+@keyframes pulse-red {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}

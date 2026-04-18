@@ -33,11 +33,11 @@ export const deleteMeeting = async (id) => {
   await authAxios.delete(`${API_BASE}/meetings/${id}/`)
 }
 
-export const getCaseResume = async (meetingId, caseId = null) => {
+export const getSubmissionResume = async (meetingId, submissionId = null) => {
   const authAxios = getAuthAxios()
-  const url = caseId 
-    ? `${API_BASE}/meetings/${meetingId}/case_resume/?case_id=${caseId}`
-    : `${API_BASE}/meetings/${meetingId}/case_resume/`
+  const url = submissionId 
+    ? `${API_BASE}/meetings/${meetingId}/submission_resume/?submission_id=${submissionId}`
+    : `${API_BASE}/meetings/${meetingId}/submission_resume/`
   const { data } = await authAxios.get(url)
   return data
 }

@@ -1,26 +1,25 @@
 import { useState, useRef } from 'react'
-import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save } from 'lucide-react'
+import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save, Video } from 'lucide-react'
 
 /**
  * File sharing panel for conference attachments.
  */
 export default function FileSharePanel({
   attachments,
-  caseAttachments,
+  submissionAttachments,
   onUpload,
+  onCancelUpload,
   onPromote,
   isOpen,
   onToggle,
   isUploading,
-  activeCaseId,
+  activeSubmissionId,
 }) {
   const [dragActive, setDragActive] = useState(false)
   const [previewItem, setPreviewItem] = useState(null)
   const fileInputRef = useRef(null)
 
   const normalizeAttachment = (attachment, source) => {
-    // Ensure the URL is relative to the current host to avoid cross-origin iframe issues
-    // or pointing to the wrong domain (like production Vercel while in development).
     let fileUrl = attachment.file || ''
     if (fileUrl.includes('/media/')) {
       fileUrl = fileUrl.substring(fileUrl.indexOf('/media/'))
@@ -39,10 +38,10 @@ export default function FileSharePanel({
   }
 
   const conferenceFiles = attachments.map((attachment) => normalizeAttachment(attachment, 'meeting'))
-  const filteredCaseAttachments = (caseAttachments || []).filter(
-    (attachment) => !activeCaseId || attachment.medical_case_id === activeCaseId
+  const filteredSubmissionAttachments = (submissionAttachments || []).filter(
+    (attachment) => !activeSubmissionId || attachment.submission_id === activeSubmissionId
   )
-  const medicalCaseFiles = filteredCaseAttachments.map((attachment) => normalizeAttachment(attachment, 'case'))
+  const submissionFiles = filteredSubmissionAttachments.map((attachment) => normalizeAttachment(attachment, 'submission'))
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -76,7 +75,9 @@ export default function FileSharePanel({
   }
 
   const getFileIcon = (type) => {
-    if (type?.startsWith('image/')) return <Image size={16} />
+    const t = type?.toUpperCase() || ''
+    if (t.startsWith('IMAGE/') || t === 'IMAGE') return <Image size={16} />
+    if (t.startsWith('VIDEO/') || t === 'VIDEO') return <Video size={16} />
     return <FileText size={16} />
   }
 
@@ -87,8 +88,19 @@ export default function FileSharePanel({
     return `${(bytes / 1048576).toFixed(1)} MB`
   }
 
-  const isPreviewable = (file) => file.fileType?.startsWith('image/') || file.fileType === 'PDF' || file.fileType === 'application/pdf'
-  const previewType = (file) => (file.fileType?.startsWith('image/') ? 'image' : 'pdf')
+  const isPreviewable = (file) => {
+    const t = file.fileType?.toUpperCase() || ''
+    return t.startsWith('IMAGE/') || t === 'IMAGE' || 
+           t.startsWith('VIDEO/') || t === 'VIDEO' || 
+           t === 'PDF' || t === 'APPLICATION/PDF'
+  }
+    
+  const previewType = (file) => {
+    const t = file.fileType?.toUpperCase() || ''
+    if (t.startsWith('IMAGE/') || t === 'IMAGE') return 'image'
+    if (t.startsWith('VIDEO/') || t === 'VIDEO') return 'video'
+    return 'pdf'
+  }
 
   if (!isOpen) return null
 
@@ -112,6 +124,18 @@ export default function FileSharePanel({
         >
           <Upload size={24} />
           <p>{isUploading ? 'Téléchargement...' : 'Glissez-déposez des fichiers ou cliquez pour télécharger'}</p>
+          {isUploading && (
+            <button 
+              className="btn-small btn-secondary" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelUpload();
+              }}
+              style={{ marginTop: '0.5rem', zIndex: 10 }}
+            >
+              <X size={14} /> Annuler
+            </button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -122,10 +146,10 @@ export default function FileSharePanel({
         </div>
 
         <div className="file-section">
-          <div className="file-section-title">Pièces jointes du dossier médical</div>
+          <div className="file-section-title">Pièces jointes du dossier</div>
           <div className="file-list">
-            {medicalCaseFiles.length === 0 && <p className="no-files">Aucune pièce jointe disponible pour ce dossier</p>}
-            {medicalCaseFiles.map((file) => (
+            {submissionFiles.length === 0 && <p className="no-files">Aucune pièce jointe disponible pour ce dossier</p>}
+            {submissionFiles.map((file) => (
               <div key={file.id} className="file-item">
                 <div className="file-icon">{getFileIcon(file.fileType)}</div>
                 <div className="file-info">
@@ -148,7 +172,7 @@ export default function FileSharePanel({
         </div>
 
         <div className="file-section">
-          <div className="file-section-title">Fichiers partagés pendant la réunion</div>
+          <div className="file-section-title">Fichiers partagés en réunion</div>
           <div className="file-list">
             {conferenceFiles.length === 0 && <p className="no-files">Aucun fichier partagé pour le moment</p>}
             {conferenceFiles.map((file) => (
@@ -167,7 +191,7 @@ export default function FileSharePanel({
                   <button 
                     className="file-action-btn" 
                     onClick={() => onPromote(file.originalId)} 
-                    title="Ajouter au dossier médical"
+                    title="Ajouter au dossier permanent"
                   >
                     <Save size={16} />
                   </button>
@@ -191,9 +215,15 @@ export default function FileSharePanel({
               </button>
             </div>
             <div className="file-preview-body">
-              {previewType(previewItem) === 'image' ? (
+              {previewType(previewItem) === 'image' && (
                 <img src={previewItem.url} alt={previewItem.name} className="file-preview-image" />
-              ) : (
+              )}
+              {previewType(previewItem) === 'video' && (
+                <video src={previewItem.url} controls className="file-preview-video" style={{ maxWidth: '100%', maxHeight: '70vh' }}>
+                  Votre navigateur ne supporte pas la lecture de vidéos.
+                </video>
+              )}
+              {previewType(previewItem) === 'pdf' && (
                 <iframe src={previewItem.url} title={previewItem.name} className="file-preview-frame" />
               )}
             </div>

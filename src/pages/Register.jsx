@@ -114,7 +114,7 @@ export default function Register() {
           <div className="form-group">
             <label>Mot de passe</label>
             <input
-              type="password"
+              type="text"
               name="password"
               value={formData.password}
               onChange={handleChange}

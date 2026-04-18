@@ -98,18 +98,20 @@ export const uploadConferenceAttachment = async (
   conferenceId,
   file,
   description = "",
-  medicalCaseId = null,
+  submissionId = null,
+  signal = null
 ) => {
   const authAxios = getAuthAxios();
   const formData = new FormData();
   formData.append("file", file);
   formData.append("description", description);
-  if (medicalCaseId) {
-    formData.append("medical_case_id", medicalCaseId);
+  if (submissionId) {
+    formData.append("submission_id", submissionId);
   }
   const { data } = await authAxios.post(
     `${API_BASE}/conferences/${conferenceId}/upload-attachment/`,
     formData,
+    { signal }
   );
   return data;
 };
@@ -125,13 +127,13 @@ export const updateConferenceNotes = async (conferenceId, notes) => {
   return data;
 };
 
-export const promoteConferenceAttachment = async (conferenceId, attachmentId, medicalCaseId) => {
+export const promoteConferenceAttachment = async (conferenceId, attachmentId, submissionId) => {
   const authAxios = getAuthAxios();
   const { data } = await authAxios.post(
     `${API_BASE}/conferences/${conferenceId}/promote-attachment/`,
     {
       attachment_id: attachmentId,
-      medical_case_id: medicalCaseId,
+      submission_id: submissionId,
     },
   );
   return data;

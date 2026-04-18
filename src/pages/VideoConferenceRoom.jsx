@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import useWebRTC from '../hooks/useWebRTC'
@@ -10,7 +10,6 @@ import {
   endConference,
   uploadConferenceAttachment,
   removeParticipant,
-  updateConferenceNotes,
   promoteConferenceAttachment,
 } from '../api/conferenceApi'
 import VideoGrid from '../components/conference/VideoGrid'
@@ -39,9 +38,10 @@ export default function VideoConferenceRoom() {
   const [showResume, setShowResume] = useState(false)
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const abortControllerRef = useRef(null)
   const [elapsedTime, setElapsedTime] = useState(0)
   const [joined, setJoined] = useState(false)
-  const [activeCaseId, setActiveCaseId] = useState(null)
+  const [activeSubmissionId, setActiveSubmissionId] = useState(null)
   const [notes, setNotes] = useState('')
   const [notesSaveStatus, setNotesSaveStatus] = useState('idle')
 
@@ -52,6 +52,11 @@ export default function VideoConferenceRoom() {
   const handleNotesSync = useCallback((newNotes) => {
     setNotes(newNotes)
   }, [])
+
+  const handleConferenceEnded = useCallback(() => {
+    alert("La réunion a été terminée par l'hôte.")
+    navigate('/meetings')
+  }, [navigate])
 
   const {
     localStream,
@@ -73,17 +78,17 @@ export default function VideoConferenceRoom() {
     broadcastNotes,
     raiseHand,
     muteRemoteParticipant,
-  } = useWebRTC(roomId, user?.id, handleChatMessage, handleNotesSync)
+  } = useWebRTC(roomId, user?.id, handleChatMessage, handleNotesSync, handleConferenceEnded)
 
   useEffect(() => {
     loadConference()
   }, [roomId])
 
   useEffect(() => {
-    if (conference?.medical_cases?.length > 0 && !activeCaseId) {
-      setActiveCaseId(conference.medical_cases[0].id)
+    if (conference?.submissions?.length > 0 && !activeSubmissionId) {
+      setActiveSubmissionId(conference.submissions[0].id)
     }
-  }, [conference, activeCaseId])
+  }, [conference, activeSubmissionId])
 
   useEffect(() => {
     if (!conference?.started_at || conference?.status === 'ENDED') return undefined
@@ -103,15 +108,10 @@ export default function VideoConferenceRoom() {
 
     setNotesSaveStatus('saving')
     const timer = setTimeout(() => {
-      // Broadcast to WebSocket - the Consumer will handle DB saving
-      console.log('Debouncing notes broadcast...', notes.length);
       const success = broadcastNotes(notes)
       if (success) {
-        console.log('Notes broadcasted successfully');
         setNotesSaveStatus('idle')
       } else {
-        console.warn('WebSocket not ready, notes not sent');
-        // If WebSocket fails, we should ideally fallback to an API call or just reset status
         setNotesSaveStatus('idle') 
       }
     }, 1000)
@@ -130,7 +130,7 @@ export default function VideoConferenceRoom() {
         setChatMessages(data.recent_messages.reverse())
       }
 
-      const me = data.participants?.find((participant) => participant.user === user?.id)
+      const me = data.participants?.find((p) => p.user === user?.id)
       setIsHost(me?.role === 'HOST')
     } catch (err) {
       setError(err.response?.data?.detail || 'Échec du chargement de la conférence')
@@ -183,15 +183,35 @@ export default function VideoConferenceRoom() {
   const handleUpload = async (file) => {
     try {
       setIsUploading(true)
-      const attachment = await uploadConferenceAttachment(conference.id, file, '', activeCaseId)
+      abortControllerRef.current = new AbortController()
+      
+      const attachment = await uploadConferenceAttachment(
+        conference.id, 
+        file, 
+        '', 
+        activeSubmissionId,
+        abortControllerRef.current.signal
+      )
+      
       setConference((prev) => ({
         ...prev,
         attachments: [...(prev.attachments || []), attachment],
       }))
     } catch (err) {
-      console.error('Upload failed:', err)
+      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+        console.log('Upload canceled by user')
+      } else {
+        console.error('Upload failed:', err)
+      }
     } finally {
       setIsUploading(false)
+      abortControllerRef.current = null
+    }
+  }
+
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
     }
   }
 
@@ -204,16 +224,16 @@ export default function VideoConferenceRoom() {
       console.error('Remove failed:', err)
     }
   }
+
   const handlePromoteAttachment = async (attachmentId) => {
-    if (!activeCaseId) return alert('Veuillez sélectionner un dossier médical correctement.');
+    if (!activeSubmissionId) return alert('Veuillez sélectionner un dossier correctement.');
     try {
-      await promoteConferenceAttachment(conference.id, attachmentId, activeCaseId)
-      // Reload conference to show the new attachment in the "Medical case attachments" section
+      await promoteConferenceAttachment(conference.id, attachmentId, activeSubmissionId)
       loadConference()
-      alert('Le fichier a été ajouté avec succès au dossier médical.')
+      alert('Le fichier a été ajouté avec succès au dossier permanent.')
     } catch (err) {
       console.error('Promotion failed:', err)
-      alert('Échec de l\'ajout du fichier au dossier médical : ' + (err.response?.data?.detail || err.message))
+      alert('Échec de l\'ajout du fichier au dossier : ' + (err.response?.data?.detail || err.message))
     }
   }
 
@@ -225,8 +245,8 @@ export default function VideoConferenceRoom() {
     return `${m}:${String(s).padStart(2, '0')}`
   }
 
-  const unreadCount = chatMessages.filter((message) => message.message_type !== 'SYSTEM' && !showChat).length
-  const raisedHands = participants.filter((participant) => participant.hand_raised)
+  const unreadCount = chatMessages.filter((m) => m.message_type !== 'SYSTEM' && !showChat).length
+  const raisedHands = participants.filter((p) => p.hand_raised)
 
   if (loading) {
     return (
@@ -251,7 +271,6 @@ export default function VideoConferenceRoom() {
     return (
       <div className="conference-ended">
         <h2>La réunion est terminée</h2>
-        <p>Cette session de conférence est terminée.</p>
         <button onClick={() => navigate('/meetings')}>Retour aux réunions</button>
       </div>
     )
@@ -263,11 +282,6 @@ export default function VideoConferenceRoom() {
         <div className="lobby-card">
           <h2>{conference?.meeting_title || 'Rejoindre la conférence'}</h2>
           <p className="lobby-room">Salle : <strong>{roomId}</strong></p>
-          {conference?.meeting_date && (
-            <p className="lobby-date">
-              Planifiée : {new Date(conference.meeting_date).toLocaleString()}
-            </p>
-          )}
           <p className="lobby-status">
             Statut : <span className={`status-${conference?.status?.toLowerCase()}`}>{conference?.status}</span>
           </p>
@@ -275,19 +289,12 @@ export default function VideoConferenceRoom() {
             <Users size={16} />
             <span>{conference?.participants?.length || 0} participant(s) invité(s)</span>
           </div>
-          {error && <div className="lobby-error">{error}</div>}
           <div className="lobby-actions">
-            <button className="btn-join" onClick={handleJoin}>
-              Rejoindre la réunion
-            </button>
+            <button className="btn-join" onClick={handleJoin}>Rejoindre la réunion</button>
             {isHost && conference?.status === 'WAITING' && (
-              <button className="btn-start" onClick={handleStartMeeting}>
-                Démarrer la réunion
-              </button>
+              <button className="btn-start" onClick={handleStartMeeting}>Démarrer la réunion</button>
             )}
-            <button className="btn-back" onClick={() => navigate('/meetings')}>
-              Retour aux réunions
-            </button>
+            <button className="btn-back" onClick={() => navigate('/meetings')}>Retour</button>
           </div>
         </div>
       </div>
@@ -299,17 +306,17 @@ export default function VideoConferenceRoom() {
       <div className="conference-header">
         <div className="header-left">
           <h2 className="conference-title">{conference?.meeting_title || 'Conférence RCP'}</h2>
-          {conference?.medical_cases?.length > 0 && (
+          {conference?.submissions?.length > 0 && (
             <div className="header-case-selector">
               <ClipboardList size={16} />
               <select 
-                value={activeCaseId || ''} 
-                onChange={(e) => setActiveCaseId(e.target.value)}
+                value={activeSubmissionId || ''} 
+                onChange={(e) => setActiveSubmissionId(e.target.value)}
                 className="case-switcher"
               >
-                {conference.medical_cases.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.patient_name} - {c.name}
+                {conference.submissions.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.patient_name} - {s.name || s.form_name}
                   </option>
                 ))}
               </select>
@@ -323,9 +330,6 @@ export default function VideoConferenceRoom() {
               <span>{formatTime(elapsedTime)}</span>
             </div>
           )}
-          <span className={`status-indicator status-${conference?.status?.toLowerCase()}`}>
-            {conference?.status === 'ACTIVE' ? '● En direct' : conference?.status}
-          </span>
         </div>
         <div className="header-right">
           <button
@@ -352,30 +356,21 @@ export default function VideoConferenceRoom() {
             <Paperclip size={18} />
           </button>
           <button
-            className={`toolbar-btn ${showNotes ? 'active' : ''}`}
-            onClick={() => { setShowNotes(!showNotes); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowResume(false) }}
-            title="Notes de réunion"
-          >
-            <FileText size={18} />
-          </button>
-          <button
             className={`toolbar-btn ${showResume ? 'active' : ''}`}
             onClick={() => { setShowResume(!showResume); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowNotes(false) }}
-            title="Résumé du dossier"
+            title="Résumé Clinique"
           >
             <ClipboardList size={18} />
           </button>
+          <button
+            className={`toolbar-btn ${showNotes ? 'active' : ''}`}
+            onClick={() => { setShowNotes(!showNotes); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowResume(false) }}
+            title="Notes"
+          >
+            <FileText size={18} />
+          </button>
         </div>
       </div>
-
-      {!!raisedHands.length && (
-        <div className="raised-hands-banner">
-          <span className="raised-hands-icon">✋</span>
-          <span>
-            Mains levées : {raisedHands.map((participant) => participant.first_name ? `${participant.first_name} ${participant.last_name || ''}`.trim() : participant.username).join(', ')}
-          </span>
-        </div>
-      )}
 
       <div className="conference-body">
         <div className={`video-area ${showParticipants || showChat || showFiles || showNotes || showResume ? 'with-sidebar' : ''}`}>
@@ -411,13 +406,14 @@ export default function VideoConferenceRoom() {
 
         <FileSharePanel
           attachments={conference?.attachments || []}
-          caseAttachments={conference?.medical_case_attachments || []}
+          submissionAttachments={conference?.submission_attachments || []}
           onUpload={handleUpload}
+          onCancelUpload={handleCancelUpload}
           onPromote={handlePromoteAttachment}
           isOpen={showFiles}
           onToggle={() => setShowFiles(false)}
           isUploading={isUploading}
-          activeCaseId={activeCaseId}
+          activeSubmissionId={activeSubmissionId}
         />
 
         <MeetingNotesSidebar
@@ -427,15 +423,13 @@ export default function VideoConferenceRoom() {
           onChange={setNotes}
           canEdit={conference?.can_edit_notes}
           saveStatus={notesSaveStatus}
-          updatedAt={conference?.notes_updated_at}
-          updatedByName={conference?.notes_updated_by_name}
         />
 
         <CaseResumeSidebar
           isOpen={showResume}
           onToggle={() => setShowResume(false)}
           meetingId={conference?.meeting}
-          activeCaseId={activeCaseId}
+          activeSubmissionId={activeSubmissionId}
         />
       </div>
 

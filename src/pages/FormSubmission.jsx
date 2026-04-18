@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { submitForm } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
-import { getMedicalCases } from '../api/medicalCasesApi'
+import { uploadAttachment } from '../api/attachmentsApi'
 import FormField from '../components/FormField'
 import SearchableSelect from '../components/SearchableSelect'
 
@@ -47,9 +47,8 @@ export default function FormSubmission() {
   const [form, setForm] = useState(null)
   const [formData, setFormData] = useState({})
   const [patients, setPatients] = useState([])
-  const [medicalCases, setMedicalCases] = useState([])
   const [selectedPatient, setSelectedPatient] = useState('')
-  const [selectedCase, setSelectedCase] = useState('')
+  const [submissionName, setSubmissionName] = useState('')
   const [loading, setLoading] = useState(true)
   const [patientsLoading, setPatientsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -67,15 +66,6 @@ export default function FormSubmission() {
     return () => clearTimeout(timer)
   }, [patientSearch])
 
-  useEffect(() => {
-    if (selectedPatient) {
-      loadMedicalCases(selectedPatient)
-    } else {
-      setMedicalCases([])
-      setSelectedCase('')
-    }
-  }, [selectedPatient])
-
   const loadPatients = async (search = '') => {
     try {
       const data = await getPatients(1, search)
@@ -85,16 +75,6 @@ export default function FormSubmission() {
       setPatients([])
     } finally {
       setPatientsLoading(false)
-    }
-  }
-
-  const loadMedicalCases = async (patientId) => {
-    try {
-      const data = await getMedicalCases({ patient: patientId })
-      setMedicalCases(Array.isArray(data) ? data : [])
-    } catch (err) {
-      console.error('Failed to load medical cases:', err)
-      setMedicalCases([])
     }
   }
 
@@ -125,18 +105,70 @@ export default function FormSubmission() {
     setFormData({ ...formData, [fieldId]: value })
   }
 
+  const getFileType = (file) => {
+    const mime = file.type
+    if (mime.includes('pdf')) return 'PDF'
+    if (mime.includes('image')) return 'IMAGE'
+    if (mime.includes('video')) return 'VIDEO'
+    if (mime.includes('dicom') || file.name.toLowerCase().endsWith('.dcm')) return 'DICOM'
+    return 'PDF'
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
       setSubmitting(true)
-      if (!selectedPatient || !selectedCase) {
-        throw new Error('Veuillez sélectionner un patient et un dossier médical.')
+      if (!selectedPatient) {
+        throw new Error('Veuillez sélectionner un patient.')
       }
-      await submitForm(id, formData, selectedPatient, selectedCase)
-      alert('Formulaire soumis avec succès !')
-      navigate('/')
+
+      // 1. Separate files from JSON data
+      const jsonFormData = { ...formData }
+      const filesToUpload = []
+
+      // Recursive function to find file fields in the form structure
+      const findFiles = (sections) => {
+        sections?.forEach(section => {
+          section.fields?.forEach(field => {
+            if (field.field_type === 'file' && formData[field.id] instanceof File) {
+              filesToUpload.push({
+                fieldId: field.id,
+                fieldName: field.name,
+                file: formData[field.id]
+              })
+              // Replace File object with filename in JSON data
+              jsonFormData[field.id] = formData[field.id].name
+            }
+          })
+          if (section.children) findFiles(section.children)
+        })
+      }
+      findFiles(form.sections)
+
+      // 2. Submit form JSON
+      const submission = await submitForm(id, jsonFormData, selectedPatient, submissionName)
+      const submissionId = submission.id
+
+      // 3. Upload files linked to this submission
+      if (filesToUpload.length > 0) {
+        for (const item of filesToUpload) {
+          const uploadData = new FormData()
+          uploadData.append('file', item.file)
+          uploadData.append('submission', submissionId)
+          uploadData.append('file_type', getFileType(item.file))
+          
+          try {
+            await uploadAttachment(uploadData)
+          } catch (uploadErr) {
+            console.error(`Failed to upload file for field ${item.fieldName}:`, uploadErr)
+          }
+        }
+      }
+
+      alert('Formulaire et fichiers soumis avec succès !')
+      navigate('/patients/' + selectedPatient)
     } catch (err) {
-      setError('Échec de la soumission du formulaire')
+      setError('Échec de la soumission du formulaire : ' + err.message)
       console.error(err)
     } finally {
       setSubmitting(false)
@@ -153,44 +185,35 @@ export default function FormSubmission() {
       {form.description && <p className="description">{form.description}</p>}
 
       <form onSubmit={handleSubmit} className="submission-form">
-        <SearchableSelect
-          label="Patient"
-          placeholder="Rechercher un patient par nom..."
-          options={patients.map(p => ({
-            value: p.id,
-            label: `${p.first_name} ${p.last_name}`,
-            subLabel: `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
-          }))}
-          value={selectedPatient}
-          onChange={setSelectedPatient}
-          onSearch={setPatientSearch}
-          loading={patientsLoading}
-          required
-        />
+        <div className="patient-selection-container">
+          <SearchableSelect
+            label="Patient"
+            placeholder="Rechercher un patient par nom..."
+            options={patients.map(p => ({
+              value: p.id,
+              label: `${p.first_name} ${p.last_name}`,
+              subLabel: `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
+            }))}
+            value={selectedPatient}
+            onChange={setSelectedPatient}
+            onSearch={setPatientSearch}
+            loading={patientsLoading}
+            required
+          />
+        </div>
 
-        {selectedPatient && (
-          <div className="patient-selector" style={{ borderColor: 'var(--secondary)' }}>
-            <label htmlFor="case-select">Sélectionner un dossier médical</label>
-            <select
-              id="case-select"
-              value={selectedCase}
-              onChange={(e) => setSelectedCase(e.target.value)}
-              required
-            >
-              <option value="">-- Sélectionner un dossier --</option>
-              {medicalCases.map(mc => (
-                <option key={mc.id} value={mc.id}>
-                  {mc.name || `Dossier ${String(mc.id).slice(0, 8)}...`} — {mc.status}
-                </option>
-              ))}
-            </select>
-            {medicalCases.length === 0 && (
-              <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginTop: '0.5rem' }}>
-                Aucun dossier médical trouvé pour ce patient.
-              </p>
-            )}
+        <div className="submission-meta-fields">
+          <div className="form-field">
+            <label htmlFor="submission-name">Nom de la soumission / Dossier (Optionnel)</label>
+            <input 
+              type="text" 
+              id="submission-name"
+              placeholder="Ex: Consultation initiale, Suivi Post-Op..."
+              value={submissionName}
+              onChange={(e) => setSubmissionName(e.target.value)}
+            />
           </div>
-        )}
+        </div>
 
         {form.sections?.map(section => (
           <SectionRenderer 
