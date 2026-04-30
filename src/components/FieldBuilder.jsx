@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { updateField, deleteField } from '../api/fieldsApi'
 
 const FIELD_TYPES = [
@@ -10,15 +10,20 @@ const FIELD_TYPES = [
   { value: 'file', label: 'Fichier' },
 ]
 
-export default function FieldBuilder({ field, onDelete }) {
+export default function FieldBuilder({ field, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false)
   const [data, setData] = useState(field)
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    setData(field)
+  }, [field])
+
   const handleSave = async () => {
     try {
       setSaving(true)
-      await updateField(field.id, data)
+      const updated = await updateField(field.id, data)
+      onUpdate(updated)
       setIsEditing(false)
     } catch (err) {
       alert('Échec de l\'enregistrement du champ')
@@ -110,10 +115,10 @@ export default function FieldBuilder({ field, onDelete }) {
       ) : (
         <div className="field-display">
           <div className="field-info">
-            <span className="field-name">{field.name}</span>
-            <span className="field-type">{field.field_type}</span>
-            {field.required && <span className="badge">Obligatoire</span>}
-            {field.show_rdv && <span className="badge badge-info">Afficher RDV</span>}
+            <span className="field-name">{data.name}</span>
+            <span className="field-type">{data.field_type}</span>
+            {data.required && <span className="badge">Obligatoire</span>}
+            {data.show_rdv && <span className="badge badge-info">Afficher RDV</span>}
           </div>
           <div className="field-controls">
             <button onClick={() => setIsEditing(true)} className="btn-small">Modifier</button>

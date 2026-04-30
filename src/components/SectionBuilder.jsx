@@ -104,6 +104,9 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
               <FieldBuilder
                 key={field.id}
                 field={field}
+                onUpdate={(updatedField) => {
+                  setFields(fields.map(f => f.id === updatedField.id ? updatedField : f))
+                }}
                 onDelete={(fieldId) => setFields(fields.filter(f => f.id !== fieldId))}
               />
             ))}
