@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getAuditLogs } from '../api/auditLogsApi'
+import { formatDateTime } from '../lib/dateUtils'
 
 const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'VIEW']
 const OBJECT_TYPES = [
@@ -115,7 +116,7 @@ export default function AuditLogsList() {
             <tbody>
               {filteredLogs.map((log) => (
                 <tr key={log.id}>
-                  <td>{new Date(log.timestamp).toLocaleString()}</td>
+                  <td>{formatDateTime(log.timestamp)}</td>
                   <td>{log.username || log.user_email || 'Système'}</td>
                   <td>
                     <span className={`badge ${getActionClass(log.action)}`}>

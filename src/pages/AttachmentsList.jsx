@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getAttachments, deleteAttachment, uploadAttachment } from '../api/attachmentsApi'
 import { getSubmissions } from '../api/submissionsApi'
+import { formatDate } from '../lib/dateUtils'
 
 const FILE_TYPE_LABELS = { PDF: 'PDF', IMAGE: 'Image', VIDEO: 'Video', DICOM: 'DICOM' }
 
@@ -195,7 +196,7 @@ export default function AttachmentsList() {
                 <td><strong>{a.file_name || 'Sans titre'}</strong></td>
                 <td className="text-muted">{a.submission_name || '—'}</td>
                 <td>{a.uploaded_by_name ?? '—'}</td>
-                <td>{new Date(a.uploaded_at).toLocaleDateString()}</td>
+                <td>{formatDate(a.uploaded_at)}</td>
                 <td className="actions">
                   {a.file && (
                     <a href={getRelativeUrl(a.file)} target="_blank" rel="noopener noreferrer" className="btn-small btn-secondary">Ouvrir</a>

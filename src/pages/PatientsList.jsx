@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getPatients, deletePatient } from '../api/patientsApi'
+import { formatDate } from '../lib/dateUtils'
 
 export default function PatientsList() {
   const [patients, setPatients] = useState([])
@@ -92,14 +93,14 @@ export default function PatientsList() {
                   <td className="name-cell">
                     <strong>{patient.first_name} {patient.last_name}</strong>
                   </td>
-                  <td>{new Date(patient.birth_date).toLocaleDateString()}</td>
+                  <td>{formatDate(patient.birth_date)}</td>
                   <td>
                     <span className="gender-badge">
                       {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : '⚪ Autre'}
                     </span>
                   </td>
                   <td>{patient.anonymized_code || '-'}</td>
-                  <td>{new Date(patient.created_at).toLocaleDateString()}</td>
+                  <td>{formatDate(patient.created_at)}</td>
                   <td className="actions-cell">
                     <button
                       className="btn-small btn-info"

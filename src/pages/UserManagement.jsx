@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getUsers, deleteUser, getPendingRegistrations, approveRegistration, rejectRegistration } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
+import { formatDate } from '../lib/dateUtils'
 
 const ROLE_LABELS = {
   'MEDECIN': 'Médecin',
@@ -173,7 +174,7 @@ export default function UserManagement() {
                   <td>{user.email}</td>
                   <td>{user.hospital || '-'}</td>
                   <td>{user.specialty || '-'}</td>
-                  <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td>{formatDate(user.created_at)}</td>
                   <td className="actions" style={{ display: 'flex', gap: '0.5rem' }}>
                     <button 
                       onClick={() => handleApprove(user.id)}

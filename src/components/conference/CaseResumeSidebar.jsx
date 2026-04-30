@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList } from 'lucide-react'
 import { getSubmissionResume } from '../../api/meetingsApi'
+import { formatDate } from '../../lib/dateUtils'
 
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
 
@@ -42,7 +43,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeS
     if (value === null || value === undefined || value === '') return '—'
     if (fieldType === 'checkbox') return value ? '✓ Oui' : '✗ Non'
     if (fieldType === 'date') {
-      try { return new Date(value).toLocaleDateString('fr-FR') } catch { return value }
+      return formatDate(value)
     }
     if (Array.isArray(value)) return value.join(', ')
     return String(value)
@@ -100,7 +101,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeS
                 <div className="cr-patient-meta-row">
                   <span className="cr-meta-chip">
                     <Calendar size={12} />
-                    {new Date(submissionResume.patient.birth_date).toLocaleDateString('fr-FR')}
+                    {formatDate(submissionResume.patient.birth_date)}
                   </span>
                   <span className="cr-meta-chip">
                     {GENDER_LABELS[submissionResume.patient.gender] || submissionResume.patient.gender}
@@ -133,9 +134,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeS
                           <div>
                             <div className="cr-form-name">{form.submission_name || form.form_name}</div>
                             <div className="cr-form-date">
-                              {new Date(form.submitted_at).toLocaleDateString('fr-FR', {
-                                day: 'numeric', month: 'short', year: 'numeric'
-                              })}
+                              {formatDate(form.submitted_at)}
                             </div>
                           </div>
                         </div>

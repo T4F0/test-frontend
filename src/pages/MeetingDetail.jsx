@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getMeeting, deleteMeeting, getSubmissionResume } from '../api/meetingsApi'
 import { createConference } from '../api/conferenceApi'
 import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList } from 'lucide-react'
+import { formatDate, formatDateTime } from '../lib/dateUtils'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
@@ -105,7 +106,7 @@ export default function MeetingDetail() {
     if (value === null || value === undefined || value === '') return '—'
     if (fieldType === 'checkbox') return value ? '✓ Oui' : '✗ Non'
     if (fieldType === 'date') {
-      try { return new Date(value).toLocaleDateString('fr-FR') } catch { return value }
+      return formatDate(value)
     }
     if (Array.isArray(value)) return value.join(', ')
     return String(value)
@@ -150,7 +151,7 @@ export default function MeetingDetail() {
           <div className="detail-grid">
             <div className="detail-item">
               <label>Planifiée le</label>
-              <p>{new Date(meeting.scheduled_date).toLocaleString()}</p>
+              <p>{formatDateTime(meeting.scheduled_date)}</p>
             </div>
             <div className="detail-item">
               <label>Statut</label>
@@ -222,7 +223,7 @@ export default function MeetingDetail() {
              <div className="case-resume-patient-meta">
                   <span className="case-resume-meta-item">
                     <Calendar size={14} />
-                    {new Date(submissionResume.patient.birth_date).toLocaleDateString('fr-FR')}
+                    {formatDate(submissionResume.patient.birth_date)}
                   </span>
                   <span className="case-resume-meta-item">
                     {GENDER_LABELS[submissionResume.patient.gender] || submissionResume.patient.gender}
@@ -246,7 +247,7 @@ export default function MeetingDetail() {
                         <FileText size={18} className="case-resume-form-icon" />
                         <div>
                           <h4 className="case-resume-form-name">{form.submission_name || form.form_name}</h4>
-                          <span className="case-resume-form-date">Soumis le {new Date(form.submitted_at).toLocaleDateString()}</span>
+                          <span className="case-resume-form-date">Soumis le {formatDate(form.submitted_at)}</span>
                         </div>
                       </div>
                       {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}

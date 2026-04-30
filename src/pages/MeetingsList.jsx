@@ -4,6 +4,7 @@ import { getMeetings, deleteMeeting } from '../api/meetingsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
 import { Video, Calendar, Clock, Users, ArrowRight } from 'lucide-react'
+import { formatDate, formatDateTime } from '../lib/dateUtils'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 
@@ -107,9 +108,9 @@ export default function MeetingsList() {
             {meetings.map((m) => (
               <tr key={m.id}>
                 <td>
-                  <strong>{m.title || new Date(m.scheduled_date).toLocaleDateString()}</strong>
+                  <strong>{m.title || formatDate(m.scheduled_date)}</strong>
                   <div className="text-muted" style={{fontSize: '0.8rem'}}>
-                    {new Date(m.scheduled_date).toLocaleDateString()} à {new Date(m.scheduled_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    {formatDateTime(m.scheduled_date)}
                   </div>
                 </td>
                 <td>

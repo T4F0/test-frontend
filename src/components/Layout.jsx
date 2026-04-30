@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell } from 'lucide-react'
 import { getNotifications, markNotificationRead } from '../api/authApi'
+import { formatDate } from '../lib/dateUtils'
 
 export default function Layout() {
   const { user, authenticated, logout } = useAuth()
@@ -136,7 +137,7 @@ export default function Layout() {
                                 <div key={n.id} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', background: n.is_read ? 'white' : '#f0f9ff', opacity: n.is_read ? 0.7 : 1 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                                     <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#0f172a' }}>{n.title}</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{new Date(n.created_at).toLocaleDateString()}</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{formatDate(n.created_at)}</span>
                                   </div>
                                   <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0, marginBottom: '0.5rem' }}>{n.message}</p>
                                   {!n.is_read && (

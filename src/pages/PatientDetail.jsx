@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient } from '../api/patientsApi'
 import { getSubmissionsByPatient, updateSubmission } from '../api/submissionsApi'
+import { formatDate, formatDateTime } from '../lib/dateUtils'
 
 const STATUS_LABELS = { 
   SUBMITTED: 'Soumis', 
@@ -101,7 +102,7 @@ export default function PatientDetail() {
             </div>
             <div className="detail-item">
               <label>Date de naissance</label>
-              <p>{new Date(patient.birth_date).toLocaleDateString()}</p>
+              <p>{formatDate(patient.birth_date)}</p>
             </div>
             <div className="detail-item">
               <label>Sexe</label>
@@ -141,8 +142,7 @@ export default function PatientDetail() {
                   {submissions.map((sub) => (
                     <tr key={sub.id}>
                       <td className="date-cell">
-                        {new Date(sub.created_at).toLocaleDateString()}
-                        <div className="time-sub">{new Date(sub.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        {formatDateTime(sub.created_at)}
                       </td>
                       <td>
                         <div className="sub-title-main">

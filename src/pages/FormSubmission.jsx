@@ -4,6 +4,7 @@ import { getForm } from '../api/formsApi'
 import { submitForm } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
 import { uploadAttachment } from '../api/attachmentsApi'
+import { formatDate } from '../lib/dateUtils'
 import FormField from '../components/FormField'
 import SearchableSelect from '../components/SearchableSelect'
 
@@ -192,7 +193,7 @@ export default function FormSubmission() {
             options={patients.map(p => ({
               value: p.id,
               label: `${p.first_name} ${p.last_name}`,
-              subLabel: `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
+              subLabel: `DDN : ${formatDate(p.birth_date)}`
             }))}
             value={selectedPatient}
             onChange={setSelectedPatient}

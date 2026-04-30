@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getForms, deleteForm } from '../api/formsApi'
 import { useAuth } from '../context/AuthContext'
+import { formatDate } from '../lib/dateUtils'
 
 export default function FormsList() {
   const [forms, setForms] = useState([])
@@ -75,7 +76,7 @@ export default function FormsList() {
               <tr key={form.id}>
                 <td>{form.name}</td>
                 <td>{form.description}</td>
-                <td>{new Date(form.created_at).toLocaleDateString()}</td>
+                <td>{formatDate(form.created_at)}</td>
                 <td className="actions">
                   <button onClick={() => navigate(`/forms/${form.id}/submit`)}>Remplir</button>
                   <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>

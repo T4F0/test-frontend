@@ -6,6 +6,7 @@ import { getPatients } from '../api/patientsApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import SearchableSelect from '../components/SearchableSelect'
+import { formatDate } from '../lib/dateUtils'
 
 export default function MeetingForm() {
   const { id } = useParams()
@@ -297,7 +298,7 @@ export default function MeetingForm() {
               options={patients.map(p => ({
                 value: p.id,
                 label: `${p.first_name} ${p.last_name}`,
-                subLabel: `DDN : ${new Date(p.birth_date).toLocaleDateString()}`
+                subLabel: `DDN : ${formatDate(p.birth_date)}`
               }))}
               value={selectedPatientId}
               onChange={handlePatientChange}
@@ -315,7 +316,7 @@ export default function MeetingForm() {
                 <option value="">{selectedPatientId ? 'Choisir une soumission...' : 'Rechercher le patient d\'abord'}</option>
                 {filteredSubmissions.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name || s.form_name} ({new Date(s.created_at).toLocaleDateString()})
+                    {s.name || s.form_name} ({formatDate(s.created_at)})
                   </option>
                 ))}
               </select>
