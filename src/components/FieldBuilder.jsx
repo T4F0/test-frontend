@@ -14,15 +14,21 @@ export default function FieldBuilder({ field, onUpdate, onDelete }) {
   const [isEditing, setIsEditing] = useState(false)
   const [data, setData] = useState(field)
   const [saving, setSaving] = useState(false)
+  const [optionsText, setOptionsText] = useState(field.options ? field.options.join('\n') : '')
 
   useEffect(() => {
     setData(field)
+    setOptionsText(field.options ? field.options.join('\n') : '')
   }, [field])
 
   const handleSave = async () => {
     try {
       setSaving(true)
-      const updated = await updateField(field.id, data)
+      const finalData = {
+        ...data,
+        options: optionsText.split('\n').map(o => o.trim()).filter(o => o !== '')
+      }
+      const updated = await updateField(field.id, finalData)
       onUpdate(updated)
       setIsEditing(false)
     } catch (err) {
@@ -72,8 +78,8 @@ export default function FieldBuilder({ field, onUpdate, onDelete }) {
             <div className="form-row">
               <textarea
                 placeholder='Options (une par ligne)'
-                value={data.options ? data.options.join('\n') : ''}
-                onChange={(e) => setData({ ...data, options: e.target.value.split('\n').filter(o => o) })}
+                value={optionsText}
+                onChange={(e) => setOptionsText(e.target.value)}
               />
             </div>
           )}
