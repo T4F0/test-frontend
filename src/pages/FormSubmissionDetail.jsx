@@ -8,6 +8,9 @@ import { Download, FileText, ExternalLink, Video, Image } from 'lucide-react'
 function formatValue(value) {
   if (value === true) return 'Oui'
   if (value === false) return 'Non'
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(', ') : '—'
+  }
   return value == null || value === '' ? '—' : String(value)
 }
 

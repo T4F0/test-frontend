@@ -9,26 +9,28 @@ export default function FormField({ field, value, onChange }) {
 
   return (
     <div className="form-field">
-      <label htmlFor={baseProps.id}>
-        {field.name}
-        {field.required && <span className="required">*</span>}
-        {field.show_rdv && (
-          <span 
-            title="Champ RDV"
-            style={{ 
-              marginLeft: '8px', 
-              fontSize: '0.75em', 
-              backgroundColor: '#e0f2fe', 
-              color: '#0284c7', 
-              padding: '2px 6px', 
-              borderRadius: '12px',
-              fontWeight: '500',
-              border: '1px solid #bae6fd'
-            }}>
-            📅 Champ RDV
-          </span>
-        )}
-      </label>
+      {field.field_type !== 'checkbox' && (
+        <label htmlFor={baseProps.id}>
+          {field.name}
+          {field.required && <span className="required">*</span>}
+          {field.show_rdv && (
+            <span 
+              title="Champ RDV"
+              style={{ 
+                marginLeft: '8px', 
+                fontSize: '0.75em', 
+                backgroundColor: '#e0f2fe', 
+                color: '#0284c7', 
+                padding: '2px 6px', 
+                borderRadius: '12px',
+                fontWeight: '500',
+                border: '1px solid #bae6fd'
+              }}>
+              📅 Champ RDV
+            </span>
+          )}
+        </label>
+      )}
 
       {field.field_type === 'text' && (
         <input type="text" {...baseProps} placeholder={field.placeholder} />
@@ -52,12 +54,46 @@ export default function FormField({ field, value, onChange }) {
       )}
 
       {field.field_type === 'checkbox' && (
-        <input
-          type="checkbox"
-          {...baseProps}
-          checked={value || false}
-          onChange={(e) => onChange(e.target.checked)}
-        />
+        <div className="checkbox-group">
+          {(!field.options || field.options.length === 0) ? (
+            <label className="checkbox-item single">
+              <input
+                type="checkbox"
+                checked={!!value}
+                onChange={(e) => onChange(e.target.checked)}
+                required={field.required}
+              />
+              <span className="checkbox-label">
+                {field.name}
+                {field.required && <span className="required">*</span>}
+              </span>
+            </label>
+          ) : (
+            <div className="checkbox-list">
+              <span className="checkbox-group-label">{field.name} {field.required && <span className="required">*</span>}</span>
+              {field.options.map((opt, i) => {
+                const currentValues = Array.isArray(value) ? value : []
+                const isChecked = currentValues.includes(opt)
+                
+                return (
+                  <label key={i} className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        const newValues = e.target.checked
+                          ? [...currentValues, opt]
+                          : currentValues.filter(v => v !== opt)
+                        onChange(newValues)
+                      }}
+                    />
+                    <span className="checkbox-label">{opt}</span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {field.field_type === 'file' && (

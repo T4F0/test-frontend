@@ -87,7 +87,11 @@ export default function FormSubmission() {
       const initFields = (sections) => {
         sections?.forEach(section => {
           section.fields?.forEach(field => {
-            initialData[field.id] = field.field_type === 'checkbox' ? false : ''
+            if (field.field_type === 'checkbox') {
+              initialData[field.id] = (field.options && field.options.length > 0) ? [] : false
+            } else {
+              initialData[field.id] = field.field_type === 'checkbox' ? false : ''
+            }
           })
           if (section.children) initFields(section.children)
         })
