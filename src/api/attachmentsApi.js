@@ -31,15 +31,27 @@ export const downloadAttachment = async (url, filename) => {
   const authAxios = getAuthAxios()
   const { data, headers } = await authAxios.get(url, { responseType: 'blob' })
   
+  // The backend might send custom types like 'PDF' or 'IMAGE' instead of real MIME types.
+  let mimeType = headers['content-type']
+  if (mimeType === 'PDF' || (filename && filename.toLowerCase().endsWith('.pdf'))) {
+    mimeType = 'application/pdf'
+  } else if (mimeType === 'IMAGE') {
+    mimeType = 'image/jpeg' // Fallback image type
+  } else if (!mimeType || mimeType === 'application/octet-stream') {
+    if (filename && filename.toLowerCase().endsWith('.pdf')) mimeType = 'application/pdf'
+  }
+
   // Create a blob URL and trigger a download or open
-  const blobUrl = window.URL.createObjectURL(new Blob([data], { type: headers['content-type'] }))
+  const blobUrl = window.URL.createObjectURL(new Blob([data], { type: mimeType }))
   const link = document.createElement('a')
   link.href = blobUrl
+  
   if (filename) {
     link.setAttribute('download', filename) // Force download if filename provided
   } else {
     link.setAttribute('target', '_blank') // Open in new tab if no filename
   }
+  
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
