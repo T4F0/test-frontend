@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getAttachments, deleteAttachment, uploadAttachment } from '../api/attachmentsApi'
+import { getAttachments, deleteAttachment, uploadAttachment, downloadAttachment } from '../api/attachmentsApi'
 import { getSubmissions } from '../api/submissionsApi'
 import { formatDate } from '../lib/dateUtils'
 
@@ -199,7 +199,12 @@ export default function AttachmentsList() {
                 <td>{formatDate(a.uploaded_at)}</td>
                 <td className="actions">
                   {a.file && (
-                    <a href={getRelativeUrl(a.file)} target="_blank" rel="noopener noreferrer" className="btn-small btn-secondary">Ouvrir</a>
+                    <button 
+                      className="btn-small btn-secondary" 
+                      onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}
+                    >
+                      Ouvrir
+                    </button>
                   )}
                   <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
                 </td>

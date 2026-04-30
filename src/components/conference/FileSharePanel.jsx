@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save, Video } from 'lucide-react'
+import { downloadAttachment } from '../../api/attachmentsApi'
 
 /**
  * File sharing panel for conference attachments.
@@ -162,9 +163,17 @@ export default function FileSharePanel({
                       <Eye size={16} />
                     </button>
                   )}
-                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Télécharger">
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault()
+                      downloadAttachment(file.url, file.name)
+                    }}
+                    className="file-download file-action-btn" 
+                    title="Télécharger"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
                     <Download size={16} />
-                  </a>
+                  </button>
                 </div>
               </div>
             ))}
@@ -195,9 +204,17 @@ export default function FileSharePanel({
                   >
                     <Save size={16} />
                   </button>
-                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="file-download" title="Télécharger">
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault()
+                      downloadAttachment(file.url, file.name)
+                    }}
+                    className="file-download file-action-btn" 
+                    title="Télécharger"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
                     <Download size={16} />
-                  </a>
+                  </button>
                 </div>
               </div>
             ))}

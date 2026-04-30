@@ -26,3 +26,22 @@ export const deleteAttachment = async (id) => {
   const authAxios = getAuthAxios()
   await authAxios.delete(`${API_BASE}/attachments/${id}/`)
 }
+
+export const downloadAttachment = async (url, filename) => {
+  const authAxios = getAuthAxios()
+  const { data, headers } = await authAxios.get(url, { responseType: 'blob' })
+  
+  // Create a blob URL and trigger a download or open
+  const blobUrl = window.URL.createObjectURL(new Blob([data], { type: headers['content-type'] }))
+  const link = document.createElement('a')
+  link.href = blobUrl
+  if (filename) {
+    link.setAttribute('download', filename) // Force download if filename provided
+  } else {
+    link.setAttribute('target', '_blank') // Open in new tab if no filename
+  }
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000)
+}

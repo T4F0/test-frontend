@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { getSubmission } from '../api/submissionsApi'
-import { getAttachments } from '../api/attachmentsApi'
+import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { Download, FileText, ExternalLink, Video, Image } from 'lucide-react'
 
 function formatValue(value) {
@@ -171,16 +171,17 @@ export default function FormSubmissionDetail() {
                       <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{file.file_type} · Par {file.uploaded_by_name}</div>
                     </div>
                   </div>
-                  <a 
-                    href={file.file} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault()
+                      downloadAttachment(file.file, file.file_name)
+                    }}
                     className="btn-icon"
-                    style={{ color: '#2563eb', padding: '8px' }}
+                    style={{ color: '#2563eb', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
                     title="Ouvrir le fichier"
                   >
                     <ExternalLink size={18} />
-                  </a>
+                  </button>
                 </div>
               ))}
             </div>
