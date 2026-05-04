@@ -18,7 +18,8 @@ export default function PatientForm() {
     last_name: '',
     birth_date: '',
     gender: 'O',
-    anonymized_code: ''
+    anonymized_code: '',
+    phone_number: ''
   })
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -139,6 +140,16 @@ export default function PatientForm() {
             value={patient.anonymized_code}
             onChange={(e) => setPatient({ ...patient, anonymized_code: e.target.value })}
             placeholder="Identifiant anonymisé optionnel"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Numéro de téléphone</label>
+          <input
+            type="tel"
+            value={patient.phone_number || ''}
+            onChange={(e) => setPatient({ ...patient, phone_number: e.target.value })}
+            placeholder="Ex: +213 6 12 34 56 78"
           />
         </div>
 

@@ -67,7 +67,7 @@ export default function FormSubmissionsList() {
               {submissions.map((sub) => (
                 <tr key={sub.id}>
                   <td>{sub.patient_name ?? '—'}</td>
-                  <td>{sub.name || <span className="text-muted">Sans titre</span>}</td>
+                  <td>{sub.form_name}</td>
                   <td><span className="badge">{sub.status}</span></td>
                   <td>{new Date(sub.created_at).toLocaleString()}</td>
                   <td>

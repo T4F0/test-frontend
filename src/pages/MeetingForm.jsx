@@ -71,8 +71,7 @@ export default function MeetingForm() {
   }
 
   const formatUserMeta = (candidate) => {
-    if (!candidate) return ''
-    return [candidate.email, candidate.role, candidate.specialty].filter(Boolean).join(' • ')
+    return [candidate.email, candidate.role].filter(Boolean).join(' • ')
   }
 
   const getInitials = (candidate) => {
@@ -165,8 +164,7 @@ export default function MeetingForm() {
       u.id !== user?.id && 
       (formatUserName(u).toLowerCase().includes(q) || 
        u.email?.toLowerCase().includes(q) || 
-       u.role?.toLowerCase().includes(q) || 
-       u.specialty?.toLowerCase().includes(q))
+       u.role?.toLowerCase().includes(q))
     )
   }, [users, participantSearch, user])
 
@@ -380,7 +378,7 @@ export default function MeetingForm() {
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>
             <input 
               type="text" 
-              placeholder="Rechercher par nom, email, rôle, spécialité..." 
+              placeholder="Rechercher par nom, email ou rôle..." 
               value={participantSearch}
               onChange={(e) => setParticipantSearch(e.target.value)}
               style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}

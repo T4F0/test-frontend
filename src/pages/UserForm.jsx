@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { createUser, updateUser, getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
+import { ALGERIA_WILAYAS } from '../lib/constants'
 
 const ROLE_CHOICES = [
-  { value: 'MEDECIN', label: 'Médecin' },
+  { value: 'MEDECIN', label: 'Médecin traitant' },
   { value: 'COORDINATEUR', label: 'Coordinateur' },
   { value: 'ADMIN', label: 'Administrateur' }
 ]
@@ -29,7 +30,7 @@ export default function UserForm() {
     password: '',
     role: 'MEDECIN',
     hospital: '',
-    specialty: ''
+    phone_number: ''
   })
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -171,23 +172,28 @@ export default function UserForm() {
             </select>
           </div>
           <div className="form-group">
-            <label>Hôpital</label>
-            <input
-              type="text"
+            <label>Hôpital / Wilaya</label>
+            <select
               value={user.hospital || ''}
               onChange={(e) => setUser({ ...user, hospital: e.target.value })}
-              placeholder="Nom de l'établissement"
-            />
+            >
+              <option value="">Sélectionnez une wilaya</option>
+              {ALGERIA_WILAYAS.map((wilaya, index) => (
+                <option key={index} value={wilaya}>
+                  {wilaya}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
         <div className="form-group">
-          <label>Spécialité</label>
+          <label>Numéro de téléphone</label>
           <input
-            type="text"
-            value={user.specialty || ''}
-            onChange={(e) => setUser({ ...user, specialty: e.target.value })}
-            placeholder="Spécialité médicale"
+            type="tel"
+            value={user.phone_number || ''}
+            onChange={(e) => setUser({ ...user, phone_number: e.target.value })}
+            placeholder="Ex: +213 6 12 34 56 78"
           />
         </div>
 

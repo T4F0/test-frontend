@@ -135,8 +135,12 @@ export default function MeetingsList() {
                 <td className="actions">
                   <div className="action-group-horizontal">
                     <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
-                    <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
-                    <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
+                    {user?.role !== 'MEDECIN' && (
+                      <>
+                        <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
+                        <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

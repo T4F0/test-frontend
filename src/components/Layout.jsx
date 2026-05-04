@@ -66,12 +66,12 @@ export default function Layout() {
     navigate('/login')
   }
 
+  const patientsLabel = user?.role === 'ADMIN' ? 'Patients' : 'Mes Patients'
+
   const navLinks = [
-    { to: '/forms', label: 'Formulaires', icon: ClipboardList },
-    { to: '/patients', label: 'Patients', icon: Users },
-    { to: '/attachments', label: 'Pièces jointes', icon: Paperclip },
+    { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN'] },
+    { to: '/patients', label: patientsLabel, icon: Users },
     { to: '/meetings', label: 'Réunions', icon: Calendar },
-    // { to: '/reports', label: 'Comptes rendus', icon: FileText },
     { to: '/users', label: 'Utilisateurs', icon: Users, roles: ['ADMIN', 'COORDINATEUR'] },
   ].filter(link => !link.roles || link.roles.includes(user?.role))
 
@@ -166,8 +166,8 @@ export default function Layout() {
                           user?.username || 'Utilisateur'
                         )}
                       </span>
-                      <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.65rem', padding: '2px 6px', marginTop: '2px' }}>
-                        {user?.role}
+                      <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.72rem', padding: '2px 8px', marginTop: '2px', fontWeight: 600 }}>
+                        {user?.role === 'MEDECIN' ? 'Médecin traitant' : user?.role === 'COORDINATEUR' ? 'Coordinateur' : user?.role === 'ADMIN' ? 'Administrateur' : user?.role}
                       </span>
                     </div>
                     <button onClick={handleLogout} className="btn-logout" title="Déconnexion" style={{display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0'}}>

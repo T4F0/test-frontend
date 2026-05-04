@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
 
 const ROLE_LABELS = {
-  'MEDECIN': 'Médecin',
+  'MEDECIN': 'Médecin traitant',
   'COORDINATEUR': 'Coordinateur',
   'ADMIN': 'Administrateur'
 }
@@ -17,6 +17,7 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('active')
+  const [search, setSearch] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -74,6 +75,15 @@ export default function UserManagement() {
 
   if (loading) return <div className="loading">Chargement des utilisateurs...</div>
 
+  const activeUsers = users.filter(u => u.approval_status !== 'PENDING' && u.approval_status !== 'REJECTED')
+  const searchLower = search.toLowerCase()
+  const filteredUsers = activeUsers.filter(u =>
+    !search ||
+    `${u.first_name} ${u.last_name}`.toLowerCase().includes(searchLower) ||
+    (u.email || '').toLowerCase().includes(searchLower) ||
+    (u.hospital || '').toLowerCase().includes(searchLower)
+  )
+
   return (
     <div className="users-management">
       <div className="users-header">
@@ -81,6 +91,17 @@ export default function UserManagement() {
         <button onClick={() => navigate('/users/new')} className="btn-primary">
           + Ajouter un utilisateur
         </button>
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <input
+          type="text"
+          placeholder="Rechercher par nom, email ou hôpital..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="search-input"
+          style={{ width: '100%', maxWidth: '420px' }}
+        />
       </div>
 
       <div className="tabs" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>
@@ -105,6 +126,8 @@ export default function UserManagement() {
       {activeTab === 'active' && (
         users.length === 0 ? (
           <div className="empty">Aucun utilisateur trouvé</div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="empty">Aucun résultat pour "{search}"</div>
         ) : (
           <table className="users-table">
             <thead>
@@ -113,12 +136,12 @@ export default function UserManagement() {
                 <th>Email</th>
                 <th>Rôle</th>
                 <th>Hôpital</th>
-                <th>Spécialité</th>
+                <th>Téléphone</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.filter(u => u.approval_status !== 'PENDING' && u.approval_status !== 'REJECTED').map(user => (
+              {filteredUsers.map(user => (
                 <tr key={user.id}>
                   <td>{user.first_name} {user.last_name}</td>
                   <td>{user.email}</td>
@@ -128,8 +151,17 @@ export default function UserManagement() {
                     </span>
                   </td>
                   <td>{user.hospital || '-'}</td>
-                  <td>{user.specialty || '-'}</td>
+                  <td>{user.phone_number || '-'}</td>
                   <td className="actions">
+                    {user.role === 'MEDECIN' && (
+                      <button
+                        onClick={() => navigate(`/patients?doctor=${user.id}`)}
+                        className="btn-small btn-info"
+                        title="Voir les patients de ce médecin"
+                      >
+                        👥 Voir patients
+                      </button>
+                    )}
                     <button 
                       onClick={() => navigate(`/users/${user.id}/edit`)}
                       className="btn-small"
@@ -162,7 +194,6 @@ export default function UserManagement() {
                 <th>Nom</th>
                 <th>Email</th>
                 <th>Hôpital</th>
-                <th>Spécialité</th>
                 <th>Soumis le</th>
                 <th>Actions</th>
               </tr>
@@ -173,7 +204,6 @@ export default function UserManagement() {
                   <td>{user.first_name} {user.last_name}</td>
                   <td>{user.email}</td>
                   <td>{user.hospital || '-'}</td>
-                  <td>{user.specialty || '-'}</td>
                   <td>{formatDate(user.created_at)}</td>
                   <td className="actions" style={{ display: 'flex', gap: '0.5rem' }}>
                     <button 

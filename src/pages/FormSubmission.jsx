@@ -49,7 +49,6 @@ export default function FormSubmission() {
   const [formData, setFormData] = useState({})
   const [patients, setPatients] = useState([])
   const [selectedPatient, setSelectedPatient] = useState('')
-  const [submissionName, setSubmissionName] = useState('')
   const [loading, setLoading] = useState(true)
   const [patientsLoading, setPatientsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -151,7 +150,7 @@ export default function FormSubmission() {
       findFiles(form.sections)
 
       // 2. Submit form JSON
-      const submission = await submitForm(id, jsonFormData, selectedPatient, submissionName)
+      const submission = await submitForm(id, jsonFormData, selectedPatient)
       const submissionId = submission.id
 
       // 3. Upload files linked to this submission
@@ -205,19 +204,6 @@ export default function FormSubmission() {
             loading={patientsLoading}
             required
           />
-        </div>
-
-        <div className="submission-meta-fields">
-          <div className="form-field">
-            <label htmlFor="submission-name">Nom de la soumission / Dossier (Optionnel)</label>
-            <input 
-              type="text" 
-              id="submission-name"
-              placeholder="Ex: Consultation initiale, Suivi Post-Op..."
-              value={submissionName}
-              onChange={(e) => setSubmissionName(e.target.value)}
-            />
-          </div>
         </div>
 
         {form.sections?.map(section => (

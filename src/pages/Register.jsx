@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { register } from '../api/authApi'
+import { ALGERIA_WILAYAS } from '../lib/constants'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -10,7 +11,7 @@ export default function Register() {
     last_name: '',
     password: '',
     hospital: '',
-    specialty: ''
+    phone_number: ''
   })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -123,24 +124,30 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Hôpital</label>
-            <input
-              type="text"
+            <label>Hôpital / Wilaya</label>
+            <select
               name="hospital"
               value={formData.hospital}
               onChange={handleChange}
               required
-            />
+            >
+              <option value="">Sélectionnez une wilaya</option>
+              {ALGERIA_WILAYAS.map((wilaya, index) => (
+                <option key={index} value={wilaya}>
+                  {wilaya}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
-            <label>Spécialité</label>
+            <label>Numéro de téléphone</label>
             <input
-              type="text"
-              name="specialty"
-              value={formData.specialty}
+              type="tel"
+              name="phone_number"
+              value={formData.phone_number}
               onChange={handleChange}
-              required
+              placeholder="Ex: +213 6 12 34 56 78"
             />
           </div>
 

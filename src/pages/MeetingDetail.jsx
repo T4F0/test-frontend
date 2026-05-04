@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMeeting, deleteMeeting, getSubmissionResume } from '../api/meetingsApi'
 import { createConference } from '../api/conferenceApi'
-import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
@@ -11,6 +12,7 @@ const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
 export default function MeetingDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [meeting, setMeeting] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -139,8 +141,12 @@ export default function MeetingDetail() {
               {creatingConference ? 'Ouverture...' : 'Rejoindre la visio'}
             </button>
           )}
-          <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Modifier</button>
-          <button className="btn-danger" onClick={handleDelete}>Supprimer</button>
+          {user?.role !== 'MEDECIN' && (
+            <>
+              <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Modifier</button>
+              <button className="btn-danger" onClick={handleDelete}>Supprimer</button>
+            </>
+          )}
           <button className="btn-secondary" onClick={() => navigate('/meetings')}>Retour</button>
         </div>
       </div>
@@ -180,13 +186,24 @@ export default function MeetingDetail() {
                 <div 
                   key={sub.id} 
                   className={`sub-item-link ${submissionResume?.submission_id === sub.id ? 'active' : ''}`}
-                  onClick={() => loadResume(sub.id)}
+                  style={{ cursor: 'pointer' }}
                 >
-                  <div className="sub-item-info">
+                  <div className="sub-item-info" onClick={() => loadResume(sub.id)} style={{ flex: 1 }}>
                     <div className="sub-item-patient">{sub.patient_name}</div>
-                    <div className="sub-item-name">{sub.name || sub.form_name}</div>
+                    <div className="sub-item-name">{sub.form_name}</div>
                   </div>
-                  <ChevronDown size={16} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <button
+                      className="btn-small btn-info"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => navigate(`/patients/${sub.patient_id}`)}
+                      title="Voir le dossier patient"
+                    >
+                      <ExternalLink size={13} />
+                      Dossier
+                    </button>
+                    <ChevronDown size={16} onClick={() => loadResume(sub.id)} />
+                  </div>
                 </div>
               ))}
             </div>
