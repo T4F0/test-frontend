@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import SimplePeer from "simple-peer/simplepeer.min.js";
 import { getToken } from "../api/authApi";
+import { RTC_ICE_SERVERS, WS_BASE_URL } from "../api/config";
 
 /**
  * Custom hook for managing WebRTC peer connections and WebSocket signaling.
@@ -50,19 +51,7 @@ export default function useWebRTC(
       stream: localStreamRef.current || undefined,
       trickle: true,
       config: {
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          {
-            urls: "turn:tifu.me:3478",
-            username: "admin",
-            credential: "admin",
-          },
-          {
-            urls: "turn:tifu.me:3478?transport=tcp",
-            username: "admin",
-            credential: "admin",
-          },
-        ],
+        iceServers: RTC_ICE_SERVERS,
       },
     });
 
@@ -244,21 +233,12 @@ export default function useWebRTC(
         }
       }
 
-      const wsProtocol = import.meta.env.PROD
-        ? "wss"
-        : window.location.protocol === "https:"
-          ? "wss"
-          : "ws";
-      const wsHost =
-        import.meta.env.VITE_WS_HOST ||
-        window.location.host ||
-        "tifu.me";
       const wsToken = getToken();
       if (!wsToken) {
         throw new Error("Missing access token for websocket connection");
       }
       const ws = new WebSocket(
-        `${wsProtocol}://${wsHost}/ws/conference/${roomId}/?token=${encodeURIComponent(wsToken)}`,
+        `${WS_BASE_URL}/ws/conference/${roomId}/?token=${encodeURIComponent(wsToken)}`,
       );
       wsRef.current = ws;
 
