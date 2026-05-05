@@ -249,9 +249,16 @@ export default function useWebRTC(
         : window.location.protocol === "https:"
           ? "wss"
           : "ws";
-      const wsHost = import.meta.env.PROD ? "tifu.me" : window.location.host;
+      const wsHost =
+        import.meta.env.VITE_WS_HOST ||
+        window.location.host ||
+        "tifu.me";
+      const wsToken = getToken();
+      if (!wsToken) {
+        throw new Error("Missing access token for websocket connection");
+      }
       const ws = new WebSocket(
-        `${wsProtocol}://${wsHost}/ws/conference/${roomId}/?token=${getToken()}`,
+        `${wsProtocol}://${wsHost}/ws/conference/${roomId}/?token=${encodeURIComponent(wsToken)}`,
       );
       wsRef.current = ws;
 
