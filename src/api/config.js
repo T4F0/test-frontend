@@ -1,6 +1,7 @@
 // src/api/config.js
 const stripTrailingSlash = (value) => value.replace(/\/+$/, "");
 const isProd = import.meta.env.PROD;
+const isDev = import.meta.env.DEV;
 
 const readEnv = (prodKey, defaultKey, fallback = "") => {
   const raw =
@@ -9,11 +10,12 @@ const readEnv = (prodKey, defaultKey, fallback = "") => {
 };
 
 const envApiUrl = readEnv("VITE_PROD_API_URL", "VITE_API_URL");
-const apiOrigin = envApiUrl
-  ? stripTrailingSlash(envApiUrl)
-  : isProd
-    ? "http://197.140.32.164"
-    : "";
+// In dev, keep requests relative so the Vite proxy handles CORS.
+const apiOrigin = isDev
+  ? ""
+  : envApiUrl
+    ? stripTrailingSlash(envApiUrl)
+    : "http://197.140.32.164";
 
 export const API_BASE = apiOrigin ? `${apiOrigin}/api` : "/api";
 
@@ -21,11 +23,11 @@ const envWsBaseUrl = readEnv("VITE_PROD_WS_BASE_URL", "VITE_WS_BASE_URL");
 const devWsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
 const defaultDevWsBaseUrl = `${devWsProtocol}://${window.location.host}`;
 
-export const WS_BASE_URL = envWsBaseUrl
-  ? stripTrailingSlash(envWsBaseUrl)
-  : isProd
-    ? "ws://197.140.32.164"
-    : defaultDevWsBaseUrl;
+export const WS_BASE_URL = isDev
+  ? defaultDevWsBaseUrl
+  : envWsBaseUrl
+    ? stripTrailingSlash(envWsBaseUrl)
+    : "ws://197.140.32.164";
 
 const stunUrl = readEnv(
   "VITE_PROD_STUN_URL",
