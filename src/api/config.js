@@ -3,9 +3,8 @@ const stripTrailingSlash = (value) => value.replace(/\/+$/, "");
 const isProd = import.meta.env.PROD;
 
 const readEnv = (prodKey, defaultKey, fallback = "") => {
-  const raw = (isProd
-    ? import.meta.env[prodKey]
-    : import.meta.env[defaultKey]) || fallback;
+  const raw =
+    import.meta.env[prodKey] || import.meta.env[defaultKey] || fallback;
   return `${raw}`.trim();
 };
 
@@ -13,7 +12,7 @@ const envApiUrl = readEnv("VITE_PROD_API_URL", "VITE_API_URL");
 const apiOrigin = envApiUrl
   ? stripTrailingSlash(envApiUrl)
   : isProd
-    ? "https://tifu.me"
+    ? "http://197.140.32.164"
     : "";
 
 export const API_BASE = apiOrigin ? `${apiOrigin}/api` : "/api";
@@ -25,7 +24,7 @@ const defaultDevWsBaseUrl = `${devWsProtocol}://${window.location.host}`;
 export const WS_BASE_URL = envWsBaseUrl
   ? stripTrailingSlash(envWsBaseUrl)
   : isProd
-    ? "wss://tifu.me"
+    ? "ws://197.140.32.164"
     : defaultDevWsBaseUrl;
 
 const stunUrl = readEnv(
@@ -33,22 +32,31 @@ const stunUrl = readEnv(
   "VITE_STUN_URL",
   "stun:stun.l.google.com:19302",
 );
-const turnUrl = readEnv("VITE_PROD_TURN_URL", "VITE_TURN_URL", "turn:tifu.me:3478");
+const turnUrl = readEnv(
+  "VITE_PROD_TURN_URL",
+  "VITE_TURN_URL",
+  "turn:197.140.32.164:3478",
+);
 const turnTcpUrl = readEnv(
   "VITE_PROD_TURN_TCP_URL",
   "VITE_TURN_TCP_URL",
-  "turn:tifu.me:3478?transport=tcp",
+  "turn:197.140.32.164:3478?transport=tcp",
 );
-const turnUsername = readEnv("VITE_PROD_TURN_USERNAME", "VITE_TURN_USERNAME", "admin");
+const turnUsername = readEnv(
+  "VITE_PROD_TURN_USERNAME",
+  "VITE_TURN_USERNAME",
+  "admin",
+);
 const turnCredential = readEnv(
   "VITE_PROD_TURN_CREDENTIAL",
   "VITE_TURN_CREDENTIAL",
   "admin",
 );
 
-const turnAuth = turnUsername && turnCredential
-  ? { username: turnUsername, credential: turnCredential }
-  : {};
+const turnAuth =
+  turnUsername && turnCredential
+    ? { username: turnUsername, credential: turnCredential }
+    : {};
 
 export const RTC_ICE_SERVERS = [
   { urls: stunUrl },

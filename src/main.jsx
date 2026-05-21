@@ -1,19 +1,17 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-// import { HashRouter } from 'react-router-dom'
+import { BrowserRouter, HashRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 import './auth.css'
 import './patients.css'
 
+const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <Router>
       <App />
-    </BrowserRouter>
-    {/* <HashRouter>
-      <App />
-    </HashRouter> */}
+    </Router>
   </React.StrictMode>,
 )
