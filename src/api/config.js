@@ -15,7 +15,7 @@ const apiOrigin = isDev
   ? ""
   : envApiUrl
     ? stripTrailingSlash(envApiUrl)
-    : "http://197.140.32.164";
+    : "https://ercp-algerie.com";
 
 export const API_BASE = apiOrigin ? `${apiOrigin}/api` : "/api";
 
@@ -27,7 +27,7 @@ export const WS_BASE_URL = isDev
   ? defaultDevWsBaseUrl
   : envWsBaseUrl
     ? stripTrailingSlash(envWsBaseUrl)
-    : "ws://197.140.32.164";
+    : "wss://ercp-algerie.com";
 
 const stunUrl = readEnv(
   "VITE_PROD_STUN_URL",
@@ -37,12 +37,12 @@ const stunUrl = readEnv(
 const turnUrl = readEnv(
   "VITE_PROD_TURN_URL",
   "VITE_TURN_URL",
-  "turn:197.140.32.164:3478",
+  "turn:ercp-algerie.com:3478",
 );
 const turnTcpUrl = readEnv(
   "VITE_PROD_TURN_TCP_URL",
   "VITE_TURN_TCP_URL",
-  "turn:197.140.32.164:3478?transport=tcp",
+  "turn:ercp-algerie.com:3478?transport=tcp",
 );
 const turnUsername = readEnv(
   "VITE_PROD_TURN_USERNAME",
