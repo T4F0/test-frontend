@@ -33,8 +33,8 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>🏥 Formulaires Médicaux</h1>
-        <p className="login-subtitle">Système d'Information Patient</p>
+        <h1>🏥 e-RCP Algerie</h1>
+        <p className="login-subtitle">Portail de coordination des RCP</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="error">{error}</div>}
@@ -66,8 +66,8 @@ export default function Login() {
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="login-button"
           >
