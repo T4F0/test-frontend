@@ -13,7 +13,7 @@ const envApiUrl = readEnv("VITE_PROD_API_URL", "VITE_API_URL");
 const apiOrigin = envApiUrl
   ? stripTrailingSlash(envApiUrl)
   : isProd
-    ? "https://tifu.me"
+    ? "https://ercp-algerie.com"
     : "";
 
 export const API_BASE = apiOrigin ? `${apiOrigin}/api` : "/api";
@@ -25,7 +25,7 @@ const defaultDevWsBaseUrl = `${devWsProtocol}://${window.location.host}`;
 export const WS_BASE_URL = envWsBaseUrl
   ? stripTrailingSlash(envWsBaseUrl)
   : isProd
-    ? "wss://tifu.me"
+    ? "wss://ercp-algerie.com"
     : defaultDevWsBaseUrl;
 
 const stunUrl = readEnv(
@@ -33,11 +33,11 @@ const stunUrl = readEnv(
   "VITE_STUN_URL",
   "stun:stun.l.google.com:19302",
 );
-const turnUrl = readEnv("VITE_PROD_TURN_URL", "VITE_TURN_URL", "turn:tifu.me:3478");
+const turnUrl = readEnv("VITE_PROD_TURN_URL", "VITE_TURN_URL", "turn:ercp-algerie.com:3478");
 const turnTcpUrl = readEnv(
   "VITE_PROD_TURN_TCP_URL",
   "VITE_TURN_TCP_URL",
-  "turn:tifu.me:3478?transport=tcp",
+  "turn:ercp-algerie.com:3478?transport=tcp",
 );
 const turnUsername = readEnv("VITE_PROD_TURN_USERNAME", "VITE_TURN_USERNAME", "admin");
 const turnCredential = readEnv(
