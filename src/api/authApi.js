@@ -126,6 +126,25 @@ export const markNotificationRead = async (id) => {
   return data
 }
 
+export const getServices = async () => {
+  const { data } = await authAxios.get(`${API_BASE}/services/`)
+  return data.results || data
+}
+
+export const createService = async (serviceData) => {
+  const { data } = await authAxios.post(`${API_BASE}/services/`, serviceData)
+  return data
+}
+
+export const updateService = async (id, serviceData) => {
+  const { data } = await authAxios.patch(`${API_BASE}/services/${id}/`, serviceData)
+  return data
+}
+
+export const deleteService = async (id) => {
+  await authAxios.delete(`${API_BASE}/services/${id}/`)
+}
+
 export const getAuthAxios = () => authAxios
 export const getToken = () => localStorage.getItem('access_token')
 export const isAuthenticated = () => !!localStorage.getItem('access_token')

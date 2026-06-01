@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { createUser, updateUser, getUsers } from '../api/authApi'
+import { createUser, updateUser, getUsers, getServices } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 
@@ -30,11 +30,28 @@ export default function UserForm() {
     password: '',
     role: 'MEDECIN',
     hospital: '',
-    phone_number: ''
+    phone_number: '',
+    service: '',
+    is_global_admin: false
   })
+  const [services, setServices] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      if (currentUser?.is_global_admin) {
+        try {
+          const list = await getServices()
+          setServices(Array.isArray(list) ? list : (list?.results || []))
+        } catch (err) {
+          console.error("Failed to load services:", err)
+        }
+      }
+    }
+    fetchServices()
+  }, [currentUser])
 
   useEffect(() => {
     if (isEdit) {
@@ -47,7 +64,11 @@ export default function UserForm() {
       const users = await getUsers()
       const foundUser = Array.isArray(users) ? users.find(u => u.id === id) : users.find(u => u.id === id)
       if (foundUser) {
-        setUser(foundUser)
+        setUser({
+          ...foundUser,
+          service: foundUser.service || '',
+          is_global_admin: foundUser.is_global_admin || false
+        })
       }
     } catch (err) {
       setError('Échec du chargement de l\'utilisateur')
@@ -63,23 +84,22 @@ export default function UserForm() {
       setSaving(true)
       setError(null)
 
+      // Copy user data to avoid modifying state directly
+      const payload = { ...user }
+
       if (isEdit) {
-        delete user.password // Don't update password if empty
-        if (!user.password) {
-          const { password, ...userData } = user
-          await updateUser(id, userData)
-        } else {
-          await updateUser(id, user)
+        if (!payload.password) {
+          delete payload.password
         }
+        await updateUser(id, payload)
       } else {
-        await createUser(user)
+        await createUser(payload)
       }
 
       navigate('/users')
     } catch (err) {
       const errorData = err.response?.data
       if (typeof errorData === 'object' && !Array.isArray(errorData)) {
-        // Show field-specific errors
         const fieldErrors = Object.entries(errorData)
           .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
           .join('\n')
@@ -99,7 +119,7 @@ export default function UserForm() {
     <div className="user-form-container">
       <h2>{isEdit ? 'Modifier l\'utilisateur' : 'Créer un nouvel utilisateur'}</h2>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" style={{ whiteSpace: 'pre-line' }}>{error}</div>}
 
       <form onSubmit={handleSubmit} className="user-form">
         <div className="form-row">
@@ -186,6 +206,35 @@ export default function UserForm() {
             </select>
           </div>
         </div>
+
+        {currentUser?.is_global_admin && (
+          <div className="form-row">
+            <div className="form-group">
+              <label>Service</label>
+              <select
+                value={user.service || ''}
+                onChange={(e) => setUser({ ...user, service: e.target.value })}
+              >
+                <option value="">Sélectionnez un service</option>
+                {services.map(srv => (
+                  <option key={srv.id} value={srv.id}>
+                    {srv.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+              <input
+                type="checkbox"
+                id="is_global_admin"
+                checked={user.is_global_admin || false}
+                onChange={(e) => setUser({ ...user, is_global_admin: e.target.checked })}
+                style={{ width: 'auto' }}
+              />
+              <label htmlFor="is_global_admin" style={{ margin: 0, cursor: 'pointer', fontWeight: 500 }}>Administrateur Global</label>
+            </div>
+          </div>
+        )}
 
         <div className="form-group">
           <label>Numéro de téléphone</label>
