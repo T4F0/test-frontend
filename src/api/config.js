@@ -21,6 +21,22 @@ const apiOrigin = isDev
 
 export const API_BASE = apiOrigin ? `${apiOrigin}/api` : "/api";
 
+export const resolveApiUrl = (url) => {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  if (!apiOrigin) return url;
+
+  if (url.startsWith("/api/")) {
+    return `${apiOrigin}${url}`;
+  }
+
+  if (url.startsWith("/media/")) {
+    return `${apiOrigin}${url}`;
+  }
+
+  return url;
+};
+
 const envWsBaseUrl = isDev
   ? readEnv("VITE_WS_BASE_URL", "VITE_WS_BASE_URL")
   : readEnv("VITE_PROD_WS_BASE_URL", "VITE_PROD_WS_BASE_URL");

@@ -1,6 +1,6 @@
 import { getAuthAxios } from './authApi'
 
-import { API_BASE } from './config'
+import { API_BASE, resolveApiUrl } from './config'
 
 export const getAttachments = async (params = {}) => {
   const authAxios = getAuthAxios()
@@ -29,7 +29,7 @@ export const deleteAttachment = async (id) => {
 
 export const downloadAttachment = async (url, filename) => {
   const authAxios = getAuthAxios()
-  const { data, headers } = await authAxios.get(url, { responseType: 'blob' })
+  const { data, headers } = await authAxios.get(resolveApiUrl(url), { responseType: 'blob' })
   
   // The backend might send custom types like 'PDF' or 'IMAGE' instead of real MIME types.
   let mimeType = headers['content-type']
@@ -56,4 +56,11 @@ export const downloadAttachment = async (url, filename) => {
   link.click()
   document.body.removeChild(link)
   setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000)
+}
+
+export const getAttachmentBlobUrl = async (url) => {
+  const authAxios = getAuthAxios()
+  const { data, headers } = await authAxios.get(resolveApiUrl(url), { responseType: 'blob' })
+  const mimeType = headers['content-type'] || 'application/octet-stream'
+  return window.URL.createObjectURL(new Blob([data], { type: mimeType }))
 }

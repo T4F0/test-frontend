@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save, Video } from 'lucide-react'
-import { downloadAttachment } from '../../api/attachmentsApi'
+import { downloadAttachment, getAttachmentBlobUrl } from '../../api/attachmentsApi'
+import { resolveApiUrl } from '../../api/config'
 
 /**
  * File sharing panel for conference attachments.
@@ -18,7 +19,44 @@ export default function FileSharePanel({
 }) {
   const [dragActive, setDragActive] = useState(false)
   const [previewItem, setPreviewItem] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewError, setPreviewError] = useState('')
   const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    let objectUrl = ''
+    let canceled = false
+
+    const loadPreview = async () => {
+      if (!previewItem) {
+        setPreviewUrl('')
+        setPreviewError('')
+        return
+      }
+
+      try {
+        setPreviewUrl('')
+        setPreviewError('')
+        objectUrl = await getAttachmentBlobUrl(previewItem.url)
+        if (!canceled) {
+          setPreviewUrl(objectUrl)
+        }
+      } catch (err) {
+        if (!canceled) {
+          setPreviewError("Impossible de charger l'aperçu.")
+        }
+      }
+    }
+
+    loadPreview()
+
+    return () => {
+      canceled = true
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl)
+      }
+    }
+  }, [previewItem])
 
   const normalizeAttachment = (attachment, source) => {
     let fileUrl = attachment.file || ''
@@ -29,7 +67,7 @@ export default function FileSharePanel({
     return {
       id: `${source}-${attachment.id}`,
       name: attachment.original_filename || attachment.display_name || 'Attachment',
-      url: fileUrl,
+      url: resolveApiUrl(fileUrl),
       fileType: attachment.file_type || '',
       size: attachment.file_size || null,
       uploadedByName: attachment.uploaded_by_name || 'Unknown',
@@ -232,16 +270,22 @@ export default function FileSharePanel({
               </button>
             </div>
             <div className="file-preview-body">
-              {previewType(previewItem) === 'image' && (
-                <img src={previewItem.url} alt={previewItem.name} className="file-preview-image" />
+              {!previewUrl && !previewError && (
+                <div className="loading">Chargement de l'aperçu...</div>
               )}
-              {previewType(previewItem) === 'video' && (
-                <video src={previewItem.url} controls className="file-preview-video" style={{ maxWidth: '100%', maxHeight: '70vh' }}>
+              {previewError && (
+                <div className="error">{previewError}</div>
+              )}
+              {previewUrl && previewType(previewItem) === 'image' && (
+                <img src={previewUrl} alt={previewItem.name} className="file-preview-image" />
+              )}
+              {previewUrl && previewType(previewItem) === 'video' && (
+                <video src={previewUrl} controls className="file-preview-video" style={{ maxWidth: '100%', maxHeight: '70vh' }}>
                   Votre navigateur ne supporte pas la lecture de vidéos.
                 </video>
               )}
-              {previewType(previewItem) === 'pdf' && (
-                <iframe src={previewItem.url} title={previewItem.name} className="file-preview-frame" />
+              {previewUrl && previewType(previewItem) === 'pdf' && (
+                <iframe src={previewUrl} title={previewItem.name} className="file-preview-frame" />
               )}
             </div>
           </div>
