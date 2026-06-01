@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getForms, deleteForm } from '../api/formsApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
@@ -60,7 +60,7 @@ export default function FormsList() {
       </div>
       
       {forms.length === 0 ? (
-        <p className="empty">Aucun formulaire. <a href="/forms/new">Créez-en un</a></p>
+        <p className="empty">Aucun formulaire. <Link to="/forms/new">Créez-en un</Link></p>
       ) : (
         <table className="forms-table">
           <thead>
