@@ -7,6 +7,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(section.name)
   const [fields, setFields] = useState(section.fields || [])
+  const [newlyCreatedFieldId, setNewlyCreatedFieldId] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const childSections = allSections ? allSections.filter(s => s.parent === section.id).sort((a,b) => a.order - b.order) : []
@@ -50,6 +51,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
         order: fields.length
       })
       setFields([...fields, newField])
+      setNewlyCreatedFieldId(newField.id)
     } catch (err) {
       alert('Échec de la création du champ')
     }
@@ -104,8 +106,10 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
               <FieldBuilder
                 key={field.id}
                 field={field}
+                initialEditing={field.id === newlyCreatedFieldId}
                 onUpdate={(updatedField) => {
                   setFields(fields.map(f => f.id === updatedField.id ? updatedField : f))
+                  setNewlyCreatedFieldId(null)
                 }}
                 onDelete={(fieldId) => setFields(fields.filter(f => f.id !== fieldId))}
               />

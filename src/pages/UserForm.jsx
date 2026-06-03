@@ -31,8 +31,7 @@ export default function UserForm() {
     role: 'MEDECIN',
     hospital: '',
     phone_number: '',
-    service: '',
-    is_global_admin: false
+    service: ''
   })
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(isEdit)
@@ -66,8 +65,7 @@ export default function UserForm() {
       if (foundUser) {
         setUser({
           ...foundUser,
-          service: foundUser.service || '',
-          is_global_admin: foundUser.is_global_admin || false
+          service: foundUser.service || ''
         })
       }
     } catch (err) {
@@ -208,31 +206,19 @@ export default function UserForm() {
         </div>
 
         {currentUser?.is_global_admin && (
-          <div className="form-row">
-            <div className="form-group">
-              <label>Service</label>
-              <select
-                value={user.service || ''}
-                onChange={(e) => setUser({ ...user, service: e.target.value })}
-              >
-                <option value="">Sélectionnez un service</option>
-                {services.map(srv => (
-                  <option key={srv.id} value={srv.id}>
-                    {srv.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
-              <input
-                type="checkbox"
-                id="is_global_admin"
-                checked={user.is_global_admin || false}
-                onChange={(e) => setUser({ ...user, is_global_admin: e.target.checked })}
-                style={{ width: 'auto' }}
-              />
-              <label htmlFor="is_global_admin" style={{ margin: 0, cursor: 'pointer', fontWeight: 500 }}>Administrateur Global</label>
-            </div>
+          <div className="form-group">
+            <label>Service</label>
+            <select
+              value={user.service || ''}
+              onChange={(e) => setUser({ ...user, service: e.target.value })}
+            >
+              <option value="">Sélectionnez un service</option>
+              {services.map(srv => (
+                <option key={srv.id} value={srv.id}>
+                  {srv.name}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 

@@ -10,8 +10,8 @@ const FIELD_TYPES = [
   { value: 'file', label: 'Fichier' },
 ]
 
-export default function FieldBuilder({ field, onUpdate, onDelete }) {
-  const [isEditing, setIsEditing] = useState(false)
+export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing = false }) {
+  const [isEditing, setIsEditing] = useState(initialEditing)
   const [data, setData] = useState(field)
   const [saving, setSaving] = useState(false)
   const [optionsText, setOptionsText] = useState(field.options ? field.options.join('\n') : '')
@@ -74,13 +74,30 @@ export default function FieldBuilder({ field, onUpdate, onDelete }) {
             />
           </div>
 
-          {data.field_type === 'select' && (
+          {['select', 'checkbox'].includes(data.field_type) && (
             <div className="form-row">
-              <textarea
-                placeholder='Options (une par ligne)'
-                value={optionsText}
-                onChange={(e) => setOptionsText(e.target.value)}
-              />
+              <label>Choix possibles:</label>
+              <div className="options-list">
+                {optionsText.split('\n').map((option, index) => (
+                  <div key={index} className="option-item" style={{display: 'flex', gap: '5px', marginBottom: '5px'}}>
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => {
+                        const newOptions = optionsText.split('\n');
+                        newOptions[index] = e.target.value;
+                        setOptionsText(newOptions.join('\n'));
+                      }}
+                    />
+                    <button type="button" onClick={() => {
+                        const newOptions = optionsText.split('\n');
+                        newOptions.splice(index, 1);
+                        setOptionsText(newOptions.join('\n'));
+                    }}>-</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => setOptionsText(optionsText + '\n')}>+ Ajouter un choix</button>
+              </div>
             </div>
           )}
 

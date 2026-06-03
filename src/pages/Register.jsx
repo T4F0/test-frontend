@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { register } from '../api/authApi'
+import { register, getPublicServices } from '../api/authApi'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 
 export default function Register() {
@@ -11,12 +11,26 @@ export default function Register() {
     last_name: '',
     password: '',
     hospital: '',
-    phone_number: ''
+    phone_number: '',
+    service: ''
   })
+  const [services, setServices] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const list = await getPublicServices()
+        setServices(Array.isArray(list) ? list : (list?.results || []))
+      } catch (err) {
+        console.error("Failed to load services:", err)
+      }
+    }
+    fetchServices()
+  }, [])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -149,6 +163,23 @@ export default function Register() {
               onChange={handleChange}
               placeholder="Ex: +213 6 12 34 56 78"
             />
+          </div>
+
+          <div className="form-group">
+            <label>Service</label>
+            <select
+              name="service"
+              value={formData.service}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Sélectionnez un service</option>
+              {services.map(srv => (
+                <option key={srv.id} value={srv.id}>
+                  {srv.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button 

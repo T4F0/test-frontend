@@ -145,7 +145,15 @@ export default function UserManagement() {
 
   if (loading) return <div className="loading">Chargement des données...</div>
 
-  const activeUsers = users.filter(u => u.approval_status !== 'PENDING' && u.approval_status !== 'REJECTED')
+  // Filter: For coordinators, only show MEDECIN
+  const isCoordinateur = currentUser?.role === 'COORDINATEUR'
+  
+  const activeUsers = users.filter(u => 
+    u.approval_status !== 'PENDING' && 
+    u.approval_status !== 'REJECTED' &&
+    (!isCoordinateur || u.role === 'MEDECIN')
+  )
+  
   const searchLower = search.toLowerCase()
   const filteredUsers = activeUsers.filter(u =>
     !search ||
@@ -158,9 +166,9 @@ export default function UserManagement() {
   return (
     <div className="users-management">
       <div className="users-header">
-        <h2>Gestion des utilisateurs</h2>
+        <h2>{isCoordinateur ? 'Gestion des médecins' : 'Gestion des utilisateurs'}</h2>
         <button onClick={() => navigate('/users/new')} className="btn-primary">
-          + Ajouter un utilisateur
+          + Ajouter un {isCoordinateur ? 'médecin' : 'utilisateur'}
         </button>
       </div>
 
@@ -234,7 +242,7 @@ export default function UserManagement() {
                   {currentUser?.is_global_admin && (
                     <td>
                       <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {user.is_global_admin ? 'Global Admin' : (user.service_name || '-')}
+                        {user.service_name || '-'}
                       </span>
                     </td>
                   )}

@@ -53,6 +53,7 @@ export default function FormBuilder() {
         navigate(`/forms/${savedForm.id}/edit`)
       } else {
         alert('Formulaire mis à jour avec succès')
+        navigate('/forms')
       }
     } catch (err) {
       setError('Échec de l\'enregistrement du formulaire')
@@ -140,6 +141,12 @@ export default function FormBuilder() {
               ))}
             </div>
           )}
+
+          <div className="form-actions-bottom" style={{marginTop: '20px', borderTop: '1px solid #ccc', paddingTop: '10px'}}>
+            <button onClick={handleSaveForm} disabled={saving} className="btn-primary">
+              {saving ? 'Enregistrement...' : 'Mettre à jour le formulaire'}
+            </button>
+          </div>
         </div>
       )}
     </div>

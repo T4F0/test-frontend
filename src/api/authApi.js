@@ -131,6 +131,11 @@ export const getServices = async () => {
   return data.results || data
 }
 
+export const getPublicServices = async () => {
+  const { data } = await axios.get(`${API_BASE}/services/`)
+  return data.results || data
+}
+
 export const createService = async (serviceData) => {
   const { data } = await authAxios.post(`${API_BASE}/services/`, serviceData)
   return data

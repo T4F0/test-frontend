@@ -70,9 +70,16 @@ export default function Layout() {
 
   const navLinks = [
     { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN'] },
-    { to: '/patients', label: patientsLabel, icon: Users },
+    // Only show patients for ADMIN
+    ...(user?.role === 'ADMIN' ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
     { to: '/meetings', label: 'Réunions', icon: Calendar },
-    { to: '/users', label: 'Utilisateurs', icon: Users, roles: ['ADMIN', 'COORDINATEUR'] },
+    // For Coordinators, label is 'Medecins', for ADMIN it is 'Utilisateurs'
+    { 
+      to: '/users', 
+      label: user?.role === 'COORDINATEUR' ? 'Medecins' : 'Utilisateurs', 
+      icon: Users, 
+      roles: ['ADMIN', 'COORDINATEUR'] 
+    },
   ].filter(link => !link.roles || link.roles.includes(user?.role))
 
   const unreadCount = notifications.filter(n => !n.is_read).length
