@@ -12,18 +12,53 @@ const readEnv = (prodKey, defaultKey, fallback = "") => {
 const envApiUrl = isDev
   ? readEnv("VITE_API_URL", "VITE_API_URL")
   : readEnv("VITE_PROD_API_URL", "VITE_PROD_API_URL");
+const DEFAULT_PROD_API_ORIGIN = "https://ercp-algerie.com";
+
+const normalizeProdApiOrigin = (value) => {
+  if (isDev) return "";
+  const origin = value ? stripTrailingSlash(value) : DEFAULT_PROD_API_ORIGIN;
+  const frontendOrigin =
+    typeof window !== "undefined" ? window.location.origin : "";
+
+  // A Vercel frontend origin here would route /api downloads through Vercel
+  // instead of Django, producing 502s for protected attachment endpoints.
+  if (
+    origin === frontendOrigin ||
+    origin.includes("test-frontend-smoky-nine.vercel.app")
+  ) {
+    return DEFAULT_PROD_API_ORIGIN;
+  }
+
+  return origin;
+};
+
 // In dev, keep requests relative so the Vite proxy handles CORS.
 const apiOrigin = isDev
   ? ""
-  : envApiUrl
-    ? stripTrailingSlash(envApiUrl)
-    : "https://ercp-algerie.com";
+  : normalizeProdApiOrigin(envApiUrl);
 
 export const API_BASE = apiOrigin ? `${apiOrigin}/api` : "/api";
 
 export const resolveApiUrl = (url) => {
   if (!url) return "";
-  if (/^https?:\/\//i.test(url)) return url;
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url);
+      const frontendOrigin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      if (
+        parsed.origin === frontendOrigin &&
+        (parsed.pathname.startsWith("/api/") ||
+          parsed.pathname.startsWith("/media/")) &&
+        apiOrigin
+      ) {
+        return `${apiOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+    } catch {
+      return url;
+    }
+    return url;
+  }
   if (!apiOrigin) return url;
 
   if (url.startsWith("/api/")) {

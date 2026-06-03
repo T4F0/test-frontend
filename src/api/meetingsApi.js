@@ -59,3 +59,17 @@ export const removeSubmissionFromMeeting = async (meetingId, submissionId) => {
   const { data } = await authAxios.post(`${API_BASE}/meetings/${meetingId}/remove_submission/`, { submission_id: submissionId })
   return data
 }
+
+export const createMeetingRequest = async (payload) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/meeting-requests/`, payload)
+  return data
+}
+
+export const getMeetingRequests = async (params = {}) => {
+  const authAxios = getAuthAxios()
+  const sp = new URLSearchParams(params).toString()
+  const url = sp ? `${API_BASE}/meeting-requests/?${sp}` : `${API_BASE}/meeting-requests/`
+  const { data } = await authAxios.get(url)
+  return data.results ?? data
+}

@@ -17,6 +17,7 @@ import PatientDetail from './pages/PatientDetail'
 import MeetingsList from './pages/MeetingsList'
 import MeetingDetail from './pages/MeetingDetail'
 import MeetingForm from './pages/MeetingForm'
+import MeetingRequestForm from './pages/MeetingRequestForm'
 import AttachmentsList from './pages/AttachmentsList'
 import AuditLogsList from './pages/AuditLogsList'
 import ReportsList from './pages/ReportsList'
@@ -72,6 +73,7 @@ function AppRoutes() {
             <Route path="/meetings/new" element={<MeetingForm />} />
             <Route path="/meetings/:id" element={<MeetingDetail />} />
             <Route path="/meetings/:id/edit" element={<MeetingForm />} />
+            <Route path="/meetings/request" element={<MeetingRequestForm />} />
             <Route path="/attachments" element={<AttachmentsList />} />
 
             <Route path="/reports" element={<ReportsList />} />

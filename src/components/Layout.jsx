@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell } from 'lucide-react'
+import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell, Send } from 'lucide-react'
 import { getNotifications, markNotificationRead } from '../api/authApi'
 import { formatDate } from '../lib/dateUtils'
 
@@ -27,7 +27,7 @@ export default function Layout() {
 
   useEffect(() => {
     let interval;
-    if (authenticated && ['ADMIN', 'COORDINATEUR'].includes(user?.role)) {
+    if (authenticated && ['ADMIN', 'COORDINATEUR', 'MEDECIN'].includes(user?.role)) {
       const loadNotifications = async () => {
         try {
           const data = await getNotifications()
@@ -75,6 +75,8 @@ export default function Layout() {
     // Show patients for ADMIN and MEDECIN
     ...(['ADMIN', 'MEDECIN'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
     { to: '/meetings', label: 'Réunions', icon: Calendar },
+    // MEDECIN can request an RCP meeting
+    ...(user?.role === 'MEDECIN' ? [{ to: '/meetings/request', label: 'Demander une RCP', icon: Send }] : []),
     // For Coordinators, label is 'Medecins', for ADMIN it is 'Utilisateurs'
     { 
       to: '/users', 
@@ -119,7 +121,7 @@ export default function Layout() {
                 </div>
                 
                 <div className="navbar-controls" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  {['ADMIN', 'COORDINATEUR'].includes(user?.role) && (
+                  {['ADMIN', 'COORDINATEUR', 'MEDECIN'].includes(user?.role) && (
                     <div className="notifications-wrapper" ref={notifRef} style={{ position: 'relative' }}>
                       <button 
                         onClick={() => setShowNotifications(!showNotifications)}
