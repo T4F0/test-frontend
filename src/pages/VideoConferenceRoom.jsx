@@ -358,7 +358,7 @@ export default function VideoConferenceRoom() {
           <button
             className={`toolbar-btn ${showResume ? 'active' : ''}`}
             onClick={() => { setShowResume(!showResume); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowNotes(false) }}
-            title="Résumé Clinique"
+            title="Résumé"
           >
             <ClipboardList size={18} />
           </button>

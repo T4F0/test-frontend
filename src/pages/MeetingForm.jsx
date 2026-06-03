@@ -239,10 +239,6 @@ export default function MeetingForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (form.submissions.length === 0) {
-      setError('Veuillez ajouter au moins un dossier (soumission) à la réunion.')
-      return
-    }
     try {
       setSaving(true)
       setError(null)

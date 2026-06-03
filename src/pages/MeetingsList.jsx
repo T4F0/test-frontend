@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getMeetings, deleteMeeting } from '../api/meetingsApi'
+import { getMeetings, deleteMeeting, joinMeeting } from '../api/meetingsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
 import { Video, Calendar, Clock, Users, ArrowRight } from 'lucide-react'
@@ -51,6 +51,15 @@ export default function MeetingsList() {
       console.error(err)
     } finally {
       setJoiningId(null)
+    }
+  }
+
+  const handleJoin = async (meetingId) => {
+    try {
+      await joinMeeting(meetingId)
+      loadMeetings()
+    } catch (err) {
+      setError('Échec de l\'inscription à la réunion')
     }
   }
 
@@ -135,6 +144,9 @@ export default function MeetingsList() {
                 <td className="actions">
                   <div className="action-group-horizontal">
                     <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
+                    {!m.participants?.some(pId => (pId.id || pId) === user?.id) && (
+                      <button className="btn-small btn-info" onClick={() => handleJoin(m.id)}>S'inscrire</button>
+                    )}
                     {user?.role !== 'MEDECIN' && (
                       <>
                         <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>

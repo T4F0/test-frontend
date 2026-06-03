@@ -9,10 +9,13 @@ import {
   getServices,
   createService,
   deleteService,
-  updateService
+  updateService,
+  getNextMeetingStats
 } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
+import { Calendar, Users, ChevronRight, FileText } from 'lucide-react'
+import MeetingTab from '../components/MeetingTab'
 
 const ROLE_LABELS = {
   'MEDECIN': 'Médecin traitant',
@@ -25,6 +28,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState([])
   const [pendingUsers, setPendingUsers] = useState([])
   const [services, setServices] = useState([])
+  const [meetingStats, setMeetingStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('active')
@@ -46,16 +50,18 @@ export default function UserManagement() {
       setLoading(true)
       const promises = [
         getUsers(),
-        getPendingRegistrations().catch(() => [])
+        getPendingRegistrations().catch(() => []),
+        getNextMeetingStats().catch(() => null)
       ]
       
       if (currentUser?.is_global_admin) {
         promises.push(getServices().catch(() => []))
       }
       
-      const [usersData, pendingData, servicesData] = await Promise.all(promises)
+      const [usersData, pendingData, statsData, servicesData] = await Promise.all(promises)
       setUsers(Array.isArray(usersData) ? usersData : (usersData?.results || []))
       setPendingUsers(Array.isArray(pendingData) ? pendingData : (pendingData?.results || []))
+      setMeetingStats(statsData)
       if (servicesData) {
         setServices(Array.isArray(servicesData) ? servicesData : (servicesData?.results || []))
       }
@@ -172,18 +178,7 @@ export default function UserManagement() {
         </button>
       </div>
 
-      <div style={{ marginBottom: '1rem' }}>
-        <input
-          type="text"
-          placeholder="Rechercher par nom, email, hôpital ou service..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-input"
-          style={{ width: '100%', maxWidth: '420px' }}
-        />
-      </div>
-
-      <div className="tabs" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>
+      <div className="tabs" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem', padding: '0 2rem' }}>
         <button 
           className={`tab ${activeTab === 'active' ? 'active' : ''}`}
           onClick={() => setActiveTab('active')}
@@ -198,6 +193,15 @@ export default function UserManagement() {
         >
           Inscriptions en attente {pendingUsers.length > 0 && `(${pendingUsers.length})`}
         </button>
+        {meetingStats && meetingStats.meeting && (
+          <button 
+            className={`tab ${activeTab === 'meeting' ? 'active' : ''}`}
+            onClick={() => setActiveTab('meeting')}
+            style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'meeting' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'meeting' ? 'bold' : 'normal' }}
+          >
+            Prochaine Réunion
+          </button>
+        )}
         {currentUser?.is_global_admin && (
           <button 
             className={`tab ${activeTab === 'services' ? 'active' : ''}`}
@@ -209,77 +213,90 @@ export default function UserManagement() {
         )}
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" style={{ margin: '0 2rem 1rem 2rem' }}>{error}</div>}
 
       {activeTab === 'active' && (
-        users.length === 0 ? (
-          <div className="empty">Aucun utilisateur trouvé</div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="empty">Aucun résultat pour "{search}"</div>
-        ) : (
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Email</th>
-                <th>Rôle</th>
-                {currentUser?.is_global_admin && <th>Service</th>}
-                <th>Hôpital</th>
-                <th>Téléphone</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map(user => (
-                <tr key={user.id}>
-                  <td>{user.first_name} {user.last_name}</td>
-                  <td>{user.email}</td>
-                  <td>
-                    <span className={`badge badge-${user.role.toLowerCase()}`}>
-                      {ROLE_LABELS[user.role] || user.role}
-                    </span>
-                  </td>
-                  {currentUser?.is_global_admin && (
+        <div>
+          <div style={{ marginBottom: '1rem', padding: '0 2rem' }}>
+            <input
+              type="text"
+              placeholder="Rechercher par nom, email, hôpital ou service..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="search-input"
+              style={{ width: '100%', maxWidth: '420px' }}
+            />
+          </div>
+          {users.length === 0 ? (
+            <div className="empty" style={{ padding: '2rem' }}>Aucun utilisateur trouvé</div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="empty" style={{ padding: '2rem' }}>Aucun résultat pour "{search}"</div>
+          ) : (
+            <table className="users-table">
+              {/* ... table content remains the same ... */}
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Email</th>
+                  <th>Rôle</th>
+                  {currentUser?.is_global_admin && <th>Service</th>}
+                  <th>Hôpital</th>
+                  <th>Téléphone</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map(user => (
+                  <tr key={user.id}>
+                    <td>{user.first_name} {user.last_name}</td>
+                    <td>{user.email}</td>
                     <td>
-                      <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {user.service_name || '-'}
+                      <span className={`badge badge-${user.role.toLowerCase()}`}>
+                        {ROLE_LABELS[user.role] || user.role}
                       </span>
                     </td>
-                  )}
-                  <td>{user.hospital || '-'}</td>
-                  <td>{user.phone_number || '-'}</td>
-                  <td className="actions">
-                    {user.role === 'MEDECIN' && (
-                      <button
-                        onClick={() => navigate(`/patients?doctor=${user.id}`)}
-                        className="btn-small btn-info"
-                        style={{ marginRight: '5px' }}
-                        title="Voir les patients de ce médecin"
-                      >
-                        👥 Voir patients
-                      </button>
+                    {currentUser?.is_global_admin && (
+                      <td>
+                        <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {user.service_name || '-'}
+                        </span>
+                      </td>
                     )}
-                    <button 
-                      onClick={() => navigate(`/users/${user.id}/edit`)}
-                      className="btn-small"
-                      style={{ marginRight: '5px' }}
-                    >
-                      Modifier
-                    </button>
-                    {currentUser?.role === 'ADMIN' && (
+                    <td>{user.hospital || '-'}</td>
+                    <td>{user.phone_number || '-'}</td>
+                    <td className="actions">
+                      {user.role === 'MEDECIN' && (
+                        <button
+                          onClick={() => navigate(`/patients?doctor=${user.id}`)}
+                          className="btn-small btn-info"
+                          style={{ marginRight: '5px' }}
+                          title="Voir les patients de ce médecin"
+                        >
+                          👥 Voir patients
+                        </button>
+                      )}
                       <button 
-                        onClick={() => handleDelete(user.id)}
-                        className="btn-small btn-danger"
+                        onClick={() => navigate(`/users/${user.id}/edit`)}
+                        className="btn-small"
+                        style={{ marginRight: '5px' }}
                       >
-                        Supprimer
+                        Modifier
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )
+                      {currentUser?.role === 'ADMIN' && (
+                        <button 
+                          onClick={() => handleDelete(user.id)}
+                          className="btn-small btn-danger"
+                        >
+                          Supprimer
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       )}
 
       {activeTab === 'pending' && (
@@ -325,8 +342,13 @@ export default function UserManagement() {
         )
       )}
 
+      {activeTab === 'meeting' && (
+        <MeetingTab meetingStats={meetingStats} />
+      )}
+
+
       {activeTab === 'services' && currentUser?.is_global_admin && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '2rem', marginTop: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '2rem', marginTop: '1.5rem', padding: '0 2rem 2rem 2rem' }}>
           {/* Create Service form */}
           <div className="card" style={{ padding: '1.5rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', height: 'fit-content' }}>
             <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a' }}>Créer un nouveau service</h3>

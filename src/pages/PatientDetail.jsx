@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPatient, getShareableDoctors, sharePatient } from '../api/patientsApi'
+import { getPatient /*, getShareableDoctors, sharePatient*/ } from '../api/patientsApi'
 import { getSubmissionsByPatient, updateSubmission } from '../api/submissionsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
@@ -27,6 +27,8 @@ export default function PatientDetail() {
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  /* Partage du dossier commented out
   const [shareOpen, setShareOpen] = useState(false)
   const [shareableDoctors, setShareableDoctors] = useState([])
   const [selectedDoctors, setSelectedDoctors] = useState([])
@@ -34,17 +36,20 @@ export default function PatientDetail() {
   const [shareSaving, setShareSaving] = useState(false)
   const [shareError, setShareError] = useState(null)
   const [shareSearch, setShareSearch] = useState('')
+  */
 
   useEffect(() => {
     loadPatient()
     loadSubmissions()
   }, [id])
 
+  /*
   useEffect(() => {
     if (patient?.shared_with) {
       setSelectedDoctors(patient.shared_with)
     }
   }, [patient?.shared_with])
+  */
 
   const formatDoctorName = (doctor) => {
     if (!doctor) return '—'
@@ -75,6 +80,7 @@ export default function PatientDetail() {
     }
   }
 
+  /*
   const loadShareableDoctors = async () => {
     try {
       setShareLoading(true)
@@ -123,6 +129,7 @@ export default function PatientDetail() {
       setShareSaving(false)
     }
   }
+  */
 
   const handleStatusChange = async (submissionId, newStatus) => {
     try {
@@ -138,11 +145,15 @@ export default function PatientDetail() {
   if (error) return <div className="error">{error}</div>
   if (!patient) return <div className="error">Patient introuvable</div>
 
+  /*
   const canShare = user?.role === 'ADMIN'
     || user?.role === 'COORDINATEUR'
     || (user?.role === 'MEDECIN' && patient.created_by === user?.id)
+  */
 
   const ownerName = formatDoctorName(patient.created_by_info)
+  
+  /*
   const sharedDoctors = Array.isArray(patient.shared_with_info) ? patient.shared_with_info : []
   const doctorLookup = new Map()
   shareableDoctors.forEach((doctor) => doctorLookup.set(doctor.id, doctor))
@@ -166,12 +177,14 @@ export default function PatientDetail() {
       .toLowerCase()
     return haystack.includes(searchTerm)
   })
+  */
 
   return (
     <div className="patient-detail-container">
       <div className="detail-header">
         <h1>👤 Dossier Patient : {patient.first_name} {patient.last_name}</h1>
         <div className="detail-actions">
+          {/* Partage du dossier commented out
           {canShare && (
             <button
               className="btn-secondary"
@@ -180,6 +193,7 @@ export default function PatientDetail() {
               {shareOpen ? 'Masquer le partage' : 'Partager le dossier'}
             </button>
           )}
+          */}
           <button
             className="btn-secondary"
             onClick={() => navigate(`/patients/${id}/edit`)}
@@ -228,6 +242,7 @@ export default function PatientDetail() {
           </div>
         </div>
 
+        {/* Partage du dossier section commented out
         <div className="detail-section share-section">
           <div className="share-header">
             <h2>🤝 Partage du dossier</h2>
@@ -343,6 +358,7 @@ export default function PatientDetail() {
             </div>
           )}
         </div>
+        */}
 
         <div className="detail-section submissions-section">
           <div className="section-header-row">
@@ -418,6 +434,7 @@ export default function PatientDetail() {
                           >
                             📎 Fichiers
                           </button>
+                          {/* 
                           <button
                             className="btn-small btn-outline"
                             onClick={() => navigate(`/meetings?submission=${sub.id}`)}
@@ -425,6 +442,7 @@ export default function PatientDetail() {
                           >
                             📅 RCP
                           </button>
+                          */}
                         </div>
                       </td>
                     </tr>

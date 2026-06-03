@@ -68,10 +68,12 @@ export default function Layout() {
 
   const patientsLabel = user?.role === 'ADMIN' ? 'Patients' : 'Mes Patients'
 
+  const homePath = !authenticated ? '/login' : (user?.role === 'MEDECIN' ? '/patients' : '/users')
+
   const navLinks = [
     { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN'] },
-    // Only show patients for ADMIN
-    ...(user?.role === 'ADMIN' ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
+    // Show patients for ADMIN and MEDECIN
+    ...(['ADMIN', 'MEDECIN'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
     { to: '/meetings', label: 'Réunions', icon: Calendar },
     // For Coordinators, label is 'Medecins', for ADMIN it is 'Utilisateurs'
     { 
@@ -89,7 +91,7 @@ export default function Layout() {
       <header className="navbar">
         <div className="container">
           <h1>
-            <Link to="/">
+            <Link to={homePath}>
               <Activity className="brand-icon" size={28} />
               Plateforme RCP
             </Link>

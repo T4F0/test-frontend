@@ -23,6 +23,22 @@ import ReportsList from './pages/ReportsList'
 import VideoConferenceRoom from './pages/VideoConferenceRoom'
 
 
+function HomeRedirect() {
+  const { user } = useAuth()
+  
+  if (user?.role === 'MEDECIN') {
+    return <Navigate to="/patients" replace />
+  }
+  
+  // Coordinators and Admins go to users
+  if (['COORDINATEUR', 'ADMIN'].includes(user?.role)) {
+    return <Navigate to="/users" replace />
+  }
+  
+  // Fallback
+  return <Navigate to="/patients" replace />
+}
+
 function AppRoutes() {
   const { loading, authenticated } = useAuth()
 
@@ -38,7 +54,7 @@ function AppRoutes() {
       <Route element={<Layout />}>
         {authenticated ? (
           <>
-            <Route path="/" element={<Navigate to="/patients" replace />} />
+            <Route path="/" element={<HomeRedirect />} />
             <Route path="/forms" element={<FormsList />} />
             <Route path="/forms/new" element={<FormBuilder />} />
             <Route path="/forms/:id/edit" element={<FormBuilder />} />

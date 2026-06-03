@@ -68,7 +68,6 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeS
       <div className="sidebar-header">
         <h3>
           <ClipboardList size={18} />
-          Résumé Clinique
         </h3>
         <button className="sidebar-close" onClick={onToggle}>×</button>
       </div>

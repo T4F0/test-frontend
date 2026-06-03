@@ -150,6 +150,11 @@ export const deleteService = async (id) => {
   await authAxios.delete(`${API_BASE}/services/${id}/`)
 }
 
+export const getNextMeetingStats = async () => {
+  const { data } = await authAxios.get(`${API_BASE}/users/next_meeting_stats/`)
+  return data
+}
+
 export const getAuthAxios = () => authAxios
 export const getToken = () => localStorage.getItem('access_token')
 export const isAuthenticated = () => !!localStorage.getItem('access_token')

@@ -41,3 +41,21 @@ export const getSubmissionResume = async (meetingId, submissionId = null) => {
   const { data } = await authAxios.get(url)
   return data
 }
+
+export const joinMeeting = async (id) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/meetings/${id}/join/`)
+  return data
+}
+
+export const addSubmissionToMeeting = async (meetingId, submissionId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/meetings/${meetingId}/add_submission/`, { submission_id: submissionId })
+  return data
+}
+
+export const removeSubmissionFromMeeting = async (meetingId, submissionId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/meetings/${meetingId}/remove_submission/`, { submission_id: submissionId })
+  return data
+}

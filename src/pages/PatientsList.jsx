@@ -94,17 +94,19 @@ export default function PatientsList() {
                 <th>Date de naissance</th>
                 <th>Sexe</th>
                 <th>Code anonymisé</th>
-                <th>Accès</th>
+                {/* <th>Accès</th> */}
                 <th>Créé le</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {patients.map((patient) => {
+                /*
                 const isOwner = patient.created_by === user?.id
                 const showAccess = user?.role === 'MEDECIN'
                 const accessLabel = isOwner ? 'Responsable' : 'Partagé'
                 const accessClass = isOwner ? 'access-badge owner' : 'access-badge shared'
+                */
                 const ownerName = formatDoctorName(patient.created_by_info)
 
                 return (
@@ -120,6 +122,7 @@ export default function PatientsList() {
                       </span>
                     </td>
                     <td>{patient.anonymized_code || '-'}</td>
+                    {/* 
                     <td>
                       {showAccess ? (
                         <span className={accessClass}>{accessLabel}</span>
@@ -127,6 +130,7 @@ export default function PatientsList() {
                         '—'
                       )}
                     </td>
+                    */}
                     <td>{formatDate(patient.created_at)}</td>
                     <td className="actions-cell">
                       <button

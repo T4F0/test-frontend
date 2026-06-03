@@ -1,26 +1,56 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { getMeeting, deleteMeeting, getSubmissionResume } from '../api/meetingsApi'
+import { useEffect, useState, useMemo } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { getMeeting, deleteMeeting, getSubmissionResume, addSubmissionToMeeting, removeSubmissionFromMeeting } from '../api/meetingsApi'
+import { getSubmissions } from '../api/submissionsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
-import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink } from 'lucide-react'
+import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2 } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
+import MeetingSummary from '../components/MeetingSummary'
+import DoctorCaseSection from '../components/DoctorCaseSection'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
 
 export default function MeetingDetail() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
+  const doctorFilter = searchParams.get('doctor')
   const navigate = useNavigate()
   const { user } = useAuth()
   const [meeting, setMeeting] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [creatingConference, setCreatingConference] = useState(false)
+  
+  // Doctor self-service state
+  const [mySubmissions, setMySubmissions] = useState([])
+  const [showAddSubModal, setShowAddSubModal] = useState(false)
+  const [addingSub, setAddingSub] = useState(false)
+
   const [submissionResume, setSubmissionResume] = useState(null)
   const [resumeLoading, setResumeLoading] = useState(false)
   const [resumeError, setResumeError] = useState(null)
   const [expandedForms, setExpandedForms] = useState({})
+
+  // Grouped submissions by doctor
+  const groupedSubmissions = useMemo(() => {
+    if (!meeting?.submission_details) return {};
+    
+    const groups = {};
+    meeting.submission_details.forEach(sub => {
+      const doctorId = sub.submitted_by_id || 'unknown';
+      if (!groups[doctorId]) {
+        groups[doctorId] = {
+          doctorName: sub.submitted_by_name || (sub.submitted_by ? `${sub.submitted_by.first_name} ${sub.submitted_by.last_name}` : 'Médecin inconnu'),
+          hospital: sub.submitted_by_hospital || (sub.submitted_by ? sub.submitted_by.hospital : 'Hôpital non spécifié'),
+          cases: []
+        };
+      }
+      groups[doctorId].cases.push(sub);
+    });
+    return groups;
+  }, [meeting]);
 
   const formatUserName = (candidate) => {
     if (!candidate) return '—'
@@ -32,13 +62,59 @@ export default function MeetingDetail() {
     loadMeeting()
   }, [id])
 
+  useEffect(() => {
+    if (showAddSubModal) {
+      loadMySubmissions()
+    }
+  }, [showAddSubModal])
+
+  const loadMySubmissions = async () => {
+    try {
+      const data = await getSubmissions()
+      setMySubmissions(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('Failed to load my submissions:', err)
+    }
+  }
+
+  const handleAddMySubmission = async (submissionId) => {
+    try {
+      setAddingSub(true)
+      await addSubmissionToMeeting(id, submissionId)
+      setShowAddSubModal(false)
+      loadMeeting()
+    } catch (err) {
+      setError('Échec de l\'ajout du dossier')
+    } finally {
+      setAddingSub(false)
+    }
+  }
+
+  const handleRemoveMySubmission = async (submissionId) => {
+    if (!window.confirm('Retirer ce dossier de la réunion ?')) return
+    try {
+      await removeSubmissionFromMeeting(id, submissionId)
+      loadMeeting()
+      if (submissionResume?.submission_id === submissionId) {
+        setSubmissionResume(null)
+      }
+    } catch (err) {
+      setError('Échec du retrait du dossier')
+    }
+  }
+
   const loadMeeting = async () => {
     try {
       const data = await getMeeting(id)
       setMeeting(data)
       setError(null)
-      if (data.submissions?.length > 0) {
-        loadResume(data.submissions[0])
+      
+      const visibleSubmissions = doctorFilter 
+        ? data.submission_details?.filter(sub => sub.submitted_by_id === doctorFilter)
+        : data.submission_details;
+
+      if (visibleSubmissions?.length > 0) {
+        loadResume(visibleSubmissions[0].id)
       }
     } catch (err) {
       setError('Échec du chargement de la réunion')
@@ -178,39 +254,78 @@ export default function MeetingDetail() {
           </div>
         </div>
 
-        <div className="detail-card dossiers-card">
-          <h2>📑 Dossiers à l'ordre du jour ({meeting.submission_details?.length || 0})</h2>
-          {meeting.submission_details?.length > 0 ? (
-            <div className="submissions-mini-list">
-              {meeting.submission_details.map(sub => (
-                <div 
-                  key={sub.id} 
-                  className={`sub-item-link ${submissionResume?.submission_id === sub.id ? 'active' : ''}`}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="sub-item-info" onClick={() => loadResume(sub.id)} style={{ flex: 1 }}>
-                    <div className="sub-item-patient">{sub.patient_name}</div>
-                    <div className="sub-item-name">{sub.form_name}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                    <button
-                      className="btn-small btn-info"
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      onClick={() => navigate(`/patients/${sub.patient_id}`)}
-                      title="Voir le dossier patient"
-                    >
-                      <ExternalLink size={13} />
-                      Dossier
-                    </button>
-                    <ChevronDown size={16} onClick={() => loadResume(sub.id)} />
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className="detail-card dossiers-card" style={{ boxShadow: 'none', border: 'none', padding: 0 }}>
+          <MeetingSummary 
+            totalDossiers={meeting.total_submissions_count || 0}
+            participatingDoctors={meeting.total_participants_count || 0}
+            meetingDate={meeting.scheduled_date}
+          />
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ margin: 0 }}>📑 Dossiers à l'ordre du jour</h2>
+            <button 
+              onClick={() => setShowAddSubModal(true)}
+              className="btn-small btn-primary btn-with-icon"
+            >
+              <Plus size={14} /> Ajouter un dossier
+            </button>
+          </div>
+          
+          {Object.entries(groupedSubmissions).length > 0 ? (
+            Object.entries(groupedSubmissions).map(([doctorId, group]) => (
+              <DoctorCaseSection
+                key={doctorId}
+                doctorName={group.doctorName}
+                hospital={group.hospital}
+                cases={group.cases}
+                onRemoveCase={handleRemoveMySubmission}
+                currentUserRole={user?.role}
+              />
+            ))
           ) : (
-            <p className="empty">Aucun dossier lié à cette réunion.</p>
+            <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <p style={{ color: '#64748b' }}>Aucun dossier lié à cette réunion.</p>
+            </div>
           )}
         </div>
+
+      {showAddSubModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="modal-content" style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h2 style={{ marginBottom: '1.5rem' }}>Ajouter un de vos dossiers à la réunion</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {mySubmissions.filter(s => !meeting.submissions.includes(s.id)).length === 0 ? (
+                <p>Aucun dossier disponible à ajouter (soit vous n'en avez pas, soit ils sont déjà dans la réunion).</p>
+              ) : (
+                mySubmissions
+                  .filter(s => !meeting.submissions.includes(s.id))
+                  .map(sub => (
+                    <div key={sub.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{sub.patient_name}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{sub.form_name} ({formatDate(sub.created_at)})</div>
+                      </div>
+                      <button 
+                        onClick={() => handleAddMySubmission(sub.id)}
+                        disabled={addingSub}
+                        className="btn-small btn-primary"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                  ))
+              )}
+            </div>
+            <button 
+              onClick={() => setShowAddSubModal(false)}
+              className="btn-secondary"
+              style={{ marginTop: '2rem', width: '100%' }}
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
       </div>
 
       {/* === CLINICAL RESUME SECTION === */}
@@ -219,8 +334,7 @@ export default function MeetingDetail() {
           <div className="case-resume-title-block">
             <ClipboardList size={22} className="case-resume-icon" />
             <div>
-              <h2 className="case-resume-title">Résumé Clinique : {submissionResume?.patient?.first_name} {submissionResume?.patient?.last_name}</h2>
-              <p className="case-resume-subtitle">Données extraites des formulaires pour la discussion RCP</p>
+              <h2 className="case-resume-title">{submissionResume?.patient?.first_name} {submissionResume?.patient?.last_name}</h2>
             </div>
           </div>
         </div>
