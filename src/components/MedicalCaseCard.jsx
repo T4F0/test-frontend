@@ -40,12 +40,6 @@ export default function MedicalCaseCard({ submission, onRemove, currentUserRole 
           <ExternalLink size={14} /> Voir
         </button>
         <button
-          onClick={() => navigate(`/forms/${submission.form}/submissions/${submission.id}`)}
-          style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-        >
-          <FileText size={14} /> Modifier
-        </button>
-        <button
           onClick={() => onRemove(submission.id)}
           style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #fee2e2', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer' }}
         >
