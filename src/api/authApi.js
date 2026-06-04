@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import { API_BASE } from './config'
+import { API_BASE, resolveApiUrl } from './config'
 
 const authAxios = axios.create()
 
@@ -161,7 +161,7 @@ export const isAuthenticated = () => !!localStorage.getItem('access_token')
 
 export const fetchFileAsBlob = async (url) => {
   const authAxios = getAuthAxios()
-  const response = await authAxios.get(url, {
+  const response = await authAxios.get(resolveApiUrl(url), {
     responseType: 'blob'
   })
   return response.data

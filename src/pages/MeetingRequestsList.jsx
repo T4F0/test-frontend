@@ -19,9 +19,10 @@ const SectionRenderer = ({ section }) => (
           <div style={{ color: '#0f172a', fontSize: '0.95rem' }}>
             {field.field_type === 'file' ? (
               field.value ? (
-                <a href={`/media/${field.value}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
-                  Voir le fichier
-                </a>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#1e293b' }}>
+                  <FileText size={14} style={{ color: '#64748b' }} />
+                  {field.value}
+                </span>
               ) : 'Aucun fichier'
             ) : (
               field.value || <span style={{ color: '#cbd5e1' }}>Non renseigné</span>
