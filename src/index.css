@@ -2261,3 +2261,177 @@ body.theme-medecin .navbar {
   margin: 0;
   letter-spacing: -0.5px;
 }
+
+/* ===== INLINE MEDICAL CASE CARD & FORM DETAILS PANEL ===== */
+.medical-case-card {
+  background-color: white;
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.medical-case-card--active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.medical-case-btn {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.medical-case-btn--details {
+  border: 1px solid var(--primary-light);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.medical-case-btn--details:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.medical-case-btn--details-active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.medical-case-btn--view {
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #334155;
+}
+
+.medical-case-btn--view:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.medical-case-btn--remove {
+  flex: 0 0 auto;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #fee2e2;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.medical-case-btn--remove:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Form details inline panel */
+.form-detail-panel {
+  margin-top: 2rem;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  padding: 2rem;
+  animation: slideDownIn 0.25s ease-out;
+}
+
+@keyframes slideDownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-detail-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--gray-100);
+  padding-bottom: 1rem;
+}
+
+.form-detail-panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-detail-panel-close {
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  width: auto;
+}
+
+.form-detail-panel-close:hover {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.form-detail-panel-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--gray-500);
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.form-detail-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.form-detail-panel-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+

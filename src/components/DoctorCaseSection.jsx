@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import MedicalCaseCard from './MedicalCaseCard';
 
-export default function DoctorCaseSection({ doctorName, hospital, cases, onRemoveCase, currentUserRole }) {
+export default function DoctorCaseSection({ doctorName, hospital, cases, onRemoveCase, onViewDetails, activeDetailId, currentUserRole }) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -36,6 +36,8 @@ export default function DoctorCaseSection({ doctorName, hospital, cases, onRemov
               key={sub.id}
               submission={sub}
               onRemove={onRemoveCase}
+              onViewDetails={onViewDetails}
+              activeDetailId={activeDetailId}
               currentUserRole={currentUserRole}
             />
           ))}
@@ -44,3 +46,4 @@ export default function DoctorCaseSection({ doctorName, hospital, cases, onRemov
     </div>
   );
 }
+

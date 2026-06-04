@@ -203,6 +203,24 @@
   margin: -1rem -1rem 0;
 }
 
+/* --- Fullscreen styles for Conference Room --- */
+.conference-room:fullscreen,
+.conference-room.fullscreen-active {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 99999 !important;
+}
+
 /* --- Header --- */
 .conference-header {
   display: flex;
@@ -441,7 +459,13 @@
 .video-tile.screen-sharer {
   grid-column: 1;
   grid-row: 1 / -1;
+  background: #090d16;
 }
+
+.video-tile.screen-sharer video {
+  object-fit: contain;
+}
+
 
 .video-tile video {
   width: 100%;
@@ -1638,8 +1662,8 @@
   background: #0f172a;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(99, 102, 241, 0.4);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(59, 130, 246, 0.4);
+  border: 3px solid #3b82f6;
   z-index: 40;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1742,3 +1766,116 @@
   border: none;
   background: white;
 }
+
+/* ===== MAIN STAGE FORM DETAILS IN CALL ===== */
+.main-stage-form-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  border-radius: 12px;
+  overflow: hidden;
+  animation: fadeIn 0.3s ease;
+  background: #1e293b;
+}
+
+.main-stage-form-details {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.main-stage-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(30, 41, 59, 0.8);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  flex-shrink: 0;
+}
+
+.main-stage-form-header .form-title {
+  color: #f8fafc;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.main-stage-form-header .form-subtitle {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin: 0.2rem 0 0 0;
+}
+
+.main-stage-form-body {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: #1e293b;
+}
+
+/* Override form detail elements for dark theme in conference call */
+.main-stage-form-body .submission-detail-meta {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  box-shadow: none;
+}
+
+.main-stage-form-body .submission-detail-meta-label {
+  color: #94a3b8;
+}
+
+.main-stage-form-body .submission-detail-meta-value {
+  color: #f1f5f9;
+}
+
+.main-stage-form-body .submission-detail-data {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  box-shadow: none;
+}
+
+.main-stage-form-body .submission-detail-data-title {
+  background: rgba(15, 23, 42, 0.5);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+}
+
+.main-stage-form-body .submission-section {
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.main-stage-form-body .submission-section.nested {
+  border-left: 3px solid rgba(99, 102, 241, 0.4);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.main-stage-form-body .submission-section-title {
+  color: #a5b4fc;
+}
+
+.main-stage-form-body .submission-detail-field {
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+.main-stage-form-body .submission-detail-field-label {
+  color: #cbd5e1;
+}
+
+.main-stage-form-body .submission-detail-field-value {
+  color: #f1f5f9;
+}
+
+.main-stage-form-body .submission-detail-empty {
+  color: #64748b;
+}
+
+.main-stage-form-body .file-field-preview {
+  color: #a5b4fc;
+}
+

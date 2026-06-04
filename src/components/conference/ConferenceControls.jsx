@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, Hand, PhoneOff, LogOut } from 'lucide-react'
+import { Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, Hand, PhoneOff, LogOut, Maximize2, Minimize2 } from 'lucide-react'
 
 /**
  * Bottom control bar for the conference.
@@ -9,6 +9,7 @@ export default function ConferenceControls({
   isScreenSharing,
   isHandRaised,
   isHost,
+  isFullscreen,
   onToggleMute,
   onToggleCamera,
   onStartScreenShare,
@@ -16,6 +17,7 @@ export default function ConferenceControls({
   onRaiseHand,
   onLeave,
   onEndMeeting,
+  onToggleFullscreen,
 }) {
   return (
     <div className="conference-controls">
@@ -54,6 +56,15 @@ export default function ConferenceControls({
         >
           <Hand size={22} />
           <span className="control-label">{isHandRaised ? 'Baisser la main' : 'Lever la main'}</span>
+        </button>
+
+        <button
+          className={`control-btn ${isFullscreen ? 'active-primary' : ''}`}
+          onClick={onToggleFullscreen}
+          title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+        >
+          {isFullscreen ? <Minimize2 size={22} /> : <Maximize2 size={22} />}
+          <span className="control-label">{isFullscreen ? 'Réduire' : 'Plein écran'}</span>
         </button>
       </div>
 

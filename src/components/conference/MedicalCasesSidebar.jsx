@@ -15,7 +15,9 @@ export default function MedicalCasesSidebar({
   isUploading,
   activeSubmissionId,
   setActiveSubmissionId,
-  onPreviewFile
+  onPreviewFile,
+  onShowFormDetails,
+  activeFormDetailId
 }) {
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
@@ -154,6 +156,26 @@ export default function MedicalCasesSidebar({
               
               {isActive && (
                 <div className="case-accordion-body">
+                  <button
+                    className={`btn-small btn-primary form-details-accordion-btn ${activeFormDetailId === submission.id ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onShowFormDetails && onShowFormDetails(submission)
+                    }}
+                    style={{
+                      width: '100%',
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      backgroundColor: activeFormDetailId === submission.id ? 'var(--secondary)' : ''
+                    }}
+                  >
+                    <ClipboardList size={14} />
+                    {activeFormDetailId === submission.id ? 'Masquer les détails' : 'Détails du formulaire'}
+                  </button>
+
                   <div
                     className={`drop-zone ${dragActive ? 'drag-active' : ''}`}
                     onDragEnter={handleDrag}

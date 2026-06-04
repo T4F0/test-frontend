@@ -1,16 +1,70 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMeeting, deleteMeeting, getSubmissionResume, addSubmissionToMeeting, removeSubmissionFromMeeting } from '../api/meetingsApi'
-import { getSubmissions } from '../api/submissionsApi'
+import { getSubmissions, getSubmission } from '../api/submissionsApi'
+import { getForm } from '../api/formsApi'
+import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
-import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2 } from 'lucide-react'
+import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2, X, Download, Image as ImageIcon, Video as VideoIcon } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
 import MeetingSummary from '../components/MeetingSummary'
 import DoctorCaseSection from '../components/DoctorCaseSection'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
+
+/* ── helpers reused from FormSubmissionDetail ── */
+function formatFieldValue(value) {
+  if (value === true) return 'Oui'
+  if (value === false) return 'Non'
+  if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : '—'
+  return value == null || value === '' ? '—' : String(value)
+}
+
+function hasDataInChildren(section, submissionData) {
+  if (section.fields?.some(f => submissionData[f.id] !== undefined)) return true
+  return section.children?.some(child => hasDataInChildren(child, submissionData)) || false
+}
+
+function SectionDataRenderer({ section, submissionData }) {
+  const hasFields = section.fields?.some(f => submissionData[f.id] !== undefined)
+  const hasChildData = section.children?.some(child => hasDataInChildren(child, submissionData))
+  if (!hasFields && !hasChildData) return null
+
+  return (
+    <div key={section.id} className={`submission-section ${section.parent ? 'nested' : ''}`}>
+      <h3 className="submission-section-title">{section.name}</h3>
+      {section.fields
+        ?.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map(field => {
+          const value = submissionData[field.id]
+          if (value === undefined) return null
+          const isFile = field.field_type === 'file'
+          return (
+            <div key={field.id} className="submission-detail-field">
+              <span className="submission-detail-field-label">{field.name}</span>
+              <span className={`submission-detail-field-value ${isFile ? 'is-file' : ''}`}>
+                {isFile ? (
+                  <span className="file-field-preview">
+                    <FileText size={14} style={{ marginRight: '6px' }} />
+                    {formatFieldValue(value)}
+                  </span>
+                ) : (
+                  formatFieldValue(value)
+                )}
+              </span>
+            </div>
+          )
+        })}
+      {section.children
+        ?.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map(child => (
+          <SectionDataRenderer key={child.id} section={child} submissionData={submissionData} />
+        ))}
+    </div>
+  )
+}
 
 export default function MeetingDetail() {
   const { id } = useParams()
@@ -32,6 +86,10 @@ export default function MeetingDetail() {
   const [resumeLoading, setResumeLoading] = useState(false)
   const [resumeError, setResumeError] = useState(null)
   const [expandedForms, setExpandedForms] = useState({})
+
+  // Form detail panel state
+  const [detailPanel, setDetailPanel] = useState({ open: false, loading: false, error: null, submission: null, form: null, attachments: [] })
+  const [activeDetailId, setActiveDetailId] = useState(null)
 
   // Grouped submissions by doctor
   const groupedSubmissions = useMemo(() => {
@@ -101,6 +159,36 @@ export default function MeetingDetail() {
     } catch (err) {
       setError('Échec du retrait du dossier')
     }
+  }
+
+  const handleViewFormDetails = async (sub) => {
+    // Toggle off if clicking the same card
+    if (activeDetailId === sub.id) {
+      setActiveDetailId(null)
+      setDetailPanel({ open: false, loading: false, error: null, submission: null, form: null, attachments: [] })
+      return
+    }
+    setActiveDetailId(sub.id)
+    setDetailPanel(prev => ({ ...prev, open: true, loading: true, error: null }))
+    try {
+      // Fetch the submission details first to get the form ID
+      const subData = await getSubmission(sub.id)
+      const formId = subData.form
+
+      const [formData, attachData] = await Promise.all([
+        getForm(formId),
+        getAttachments({ submission: sub.id })
+      ])
+      setDetailPanel({ open: true, loading: false, error: null, submission: subData, form: formData, attachments: attachData || [] })
+    } catch (err) {
+      console.error('Failed to load form details:', err)
+      setDetailPanel(prev => ({ ...prev, loading: false, error: 'Impossible de charger les détails du formulaire.' }))
+    }
+  }
+
+  const closeDetailPanel = () => {
+    setActiveDetailId(null)
+    setDetailPanel({ open: false, loading: false, error: null, submission: null, form: null, attachments: [] })
   }
 
   const loadMeeting = async () => {
@@ -293,12 +381,132 @@ export default function MeetingDetail() {
                 hospital={group.hospital}
                 cases={group.cases}
                 onRemoveCase={handleRemoveMySubmission}
+                onViewDetails={handleViewFormDetails}
+                activeDetailId={activeDetailId}
                 currentUserRole={user?.role}
               />
             ))
           ) : (
             <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <p style={{ color: '#64748b' }}>Aucun dossier lié à cette réunion.</p>
+            </div>
+          )}
+
+          {/* ── Inline Form Details Panel ── */}
+          {detailPanel.open && (
+            <div className="form-detail-panel">
+              <div className="form-detail-panel-header">
+                <h2 className="form-detail-panel-title">
+                  <ClipboardList size={22} />
+                  Détails du formulaire
+                </h2>
+                <button onClick={closeDetailPanel} className="form-detail-panel-close" title="Fermer">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {detailPanel.loading && (
+                <div className="form-detail-panel-loading">
+                  <div className="form-detail-spinner" />
+                  Chargement des détails…
+                </div>
+              )}
+
+              {detailPanel.error && (
+                <div className="form-detail-panel-error">
+                  <AlertCircle size={18} />
+                  {detailPanel.error}
+                </div>
+              )}
+
+              {!detailPanel.loading && !detailPanel.error && detailPanel.form && detailPanel.submission && (
+                <>
+                  {/* Meta info */}
+                  <div className="submission-detail-meta" style={{ marginBottom: '1.5rem' }}>
+                    <div className="submission-detail-meta-item">
+                      <span className="submission-detail-meta-label">Formulaire</span>
+                      <span className="submission-detail-meta-value">{detailPanel.form.name}</span>
+                    </div>
+                    <div className="submission-detail-meta-item">
+                      <span className="submission-detail-meta-label">Patient</span>
+                      <span className="submission-detail-meta-value">{detailPanel.submission.patient_name ?? '—'}</span>
+                    </div>
+                    <div className="submission-detail-meta-item">
+                      <span className="submission-detail-meta-label">Soumis le</span>
+                      <span className="submission-detail-meta-value">{new Date(detailPanel.submission.created_at).toLocaleString()}</span>
+                    </div>
+                    <div className="submission-detail-meta-item">
+                      <span className="submission-detail-meta-label">Statut</span>
+                      <span className="badge">{detailPanel.submission.status}</span>
+                    </div>
+                  </div>
+
+                  {/* Sections data */}
+                  <div className="submission-detail-data">
+                    <h2 className="submission-detail-data-title">Valeurs extraites</h2>
+                    {Object.keys(detailPanel.submission.data || {}).length === 0 ? (
+                      <div className="submission-detail-empty">Aucune donnée trouvée dans cette soumission.</div>
+                    ) : (
+                      <div className="submission-detail-sections">
+                        {detailPanel.form.sections
+                          ?.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                          .map(section => (
+                            <SectionDataRenderer
+                              key={section.id}
+                              section={section}
+                              submissionData={detailPanel.submission.data || {}}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Attachments */}
+                  {detailPanel.attachments.length > 0 && (
+                    <section style={{ marginTop: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+                      <h2 className="submission-detail-data-title" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'none', border: 'none', padding: 0 }}>
+                        <Download size={20} />
+                        Pièces jointes ({detailPanel.attachments.length})
+                      </h2>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
+                        {detailPanel.attachments.map(file => (
+                          <div key={file.id} className="attachment-card" style={{ padding: '0.85rem 1rem', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', overflow: 'hidden' }}>
+                              <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', flexShrink: 0 }}>
+                                {file.file_type?.startsWith('image/') ? <ImageIcon size={18} /> :
+                                 file.file_type?.startsWith('video/') ? <VideoIcon size={18} /> :
+                                 <FileText size={18} />}
+                              </div>
+                              <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={file.file_name}>
+                                  {file.file_name}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{file.file_type}</div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.35rem' }}>
+                              <button
+                                onClick={(e) => { e.preventDefault(); downloadAttachment(file.file, null) }}
+                                style={{ color: '#2563eb', padding: '6px', background: 'none', border: 'none', cursor: 'pointer' }}
+                                title="Ouvrir"
+                              >
+                                <ExternalLink size={16} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.preventDefault(); downloadAttachment(file.file, file.file_name) }}
+                                style={{ color: '#2563eb', padding: '6px', background: 'none', border: 'none', cursor: 'pointer' }}
+                                title="Télécharger"
+                              >
+                                <Download size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>

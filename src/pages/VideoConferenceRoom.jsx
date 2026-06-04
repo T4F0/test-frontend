@@ -18,6 +18,10 @@ import ParticipantList from '../components/conference/ParticipantList'
 import ChatSidebar from '../components/conference/ChatSidebar'
 import MedicalCasesSidebar from '../components/conference/MedicalCasesSidebar'
 import MainStageFileViewer from '../components/conference/MainStageFileViewer'
+import MainStageFormDetails from '../components/conference/MainStageFormDetails'
+import { getSubmission } from '../api/submissionsApi'
+import { getForm } from '../api/formsApi'
+import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { Users, MessageSquare, ClipboardList, Clock } from 'lucide-react'
 import '../conference.css'
 
@@ -37,9 +41,105 @@ export default function VideoConferenceRoom() {
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const abortControllerRef = useRef(null)
+  const conferenceRef = useRef(null)
   const [elapsedTime, setElapsedTime] = useState(0)
   const [joined, setJoined] = useState(false)
   const [activeSubmissionId, setActiveSubmissionId] = useState(null)
+  const [activeFormDetail, setActiveFormDetail] = useState(null)
+  const [formDetailLoading, setFormDetailLoading] = useState(false)
+  const [formDetailData, setFormDetailData] = useState({ form: null, submission: null, attachments: [] })
+  const [formDetailError, setFormDetailError] = useState(null)
+
+  // Draggable PIP states
+  const [pipPosition, setPipPosition] = useState({ x: 0, y: 0 })
+  const [isDraggingPip, setIsDraggingPip] = useState(false)
+  const dragStartRef = useRef({ x: 0, y: 0 })
+
+  // Reset PIP position when closed
+  useEffect(() => {
+    if (!activePreviewItem && !activeFormDetail) {
+      setPipPosition({ x: 0, y: 0 })
+    }
+  }, [activePreviewItem, activeFormDetail])
+
+  const handlePipMouseDown = (e) => {
+    // Only drag with left click and when in PIP mode
+    if (e.button !== 0) return
+    setIsDraggingPip(true)
+    dragStartRef.current = {
+      x: e.clientX - pipPosition.x,
+      y: e.clientY - pipPosition.y
+    }
+    e.preventDefault()
+  }
+
+  const handlePipMouseMove = useCallback((e) => {
+    if (!isDraggingPip) return
+    const newX = e.clientX - dragStartRef.current.x
+    const newY = e.clientY - dragStartRef.current.y
+    
+    // Keep PIP within the bounds of the video area viewport (with 10px margin at edges)
+    const videoArea = document.querySelector('.video-area')
+    if (videoArea) {
+      const bounds = videoArea.getBoundingClientRect()
+      
+      // Initial pos is right: 20px (defaultLeft = bounds.width - 320 - 20)
+      const minX = 10 - (bounds.width - 320 - 20)
+      const maxX = 10
+      
+      // Initial pos is bottom: 20px (defaultTop = bounds.height - 240 - 20)
+      const minY = 10 - (bounds.height - 240 - 20)
+      const maxY = 10
+      
+      const constrainedX = Math.max(minX, Math.min(maxX, newX))
+      const constrainedY = Math.max(minY, Math.min(maxY, newY))
+      setPipPosition({ x: constrainedX, y: constrainedY })
+    } else {
+      setPipPosition({ x: newX, y: newY })
+    }
+  }, [isDraggingPip, pipPosition])
+
+  const handlePipMouseUp = useCallback(() => {
+    setIsDraggingPip(false)
+  }, [])
+
+  useEffect(() => {
+    if (isDraggingPip) {
+      window.addEventListener('mousemove', handlePipMouseMove)
+      window.addEventListener('mouseup', handlePipMouseUp)
+    } else {
+      window.removeEventListener('mousemove', handlePipMouseMove)
+      window.removeEventListener('mouseup', handlePipMouseUp)
+    }
+    return () => {
+      window.removeEventListener('mousemove', handlePipMouseMove)
+      window.removeEventListener('mouseup', handlePipMouseUp)
+    }
+  }, [isDraggingPip, handlePipMouseMove, handlePipMouseUp])
+
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (conferenceRef.current) {
+        conferenceRef.current.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`)
+        })
+      }
+    } else {
+      document.exitFullscreen()
+    }
+  }
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [])
 
   const handleChatMessage = useCallback((msg) => {
     setChatMessages((prev) => [...prev, msg])
@@ -210,6 +310,34 @@ export default function VideoConferenceRoom() {
     }
   }
 
+  const handleShowFormDetails = async (sub) => {
+    if (activeFormDetail && activeFormDetail.id === sub.id) {
+      // Toggle off if clicking the same case details button
+      setActiveFormDetail(null)
+      setFormDetailData({ form: null, submission: null, attachments: [] })
+      return
+    }
+    setActivePreviewItem(null) // Hide other file previews
+    setFormDetailLoading(true)
+    setFormDetailError(null)
+    setActiveFormDetail(sub)
+    try {
+      const subData = await getSubmission(sub.id)
+      const formId = subData.form
+      
+      const [formData, attachData] = await Promise.all([
+        getForm(formId),
+        getAttachments({ submission: sub.id })
+      ])
+      setFormDetailData({ form: formData, submission: subData, attachments: attachData || [] })
+    } catch (err) {
+      console.error('Failed to load form details in conference stage:', err)
+      setFormDetailError('Impossible de charger les détails du formulaire.')
+    } finally {
+      setFormDetailLoading(false)
+    }
+  }
+
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600)
     const m = Math.floor((seconds % 3600) / 60)
@@ -275,7 +403,7 @@ export default function VideoConferenceRoom() {
   }
 
   return (
-    <div className="conference-room">
+    <div className={`conference-room ${isFullscreen ? 'fullscreen-active' : ''}`} ref={conferenceRef}>
       <div className="conference-header">
         <div className="header-left">
           <h2 className="conference-title">{conference?.meeting_title || 'Conférence RCP'}</h2>
@@ -316,14 +444,51 @@ export default function VideoConferenceRoom() {
       </div>
 
       <div className="conference-body">
-        <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''} ${activePreviewItem ? 'has-preview' : ''}`}>
+        <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''} ${(activePreviewItem || activeFormDetail) ? 'has-preview' : ''}`}>
           {activePreviewItem && (
             <MainStageFileViewer 
               file={activePreviewItem} 
               onClose={() => setActivePreviewItem(null)} 
             />
           )}
-          <div className={activePreviewItem ? 'pip-video-container' : 'full-video-container'}>
+          {activeFormDetail && (
+            <div className="main-stage-form-wrapper" style={{ flex: 1, height: '100%', overflowY: 'auto', background: '#0f172a', borderRadius: '12px', display: 'flex', flexDirection: 'column', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
+              {formDetailLoading && (
+                <div className="form-detail-panel-loading" style={{ height: '100%' }}>
+                  <div className="form-detail-spinner" />
+                  Chargement des détails…
+                </div>
+              )}
+              {formDetailError && (
+                <div style={{ padding: '2rem' }}>
+                  <div className="form-detail-panel-error">
+                    {formDetailError}
+                  </div>
+                  <button className="btn-secondary" style={{ marginTop: '1rem' }} onClick={() => { setActiveFormDetail(null); setFormDetailData({ form: null, submission: null, attachments: [] }) }}>
+                    Fermer
+                  </button>
+                </div>
+              )}
+              {!formDetailLoading && !formDetailError && formDetailData.form && formDetailData.submission && (
+                <MainStageFormDetails
+                  form={formDetailData.form}
+                  submission={formDetailData.submission}
+                  attachments={formDetailData.attachments}
+                  onClose={() => { setActiveFormDetail(null); setFormDetailData({ form: null, submission: null, attachments: [] }) }}
+                  downloadAttachment={downloadAttachment}
+                />
+              )}
+            </div>
+          )}
+          <div 
+            className={(activePreviewItem || activeFormDetail) ? 'pip-video-container' : 'full-video-container'}
+            style={(activePreviewItem || activeFormDetail) ? {
+              transform: `translate(${pipPosition.x}px, ${pipPosition.y}px)`,
+              cursor: isDraggingPip ? 'grabbing' : 'grab',
+              transition: isDraggingPip ? 'none' : 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+            } : {}}
+            onMouseDown={(activePreviewItem || activeFormDetail) ? handlePipMouseDown : undefined}
+          >
             <VideoGrid
               localStream={localStream}
               screenStream={screenStream}
@@ -367,7 +532,13 @@ export default function VideoConferenceRoom() {
           isUploading={isUploading}
           activeSubmissionId={activeSubmissionId}
           setActiveSubmissionId={setActiveSubmissionId}
-          onPreviewFile={(file) => setActivePreviewItem(file)}
+          onPreviewFile={(file) => {
+            setActivePreviewItem(file);
+            setActiveFormDetail(null);
+            setFormDetailData({ form: null, submission: null, attachments: [] });
+          }}
+          onShowFormDetails={handleShowFormDetails}
+          activeFormDetailId={activeFormDetail ? activeFormDetail.id : null}
         />
       </div>
 
@@ -377,6 +548,7 @@ export default function VideoConferenceRoom() {
         isScreenSharing={isScreenSharing}
         isHandRaised={isHandRaised}
         isHost={isHost}
+        isFullscreen={isFullscreen}
         onToggleMute={toggleMute}
         onToggleCamera={toggleCamera}
         onStartScreenShare={startScreenShare}
@@ -384,6 +556,7 @@ export default function VideoConferenceRoom() {
         onRaiseHand={raiseHand}
         onLeave={handleLeave}
         onEndMeeting={handleEndMeeting}
+        onToggleFullscreen={handleToggleFullscreen}
       />
     </div>
   )

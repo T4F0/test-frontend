@@ -1,22 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, FileText, Trash2 } from 'lucide-react';
+import { ExternalLink, FileText, Trash2, ClipboardList } from 'lucide-react';
 import { formatDate } from '../lib/dateUtils';
 
-export default function MedicalCaseCard({ submission, onRemove, currentUserRole }) {
+export default function MedicalCaseCard({ submission, onRemove, onViewDetails, activeDetailId, currentUserRole }) {
   const navigate = useNavigate();
+  const isActive = activeDetailId === submission.id;
 
   return (
-    <div style={{
-      backgroundColor: 'white',
-      padding: '1.25rem',
-      borderRadius: '12px',
-      border: '1px solid #e2e8f0',
-      boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.75rem',
-    }}>
+    <div className={`medical-case-card ${isActive ? 'medical-case-card--active' : ''}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>{submission.patient_name}</h4>
         <span style={{
@@ -32,16 +24,25 @@ export default function MedicalCaseCard({ submission, onRemove, currentUserRole 
       <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>{submission.form_name}</p>
       <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>Soumis le {formatDate(submission.created_at)}</p>
       
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => onViewDetails && onViewDetails(submission)}
+          className={`medical-case-btn medical-case-btn--details ${isActive ? 'medical-case-btn--details-active' : ''}`}
+          title="Voir les détails du formulaire"
+        >
+          <ClipboardList size={14} /> Détails
+        </button>
         <button
           onClick={() => navigate(`/patients/${submission.patient_id}`)}
-          style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+          className="medical-case-btn medical-case-btn--view"
+          title="Voir le dossier patient"
         >
           <ExternalLink size={14} /> Voir
         </button>
         <button
           onClick={() => onRemove(submission.id)}
-          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #fee2e2', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer' }}
+          className="medical-case-btn medical-case-btn--remove"
+          title="Retirer de la réunion"
         >
           <Trash2 size={14} />
         </button>
