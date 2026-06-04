@@ -11,6 +11,7 @@ import FormSubmissionsList from './pages/FormSubmissionsList'
 import FormSubmissionDetail from './pages/FormSubmissionDetail'
 import UserManagement from './pages/UserManagement'
 import UserForm from './pages/UserForm'
+import UserProfile from './pages/UserProfile'
 import PatientsList from './pages/PatientsList'
 import PatientForm from './pages/PatientForm'
 import PatientDetail from './pages/PatientDetail'
@@ -65,6 +66,7 @@ function AppRoutes() {
             <Route path="/forms/:formId/submissions/:submissionId" element={<FormSubmissionDetail />} />
             <Route path="/users" element={<UserManagement />} />
             <Route path="/users/new" element={<UserForm />} />
+            <Route path="/users/:id" element={<UserProfile />} />
             <Route path="/users/:id/edit" element={<UserForm />} />
             <Route path="/patients" element={<PatientsList />} />
             <Route path="/patients/new" element={<PatientForm />} />

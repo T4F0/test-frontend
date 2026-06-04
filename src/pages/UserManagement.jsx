@@ -14,7 +14,7 @@ import {
 } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
-import { Calendar, Users, ChevronRight, FileText } from 'lucide-react'
+import { Calendar, Users, ChevronRight, FileText, Activity, Search } from 'lucide-react'
 import MeetingTab from '../components/MeetingTab'
 
 const ROLE_LABELS = {
@@ -178,37 +178,33 @@ export default function UserManagement() {
         </button>
       </div>
 
-      <div className="tabs" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem', padding: '0 2rem' }}>
+      <div className="modern-tabs-container">
         <button 
-          className={`tab ${activeTab === 'active' ? 'active' : ''}`}
+          className={`modern-tab ${activeTab === 'active' ? 'active-blue' : ''}`}
           onClick={() => setActiveTab('active')}
-          style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'active' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'active' ? 'bold' : 'normal' }}
         >
-          Utilisateurs actifs
+          <Users size={18} /> Utilisateurs actifs
         </button>
         <button 
-          className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
+          className={`modern-tab ${activeTab === 'pending' ? 'active-orange' : ''}`}
           onClick={() => setActiveTab('pending')}
-          style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'pending' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'pending' ? 'bold' : 'normal' }}
         >
-          Inscriptions en attente {pendingUsers.length > 0 && `(${pendingUsers.length})`}
+          <FileText size={18} /> Inscriptions en attente {pendingUsers.length > 0 && <span className="tab-badge">{pendingUsers.length}</span>}
         </button>
         {['ADMIN', 'COORDINATEUR'].includes(currentUser?.role) && (
           <button 
-            className={`tab ${activeTab === 'meeting' ? 'active' : ''}`}
+            className={`modern-tab ${activeTab === 'meeting' ? 'active-purple' : ''}`}
             onClick={() => setActiveTab('meeting')}
-            style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'meeting' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'meeting' ? 'bold' : 'normal' }}
           >
-            Prochaine Réunion
+            <Calendar size={18} /> Demande de RCP
           </button>
         )}
         {currentUser?.is_global_admin && (
           <button 
-            className={`tab ${activeTab === 'services' ? 'active' : ''}`}
+            className={`modern-tab ${activeTab === 'services' ? 'active-green' : ''}`}
             onClick={() => setActiveTab('services')}
-            style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'services' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'services' ? 'bold' : 'normal' }}
           >
-            Services
+            <Activity size={18} /> Services
           </button>
         )}
       </div>
@@ -217,14 +213,14 @@ export default function UserManagement() {
 
       {activeTab === 'active' && (
         <div>
-          <div style={{ marginBottom: '1rem', padding: '0 2rem' }}>
+          <div className="modern-search-container">
+            <Search className="search-icon" size={18} />
             <input
               type="text"
               placeholder="Rechercher par nom, email, hôpital ou service..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="search-input"
-              style={{ width: '100%', maxWidth: '420px' }}
+              className="modern-search-input"
             />
           </div>
           {users.length === 0 ? (

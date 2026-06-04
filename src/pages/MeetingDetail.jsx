@@ -244,13 +244,27 @@ export default function MeetingDetail() {
               <p>{formatUserName(meeting.coordinator_details)}</p>
             </div>
           </div>
-          <div className="detail-section" style={{marginTop: '1.5rem'}}>
+          <div className="detail-section" style={{marginTop: '2rem'}}>
             <label>Participants ({meeting.participant_details?.length || 0})</label>
-            <p className="participants-list">
-              {meeting.participant_details?.length
-                ? meeting.participant_details.map((p) => formatUserName(p)).join(', ')
-                : 'Aucun participant invité'}
-            </p>
+            {meeting.participant_details?.length ? (
+              <ul className="participants-list">
+                {meeting.participant_details.map((p, index) => (
+                  <li 
+                    key={index} 
+                    className="participant-item clickable"
+                    onClick={() => navigate(`/users/${p.id}`)}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-50)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <User size={14} className="participant-icon" />
+                    <span>{formatUserName(p)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="participants-list empty">Aucun participant invité</p>
+            )}
           </div>
         </div>
 
