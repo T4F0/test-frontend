@@ -16,8 +16,6 @@ import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
 import { Calendar, Users, ChevronRight, FileText } from 'lucide-react'
 import MeetingTab from '../components/MeetingTab'
-import MeetingRequestsList from './MeetingRequestsList'
-import { getMeetingRequests } from '../api/meetingsApi'
 
 const ROLE_LABELS = {
   'MEDECIN': 'Médecin traitant',
@@ -31,7 +29,6 @@ export default function UserManagement() {
   const [pendingUsers, setPendingUsers] = useState([])
   const [services, setServices] = useState([])
   const [meetingStats, setMeetingStats] = useState(null)
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('active')
@@ -54,19 +51,17 @@ export default function UserManagement() {
       const promises = [
         getUsers(),
         getPendingRegistrations().catch(() => []),
-        getNextMeetingStats().catch(() => null),
-        getMeetingRequests({ status: 'PENDING' }).catch(() => [])
+        getNextMeetingStats().catch(() => null)
       ]
       
       if (currentUser?.is_global_admin) {
         promises.push(getServices().catch(() => []))
       }
       
-      const [usersData, pendingData, statsData, requestsData, servicesData] = await Promise.all(promises)
+      const [usersData, pendingData, statsData, servicesData] = await Promise.all(promises)
       setUsers(Array.isArray(usersData) ? usersData : (usersData?.results || []))
       setPendingUsers(Array.isArray(pendingData) ? pendingData : (pendingData?.results || []))
       setMeetingStats(statsData)
-      setPendingRequestsCount(Array.isArray(requestsData) ? requestsData.length : 0)
       if (servicesData) {
         setServices(Array.isArray(servicesData) ? servicesData : (servicesData?.results || []))
       }
@@ -199,15 +194,6 @@ export default function UserManagement() {
           Inscriptions en attente {pendingUsers.length > 0 && `(${pendingUsers.length})`}
         </button>
         {['ADMIN', 'COORDINATEUR'].includes(currentUser?.role) && (
-          <button 
-            className={`tab ${activeTab === 'requests' ? 'active' : ''}`}
-            onClick={() => setActiveTab('requests')}
-            style={{ padding: '0.5rem 1rem', border: 'none', borderBottom: activeTab === 'requests' ? '2px solid #0056b3' : 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'requests' ? 'bold' : 'normal' }}
-          >
-            Demandes de réunions {pendingRequestsCount > 0 && `(${pendingRequestsCount})`}
-          </button>
-        )}
-        {meetingStats && meetingStats.meeting && (
           <button 
             className={`tab ${activeTab === 'meeting' ? 'active' : ''}`}
             onClick={() => setActiveTab('meeting')}
@@ -356,14 +342,14 @@ export default function UserManagement() {
         )
       )}
 
-      {activeTab === 'requests' && (
-        <div style={{ padding: '0 2rem' }}>
-          <MeetingRequestsList />
-        </div>
-      )}
-
       {activeTab === 'meeting' && (
-        <MeetingTab meetingStats={meetingStats} />
+        meetingStats && meetingStats.meeting ? (
+          <MeetingTab meetingStats={meetingStats} />
+        ) : (
+          <div className="empty" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+            Aucune réunion prévue pour le moment.
+          </div>
+        )
       )}
 
 

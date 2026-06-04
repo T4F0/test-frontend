@@ -174,17 +174,30 @@ export default function FormSubmissionDetail() {
                       <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{file.file_type} · Par {file.uploaded_by_name}</div>
                     </div>
                   </div>
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      downloadAttachment(file.file, file.file_name)
-                    }}
-                    className="btn-icon"
-                    style={{ color: '#2563eb', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
-                    title="Ouvrir le fichier"
-                  >
-                    <ExternalLink size={18} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        downloadAttachment(file.file, null)
+                      }}
+                      className="btn-icon"
+                      style={{ color: '#2563eb', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
+                      title="Ouvrir le fichier"
+                    >
+                      <ExternalLink size={18} />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        downloadAttachment(file.file, file.file_name)
+                      }}
+                      className="btn-icon"
+                      style={{ color: '#2563eb', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
+                      title="Télécharger le fichier"
+                    >
+                      <Download size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

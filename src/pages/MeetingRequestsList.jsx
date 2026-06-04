@@ -1,9 +1,43 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMeetingRequests, getMeetingRequestSubmissionResume } from '../api/meetingsApi'
+import { fetchFileAsBlob } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
-import { Send, FileText, User, Calendar, ArrowRight, Eye, ChevronDown, ChevronUp } from 'lucide-react'
+import { Send, FileText, User, Calendar, ArrowRight, Eye, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+
+const SectionRenderer = ({ section }) => (
+  <div style={{ marginBottom: '1rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+    <h5 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: '#3b82f6', textTransform: 'uppercase' }}>
+      {section.section_name}
+    </h5>
+    
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {section.fields.map((field, fIdx) => (
+        <div key={fIdx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>{field.field_name}</div>
+          <div style={{ color: '#0f172a', fontSize: '0.95rem' }}>
+            {field.field_type === 'file' ? (
+              field.value ? (
+                <a href={`/media/${field.value}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                  Voir le fichier
+                </a>
+              ) : 'Aucun fichier'
+            ) : (
+              field.value || <span style={{ color: '#cbd5e1' }}>Non renseigné</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {section.children && section.children.map((child, cIdx) => (
+      <div key={cIdx} style={{ marginTop: '1rem', paddingLeft: '1rem' }}>
+        <SectionRenderer section={child} />
+      </div>
+    ))}
+  </div>
+);
 
 export default function MeetingRequestsList() {
   const navigate = useNavigate()
@@ -14,6 +48,34 @@ export default function MeetingRequestsList() {
   const [expandedRequestId, setExpandedRequestId] = useState(null)
   const [selectedSubmission, setSelectedSubmission] = useState(null)
   const [resumeLoading, setResumeLoading] = useState(false)
+  const [viewingFileId, setViewingFileId] = useState(null)
+
+  const handleViewFile = async (fileUrl, fileId, fileType) => {
+    setViewingFileId(fileId)
+    try {
+      const blob = await fetchFileAsBlob(fileUrl)
+      // Attempt to map fileType (e.g., 'PDF') to a MIME type
+      const mimeMap = {
+        'PDF': 'application/pdf',
+        'IMAGE': 'image/jpeg',
+        'JPG': 'image/jpeg',
+        'JPEG': 'image/jpeg',
+        'PNG': 'image/png',
+        'GIF': 'image/gif'
+      }
+      const mimeType = mimeMap[fileType] || blob.type
+      
+      const typedBlob = new Blob([blob], { type: mimeType })
+      const blobUrl = URL.createObjectURL(typedBlob)
+      window.open(blobUrl, '_blank')
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+    } catch (err) {
+      console.error('Error fetching file:', err)
+      alert('Erreur lors de l\'ouverture du fichier')
+    } finally {
+      setViewingFileId(null)
+    }
+  }
 
   useEffect(() => {
     if (user && !['ADMIN', 'COORDINATEUR'].includes(user.role)) {
@@ -181,16 +243,27 @@ export default function MeetingRequestsList() {
                                   <h4 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>{form.form_name}</h4>
                                 </div>
                                 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                  {form.fields.map((field, sIdx) => (
-                                    <div key={sIdx} style={{ paddingLeft: '1.5rem', borderLeft: '2px solid #e2e8f0' }}>
-                                      <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{field.field_name}</div>
-                                      <div style={{ color: '#0f172a', fontSize: '0.95rem' }}>
-                                        {field.value || <span style={{ color: '#cbd5e1' }}>Non renseigné</span>}
-                                      </div>
+                                {form.sections?.map((section, sIdx) => (
+                                  <SectionRenderer key={sIdx} section={section} />
+                                ))}
+                                
+                                {form.attachments && form.attachments.length > 0 && (
+                                  <div style={{ marginTop: '1rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '1rem' }}>
+                                    <h5 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: '#0369a1', textTransform: 'uppercase' }}>Fichiers joints</h5>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                      {form.attachments.map((file) => (
+                                        <button 
+                                          key={file.id} 
+                                          onClick={() => handleViewFile(file.file_url, file.id, file.file_type)}
+                                          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0369a1', textDecoration: 'none', padding: '0.5rem', background: 'white', borderRadius: '4px', border: '1px solid #e0f2fe', cursor: 'pointer', width: '100%' }}
+                                        >
+                                          {viewingFileId === file.id ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                                          {file.filename}
+                                        </button>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

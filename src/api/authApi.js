@@ -158,3 +158,11 @@ export const getNextMeetingStats = async () => {
 export const getAuthAxios = () => authAxios
 export const getToken = () => localStorage.getItem('access_token')
 export const isAuthenticated = () => !!localStorage.getItem('access_token')
+
+export const fetchFileAsBlob = async (url) => {
+  const authAxios = getAuthAxios()
+  const response = await authAxios.get(url, {
+    responseType: 'blob'
+  })
+  return response.data
+}
