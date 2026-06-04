@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { getMeeting, createMeeting, updateMeeting } from '../api/meetingsApi'
 import { getSubmissionsByPatient, getSubmissions } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
@@ -11,6 +11,7 @@ import { formatDate } from '../lib/dateUtils'
 export default function MeetingForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const isEdit = !!id
 
@@ -21,14 +22,16 @@ export default function MeetingForm() {
     }
   }, [user, navigate])
 
+  const preselectData = useMemo(() => location.state || {}, [location.state])
+
   const [form, setForm] = useState({
     name: '',
-    submissions: [],
+    submissions: preselectData.preselectSubmissions ? preselectData.preselectSubmissions.map(id => String(id)) : [],
     coordinator: '',
     scheduled_date: '',
     scheduled_time: '09:00',
     meeting_link: '',
-    participants: [],
+    participants: preselectData.preselectDoctor ? [String(preselectData.preselectDoctor)] : [],
   })
   const [allSubmissions, setAllSubmissions] = useState([])
   const [patients, setPatients] = useState([])
@@ -429,7 +432,12 @@ export default function MeetingForm() {
                   {getInitials(u)}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', color: '#1e293b' }}>{formatUserName(u)}</div>
+                  <div style={{ fontWeight: '600', color: u.has_pending_request ? '#16a34a' : '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {formatUserName(u)}
+                    {u.has_pending_request && (
+                      <span style={{ fontSize: '0.65rem', background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: '4px', fontWeight: 'bold' }}>EN ATTENTE</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{formatUserMeta(u)}</div>
                 </div>
                 <button 

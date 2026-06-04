@@ -73,3 +73,12 @@ export const getMeetingRequests = async (params = {}) => {
   const { data } = await authAxios.get(url)
   return data.results ?? data
 }
+
+export const getMeetingRequestSubmissionResume = async (requestId, submissionId = null) => {
+  const authAxios = getAuthAxios()
+  const url = submissionId 
+    ? `${API_BASE}/meeting-requests/${requestId}/submission_resume/?submission_id=${submissionId}`
+    : `${API_BASE}/meeting-requests/${requestId}/submission_resume/`
+  const { data } = await authAxios.get(url)
+  return data
+}

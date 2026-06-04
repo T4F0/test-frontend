@@ -151,7 +151,7 @@ export const deleteService = async (id) => {
 }
 
 export const getNextMeetingStats = async () => {
-  const { data } = await authAxios.get(`${API_BASE}/users/next_meeting_stats/`)
+  const { data } = await authAxios.get(`${API_BASE}/users/next_meeting_stats/?t=${Date.now()}`)
   return data
 }
 

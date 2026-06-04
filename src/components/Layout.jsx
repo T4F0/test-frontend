@@ -75,6 +75,8 @@ export default function Layout() {
     // Show patients for ADMIN and MEDECIN
     ...(['ADMIN', 'MEDECIN'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
     { to: '/meetings', label: 'Réunions', icon: Calendar },
+    // Coordinators and Admin can see the requests list
+    ...(['ADMIN', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/meetings/requests', label: 'Demandes', icon: Send }] : []),
     // MEDECIN can request an RCP meeting
     ...(user?.role === 'MEDECIN' ? [{ to: '/meetings/request', label: 'Demander une RCP', icon: Send }] : []),
     // For Coordinators, label is 'Medecins', for ADMIN it is 'Utilisateurs'
