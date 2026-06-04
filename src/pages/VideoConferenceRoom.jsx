@@ -16,10 +16,8 @@ import VideoGrid from '../components/conference/VideoGrid'
 import ConferenceControls from '../components/conference/ConferenceControls'
 import ParticipantList from '../components/conference/ParticipantList'
 import ChatSidebar from '../components/conference/ChatSidebar'
-import FileSharePanel from '../components/conference/FileSharePanel'
-import MeetingNotesSidebar from '../components/conference/MeetingNotesSidebar'
-import CaseResumeSidebar from '../components/conference/CaseResumeSidebar'
-import { Users, MessageSquare, Paperclip, Clock, FileText, ClipboardList } from 'lucide-react'
+import MedicalCasesSidebar from '../components/conference/MedicalCasesSidebar'
+import { Users, MessageSquare, ClipboardList, Clock } from 'lucide-react'
 import '../conference.css'
 
 export default function VideoConferenceRoom() {
@@ -33,25 +31,19 @@ export default function VideoConferenceRoom() {
   const [chatMessages, setChatMessages] = useState([])
   const [showParticipants, setShowParticipants] = useState(false)
   const [showChat, setShowChat] = useState(false)
-  const [showFiles, setShowFiles] = useState(false)
-  const [showNotes, setShowNotes] = useState(false)
-  const [showResume, setShowResume] = useState(false)
+  const [showCases, setShowCases] = useState(false)
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const abortControllerRef = useRef(null)
   const [elapsedTime, setElapsedTime] = useState(0)
   const [joined, setJoined] = useState(false)
   const [activeSubmissionId, setActiveSubmissionId] = useState(null)
-  const [notes, setNotes] = useState('')
-  const [notesSaveStatus, setNotesSaveStatus] = useState('idle')
 
   const handleChatMessage = useCallback((msg) => {
     setChatMessages((prev) => [...prev, msg])
   }, [])
 
-  const handleNotesSync = useCallback((newNotes) => {
-    setNotes(newNotes)
-  }, [])
+  const handleNotesSync = useCallback(() => {}, [])
 
   const handleConferenceEnded = useCallback(() => {
     alert("La réunion a été terminée par l'hôte.")
@@ -99,32 +91,11 @@ export default function VideoConferenceRoom() {
     return () => clearInterval(timer)
   }, [conference?.started_at, conference?.status])
 
-  useEffect(() => {
-    if (!conference?.can_edit_notes || !joined) return undefined
-    if (notes === (conference.notes || '')) {
-      setNotesSaveStatus('idle')
-      return undefined
-    }
-
-    setNotesSaveStatus('saving')
-    const timer = setTimeout(() => {
-      const success = broadcastNotes(notes)
-      if (success) {
-        setNotesSaveStatus('idle')
-      } else {
-        setNotesSaveStatus('idle') 
-      }
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [conference?.can_edit_notes, conference?.notes, joined, notes, broadcastNotes])
-
   const loadConference = async () => {
     try {
       setLoading(true)
       const data = await getConferenceByRoom(roomId)
       setConference(data)
-      setNotes(data.notes || '')
 
       if (data.recent_messages) {
         setChatMessages(data.recent_messages.reverse())
@@ -195,7 +166,7 @@ export default function VideoConferenceRoom() {
       
       setConference((prev) => ({
         ...prev,
-        attachments: [...(prev.attachments || []), attachment],
+        attachments: [...(prev.attachments || []), { ...attachment, submission_id: attachment.submission_id || activeSubmissionId }],
       }))
     } catch (err) {
       if (err.name === 'CanceledError' || err.name === 'AbortError') {
@@ -306,22 +277,6 @@ export default function VideoConferenceRoom() {
       <div className="conference-header">
         <div className="header-left">
           <h2 className="conference-title">{conference?.meeting_title || 'Conférence RCP'}</h2>
-          {conference?.submissions?.length > 0 && (
-            <div className="header-case-selector">
-              <ClipboardList size={16} />
-              <select 
-                value={activeSubmissionId || ''} 
-                onChange={(e) => setActiveSubmissionId(e.target.value)}
-                className="case-switcher"
-              >
-                {conference.submissions.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.patient_name} - {s.name || s.form_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
         <div className="header-center">
           {conference?.started_at && (
@@ -334,7 +289,7 @@ export default function VideoConferenceRoom() {
         <div className="header-right">
           <button
             className={`toolbar-btn ${showParticipants ? 'active' : ''}`}
-            onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); setShowFiles(false); setShowNotes(false); setShowResume(false) }}
+            onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); setShowCases(false); }}
             title="Participants"
           >
             <Users size={18} />
@@ -342,38 +297,24 @@ export default function VideoConferenceRoom() {
           </button>
           <button
             className={`toolbar-btn ${showChat ? 'active' : ''}`}
-            onClick={() => { setShowChat(!showChat); setShowParticipants(false); setShowFiles(false); setShowNotes(false); setShowResume(false) }}
+            onClick={() => { setShowChat(!showChat); setShowParticipants(false); setShowCases(false); }}
             title="Chat"
           >
             <MessageSquare size={18} />
             {!!unreadCount && <span className="toolbar-count">{unreadCount}</span>}
           </button>
           <button
-            className={`toolbar-btn ${showFiles ? 'active' : ''}`}
-            onClick={() => { setShowFiles(!showFiles); setShowParticipants(false); setShowChat(false); setShowNotes(false); setShowResume(false) }}
-            title="Fichiers"
-          >
-            <Paperclip size={18} />
-          </button>
-          <button
-            className={`toolbar-btn ${showResume ? 'active' : ''}`}
-            onClick={() => { setShowResume(!showResume); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowNotes(false) }}
-            title="Résumé"
+            className={`toolbar-btn ${showCases ? 'active' : ''}`}
+            onClick={() => { setShowCases(!showCases); setShowParticipants(false); setShowChat(false); }}
+            title="Dossiers Médicaux"
           >
             <ClipboardList size={18} />
-          </button>
-          <button
-            className={`toolbar-btn ${showNotes ? 'active' : ''}`}
-            onClick={() => { setShowNotes(!showNotes); setShowParticipants(false); setShowChat(false); setShowFiles(false); setShowResume(false) }}
-            title="Notes"
-          >
-            <FileText size={18} />
           </button>
         </div>
       </div>
 
       <div className="conference-body">
-        <div className={`video-area ${showParticipants || showChat || showFiles || showNotes || showResume ? 'with-sidebar' : ''}`}>
+        <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''}`}>
           <VideoGrid
             localStream={localStream}
             screenStream={screenStream}
@@ -404,32 +345,18 @@ export default function VideoConferenceRoom() {
           currentUserId={user?.id}
         />
 
-        <FileSharePanel
+        <MedicalCasesSidebar
+          submissions={conference?.submissions || []}
           attachments={conference?.attachments || []}
           submissionAttachments={conference?.submission_attachments || []}
           onUpload={handleUpload}
           onCancelUpload={handleCancelUpload}
           onPromote={handlePromoteAttachment}
-          isOpen={showFiles}
-          onToggle={() => setShowFiles(false)}
+          isOpen={showCases}
+          onToggle={() => setShowCases(false)}
           isUploading={isUploading}
           activeSubmissionId={activeSubmissionId}
-        />
-
-        <MeetingNotesSidebar
-          isOpen={showNotes}
-          onToggle={() => setShowNotes(false)}
-          notes={notes}
-          onChange={setNotes}
-          canEdit={conference?.can_edit_notes}
-          saveStatus={notesSaveStatus}
-        />
-
-        <CaseResumeSidebar
-          isOpen={showResume}
-          onToggle={() => setShowResume(false)}
-          meetingId={conference?.meeting}
-          activeSubmissionId={activeSubmissionId}
+          setActiveSubmissionId={setActiveSubmissionId}
         />
       </div>
 
