@@ -14,48 +14,13 @@ export default function MedicalCasesSidebar({
   onToggle,
   isUploading,
   activeSubmissionId,
-  setActiveSubmissionId
+  setActiveSubmissionId,
+  onPreviewFile
 }) {
   const [dragActive, setDragActive] = useState(false)
-  const [previewItem, setPreviewItem] = useState(null)
-  const [previewUrl, setPreviewUrl] = useState('')
-  const [previewError, setPreviewError] = useState('')
   const fileInputRef = useRef(null)
 
-  useEffect(() => {
-    let objectUrl = ''
-    let canceled = false
 
-    const loadPreview = async () => {
-      if (!previewItem) {
-        setPreviewUrl('')
-        setPreviewError('')
-        return
-      }
-
-      try {
-        setPreviewUrl('')
-        setPreviewError('')
-        objectUrl = await getAttachmentBlobUrl(previewItem.url)
-        if (!canceled) {
-          setPreviewUrl(objectUrl)
-        }
-      } catch (err) {
-        if (!canceled) {
-          setPreviewError("Impossible de charger l'aperçu.")
-        }
-      }
-    }
-
-    loadPreview()
-
-    return () => {
-      canceled = true
-      if (objectUrl) {
-        window.URL.revokeObjectURL(objectUrl)
-      }
-    }
-  }, [previewItem])
 
   const normalizeAttachment = (attachment, source) => {
     let fileUrl = attachment.file || ''
@@ -233,7 +198,7 @@ export default function MedicalCasesSidebar({
                           </div>
                           <div className="file-actions-inline">
                             {isPreviewable(file) && (
-                              <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Aperçu"><Eye size={16} /></button>
+                              <button className="file-action-btn" onClick={() => onPreviewFile(file)} title="Aperçu"><Eye size={16} /></button>
                             )}
                             <button onClick={(e) => { e.preventDefault(); downloadAttachment(file.url, file.name) }} className="file-download file-action-btn" title="Télécharger">
                               <Download size={16} />
@@ -257,7 +222,7 @@ export default function MedicalCasesSidebar({
                           </div>
                           <div className="file-actions-inline">
                             {isPreviewable(file) && (
-                              <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Aperçu"><Eye size={16} /></button>
+                              <button className="file-action-btn" onClick={() => onPreviewFile(file)} title="Aperçu"><Eye size={16} /></button>
                             )}
                             <button className="file-action-btn" onClick={() => onPromote(file.originalId)} title="Ajouter au dossier permanent">
                               <Save size={16} />
@@ -276,30 +241,6 @@ export default function MedicalCasesSidebar({
           )
         })}
       </div>
-
-      {previewItem && (
-        <div className="file-preview-modal" onClick={() => setPreviewItem(null)}>
-          <div className="file-preview-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="file-preview-header">
-              <strong>{previewItem.name}</strong>
-              <button className="sidebar-close" onClick={() => setPreviewItem(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="file-preview-body">
-              {!previewUrl && !previewError && <div className="loading">Chargement de l'aperçu...</div>}
-              {previewError && <div className="error">{previewError}</div>}
-              {previewUrl && previewType(previewItem) === 'image' && <img src={previewUrl} alt={previewItem.name} className="file-preview-image" />}
-              {previewUrl && previewType(previewItem) === 'video' && (
-                <video src={previewUrl} controls className="file-preview-video" style={{ maxWidth: '100%', maxHeight: '70vh' }}>
-                  Votre navigateur ne supporte pas la lecture de vidéos.
-                </video>
-              )}
-              {previewUrl && previewType(previewItem) === 'pdf' && <iframe src={previewUrl} title={previewItem.name} className="file-preview-frame" />}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

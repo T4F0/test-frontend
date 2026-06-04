@@ -17,6 +17,7 @@ import ConferenceControls from '../components/conference/ConferenceControls'
 import ParticipantList from '../components/conference/ParticipantList'
 import ChatSidebar from '../components/conference/ChatSidebar'
 import MedicalCasesSidebar from '../components/conference/MedicalCasesSidebar'
+import MainStageFileViewer from '../components/conference/MainStageFileViewer'
 import { Users, MessageSquare, ClipboardList, Clock } from 'lucide-react'
 import '../conference.css'
 
@@ -32,6 +33,7 @@ export default function VideoConferenceRoom() {
   const [showParticipants, setShowParticipants] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [showCases, setShowCases] = useState(false)
+  const [activePreviewItem, setActivePreviewItem] = useState(null)
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const abortControllerRef = useRef(null)
@@ -314,17 +316,25 @@ export default function VideoConferenceRoom() {
       </div>
 
       <div className="conference-body">
-        <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''}`}>
-          <VideoGrid
-            localStream={localStream}
-            screenStream={screenStream}
-            remoteStreams={remoteStreams}
-            participants={participants}
-            currentUserId={user?.id}
-            isCameraOff={isCameraOff}
-            isMuted={isMuted}
-            screenSharer={screenSharer}
-          />
+        <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''} ${activePreviewItem ? 'has-preview' : ''}`}>
+          {activePreviewItem && (
+            <MainStageFileViewer 
+              file={activePreviewItem} 
+              onClose={() => setActivePreviewItem(null)} 
+            />
+          )}
+          <div className={activePreviewItem ? 'pip-video-container' : 'full-video-container'}>
+            <VideoGrid
+              localStream={localStream}
+              screenStream={screenStream}
+              remoteStreams={remoteStreams}
+              participants={participants}
+              currentUserId={user?.id}
+              isCameraOff={isCameraOff}
+              isMuted={isMuted}
+              screenSharer={screenSharer}
+            />
+          </div>
         </div>
 
         <ParticipantList
@@ -357,6 +367,7 @@ export default function VideoConferenceRoom() {
           isUploading={isUploading}
           activeSubmissionId={activeSubmissionId}
           setActiveSubmissionId={setActiveSubmissionId}
+          onPreviewFile={(file) => setActivePreviewItem(file)}
         />
       </div>
 
