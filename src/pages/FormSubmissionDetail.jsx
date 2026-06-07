@@ -20,40 +20,47 @@ function SectionDataRenderer({ section, submissionData }) {
 
   if (!hasFields && !hasChildData) return null
 
+  const combinedItems = [
+    ...(section.fields || []).map(f => ({ ...f, itemType: 'field' })),
+    ...(section.children || []).map(s => ({ ...s, itemType: 'section' }))
+  ].sort((a, b) => a.order - b.order);
+
   return (
     <div key={section.id} className={`submission-section ${section.parent ? 'nested' : ''}`}>
       <h3 className="submission-section-title">{section.name}</h3>
       
-      {section.fields?.map(field => {
-        const value = submissionData[field.id]
-        if (value === undefined) return null
-        
-        const isFile = field.field_type === 'file'
+      {combinedItems.map(item => {
+        if (item.itemType === 'field') {
+          const value = submissionData[item.id]
+          if (value === undefined) return null
+          
+          const isFile = item.field_type === 'file'
 
-        return (
-          <div key={field.id} className="submission-detail-field">
-            <span className="submission-detail-field-label">{field.name}</span>
-            <span className={`submission-detail-field-value ${isFile ? 'is-file' : ''}`}>
-              {isFile ? (
-                <span className="file-field-preview">
-                  <FileText size={14} style={{ marginRight: '6px' }} />
-                  {formatValue(value)}
-                </span>
-              ) : (
-                formatValue(value)
-              )}
-            </span>
-          </div>
-        )
+          return (
+            <div key={`field-${item.id}`} className="submission-detail-field">
+              <span className="submission-detail-field-label">{item.name}</span>
+              <span className={`submission-detail-field-value ${isFile ? 'is-file' : ''}`}>
+                {isFile ? (
+                  <span className="file-field-preview">
+                    <FileText size={14} style={{ marginRight: '6px' }} />
+                    {formatValue(value)}
+                  </span>
+                ) : (
+                  formatValue(value)
+                )}
+              </span>
+            </div>
+          )
+        } else {
+          return (
+            <SectionDataRenderer 
+              key={`section-${item.id}`} 
+              section={item} 
+              submissionData={submissionData} 
+            />
+          )
+        }
       })}
-
-      {section.children?.map(child => (
-        <SectionDataRenderer 
-          key={child.id} 
-          section={child} 
-          submissionData={submissionData} 
-        />
-      ))}
     </div>
   )
 }

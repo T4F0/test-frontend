@@ -59,6 +59,12 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
               placeholder="Nom du champ"
               value={data.name}
               onChange={(e) => setData({ ...data, name: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSave();
+                }
+              }}
               onFocus={(e) => e.target.select()}
               autoFocus
             />

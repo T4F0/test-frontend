@@ -1,38 +1,35 @@
 import { useState } from 'react'
-import { updateSection, deleteSection, createSection, reorderSections } from '../api/sectionsApi'
-import { createField, reorderFields } from '../api/fieldsApi'
+import { updateSection, deleteSection, createSection } from '../api/sectionsApi'
 import FieldBuilder from './FieldBuilder'
 import {
-  DndContext, 
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SortableItem } from './SortableItem'
 
-export default function SectionBuilder({ section, allSections, onUpdate, onReorderSections = () => {}, onDelete, onAddSection, newlyCreatedSectionId = null }) {
+export default function SectionBuilder({ 
+  section, 
+  allSections, 
+  allFields,
+  onUpdate, 
+  onReorderSections, 
+  onDelete, 
+  onAddSection, 
+  onAddField,
+  onUpdateField,
+  onDeleteField,
+  newlyCreatedSectionId = null,
+  newlyCreatedFieldId = null
+}) {
   const [isEditing, setIsEditing] = useState(section.id === newlyCreatedSectionId)
   const [name, setName] = useState(section.name)
-  const [fields, setFields] = useState(section.fields || [])
-  const [newlyCreatedFieldId, setNewlyCreatedFieldId] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
+  const childSections = allSections ? allSections.filter(s => s.parent === section.id).map(s => ({ ...s, itemType: 'section' })) : []
+  const fields = allFields ? allFields.filter(f => (f.section === section.id || f.section_id === section.id)).map(f => ({ ...f, itemType: 'field' })) : []
 
-  const childSections = allSections ? allSections.filter(s => s.parent === section.id).sort((a,b) => a.order - b.order) : []
+  // Combine and sort all items (fields and sub-sections) by their order
+  const combinedItems = [...childSections, ...fields].sort((a, b) => a.order - b.order)
 
   const handleSaveSection = async () => {
     try {
@@ -64,24 +61,9 @@ export default function SectionBuilder({ section, allSections, onUpdate, onReord
     }
   }
 
-  const handleAddField = async () => {
-    try {
-      const newField = await createField({
-        section: section.id,
-        name: '',
-        field_type: 'text',
-        order: fields.length
-      })
-      setFields([...fields, newField])
-      setNewlyCreatedFieldId(newField.id)
-    } catch (err) {
-      alert('Échec de la création du champ')
-    }
-  }
-
   const handleAddSubSection = async () => {
     try {
-      const order = childSections.length
+      const order = combinedItems.length
       const newSection = await createSection({
         form: section.form,
         parent: section.id,
@@ -94,46 +76,8 @@ export default function SectionBuilder({ section, allSections, onUpdate, onReord
     }
   }
 
-  const handleFieldDragEnd = async (event) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = fields.findIndex(f => f.id === active.id)
-    const newIndex = fields.findIndex(f => f.id === over.id)
-    
-    const reorderedFieldsList = arrayMove(fields, oldIndex, newIndex)
-    const updatedFields = reorderedFieldsList.map((f, index) => ({ ...f, order: index }))
-    setFields(updatedFields)
-
-    try {
-      await reorderFields(updatedFields.map((f, index) => ({ id: f.id, order: index })))
-    } catch (err) {
-      console.error('Failed to reorder fields:', err)
-    }
-  }
-
-  const handleChildSectionDragEnd = async (event) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = childSections.findIndex(s => s.id === active.id)
-    const newIndex = childSections.findIndex(s => s.id === over.id)
-    
-    const reorderedChildSections = arrayMove(childSections, oldIndex, newIndex)
-    const updatedChildren = reorderedChildSections.map((s, index) => ({ ...s, order: index }))
-    
-    // Update local state first
-    onReorderSections(updatedChildren)
-
-    try {
-      await reorderSections(updatedChildren.map((s, index) => ({ id: s.id, order: index })))
-    } catch (err) {
-      console.error('Failed to reorder sub-sections:', err)
-    }
-  }
-
   return (
-    <div className={`section-builder ${section.parent ? 'nested' : ''}`}>
+    <div className={`section-builder ${section.parent ? 'nested' : ''}`} id={`section-container-${section.id}`}>
       <div className="section-header">
         {isEditing ? (
           <div className="edit-section">
@@ -142,6 +86,12 @@ export default function SectionBuilder({ section, allSections, onUpdate, onReord
               placeholder="Nom de la section"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSaveSection();
+                }
+              }}
               onFocus={(e) => e.target.select()}
               autoFocus
             />
@@ -154,7 +104,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onReord
             <div className="section-actions">
               <button onClick={() => setIsEditing(true)} className="btn-small">Modifier</button>
               <button onClick={handleDelete} className="btn-small btn-danger">Supprimer</button>
-              <button onClick={handleAddField} className="btn-small btn-secondary">+ Champ</button>
+              <button onClick={() => onAddField(section.id)} className="btn-small btn-secondary">+ Champ</button>
               <button onClick={handleAddSubSection} className="btn-small btn-primary">+ Sous-section</button>
             </div>
           </>
@@ -162,67 +112,56 @@ export default function SectionBuilder({ section, allSections, onUpdate, onReord
       </div>
 
       <div className="section-contents">
-        {fields.length > 0 && (
-          <div className="fields-list">
-            <DndContext 
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleFieldDragEnd}
-            >
-              <SortableContext 
-                items={fields.map(f => f.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {fields.map(field => (
-                  <SortableItem key={field.id} id={field.id}>
-                    <FieldBuilder
-                      field={field}
-                      initialEditing={field.id === newlyCreatedFieldId}
-                      onUpdate={(updatedField) => {
-                        setFields(fields.map(f => f.id === updatedField.id ? updatedField : f))
-                        setNewlyCreatedFieldId(null)
-                      }}
-                      onDelete={(fieldId) => setFields(fields.filter(f => f.id !== fieldId))}
-                    />
-                  </SortableItem>
-                ))}
-              </SortableContext>
-            </DndContext>
-          </div>
-        )}
+        <SortableContext 
+          items={combinedItems.map(item => item.itemType === 'field' ? `field-${item.id}` : `section-${item.id}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {combinedItems.map(item => (
+            <SortableItem key={item.itemType === 'field' ? `field-${item.id}` : `section-${item.id}`} id={item.itemType === 'field' ? `field-${item.id}` : `section-${item.id}`}>
+              {item.itemType === 'field' ? (
+                <FieldBuilder
+                  field={item}
+                  initialEditing={item.id === newlyCreatedFieldId}
+                  onUpdate={onUpdateField}
+                  onDelete={onDeleteField}
+                />
+              ) : (
+                <SectionBuilder
+                  section={item}
+                  allSections={allSections}
+                  allFields={allFields}
+                  onUpdate={onUpdate}
+                  onReorderSections={onReorderSections}
+                  onDelete={onDelete}
+                  onAddSection={onAddSection}
+                  onAddField={onAddField}
+                  onUpdateField={onUpdateField}
+                  onDeleteField={onDeleteField}
+                  newlyCreatedSectionId={newlyCreatedSectionId}
+                  newlyCreatedFieldId={newlyCreatedFieldId}
+                />
+              )}
+            </SortableItem>
+          ))}
 
-        {childSections.length > 0 && (
-          <div className="child-sections-list">
-            <DndContext 
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleChildSectionDragEnd}
-            >
-              <SortableContext 
-                items={childSections.map(s => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {childSections.map(child => (
-                  <SortableItem key={child.id} id={child.id}>
-                    <SectionBuilder
-                      section={child}
-                      allSections={allSections}
-                      onUpdate={onUpdate}
-                      onReorderSections={onReorderSections}
-                      onDelete={onDelete}
-                      onAddSection={onAddSection}
-                      newlyCreatedSectionId={newlyCreatedSectionId}
-                    />
-                  </SortableItem>
-                ))}
-              </SortableContext>
-            </DndContext>
+          <div 
+            id={`empty-${section.id}`} 
+            className="empty-drop-zone" 
+            style={{ 
+              height: combinedItems.length === 0 ? '40px' : '10px', 
+              border: '1px dashed #ccc', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              color: '#999', 
+              fontSize: '0.8rem',
+              marginTop: '5px',
+              opacity: combinedItems.length === 0 ? 1 : 0.3
+            }}
+          >
+            {combinedItems.length === 0 ? "Déposez un élément ici" : ""}
           </div>
-        )}
-
-        {fields.length === 0 && childSections.length === 0 && (
-          <p className="empty-small">Aucun champ ou sous-section.</p>
-        )}
+        </SortableContext>
       </div>
     </div>
   )

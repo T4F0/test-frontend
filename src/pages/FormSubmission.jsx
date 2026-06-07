@@ -11,33 +11,34 @@ import SearchableSelect from '../components/SearchableSelect'
 function SectionRenderer({ section, formData, onFieldChange }) {
   const isNested = !!section.parent;
 
+  const combinedItems = [
+    ...(section.fields || []).map(f => ({ ...f, itemType: 'field' })),
+    ...(section.children || []).map(s => ({ ...s, itemType: 'section' }))
+  ].sort((a, b) => a.order - b.order);
+
   return (
     <div key={section.id} className={`form-section-container ${isNested ? 'nested' : ''}`}>
       <h3 className="section-title">{section.name}</h3>
       
-      <div className="section-fields">
-        {section.fields?.map(field => (
-          <FormField
-            key={field.id}
-            field={field}
-            value={formData[field.id]}
-            onChange={(value) => onFieldChange(field.id, value)}
-          />
-        ))}
-      </div>
-
-      {section.children?.length > 0 && (
-        <div className="nested-sections">
-          {section.children.map(child => (
+      <div className="section-contents">
+        {combinedItems.map(item => (
+          item.itemType === 'field' ? (
+            <FormField
+              key={`field-${item.id}`}
+              field={item}
+              value={formData[item.id]}
+              onChange={(value) => onFieldChange(item.id, value)}
+            />
+          ) : (
             <SectionRenderer 
-              key={child.id} 
-              section={child} 
+              key={`section-${item.id}`} 
+              section={item} 
               formData={formData} 
               onFieldChange={onFieldChange} 
             />
-          ))}
-        </div>
-      )}
+          )
+        ))}
+      </div>
     </div>
   )
 }
