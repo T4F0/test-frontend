@@ -3,8 +3,8 @@ import { updateSection, deleteSection, createSection } from '../api/sectionsApi'
 import { createField } from '../api/fieldsApi'
 import FieldBuilder from './FieldBuilder'
 
-export default function SectionBuilder({ section, allSections, onUpdate, onDelete, onAddSection }) {
-  const [isEditing, setIsEditing] = useState(false)
+export default function SectionBuilder({ section, allSections, onUpdate, onDelete, onAddSection, newlyCreatedSectionId = null }) {
+  const [isEditing, setIsEditing] = useState(section.id === newlyCreatedSectionId)
   const [name, setName] = useState(section.name)
   const [fields, setFields] = useState(section.fields || [])
   const [newlyCreatedFieldId, setNewlyCreatedFieldId] = useState(null)
@@ -46,7 +46,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
     try {
       const newField = await createField({
         section: section.id,
-        name: 'Nouveau champ',
+        name: '',
         field_type: 'text',
         order: fields.length
       })
@@ -63,7 +63,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
       const newSection = await createSection({
         form: section.form,
         parent: section.id,
-        name: 'Nouvelle sous-section',
+        name: '',
         order: order
       })
       onAddSection(newSection)
@@ -79,8 +79,10 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
           <div className="edit-section">
             <input
               type="text"
+              placeholder="Nom de la section"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onFocus={(e) => e.target.select()}
               autoFocus
             />
             <button onClick={handleSaveSection} disabled={saving}>Enregistrer</button>
@@ -88,7 +90,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
           </div>
         ) : (
           <>
-            <h4>{name}</h4>
+            <h4>{name || 'Sans titre'}</h4>
             <div className="section-actions">
               <button onClick={() => setIsEditing(true)} className="btn-small">Modifier</button>
               <button onClick={handleDelete} className="btn-small btn-danger">Supprimer</button>
@@ -127,6 +129,7 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 onAddSection={onAddSection}
+                newlyCreatedSectionId={newlyCreatedSectionId}
               />
             ))}
           </div>

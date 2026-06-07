@@ -14,6 +14,7 @@ export default function FormBuilder() {
     description: ''
   })
   const [sections, setSections] = useState([])
+  const [newlyCreatedSectionId, setNewlyCreatedSectionId] = useState(null)
   const [loading, setLoading] = useState(isEdit)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -73,10 +74,11 @@ export default function FormBuilder() {
       const newSection = await createSection({
         form: form.id,
         parent: parentId,
-        name: parentId ? 'Nouvelle sous-section' : 'Nouvelle section',
+        name: '',
         order: order
       })
       setSections([...sections, newSection])
+      setNewlyCreatedSectionId(newSection.id)
     } catch (err) {
       setError('Échec de la création de la section')
     }
@@ -130,12 +132,15 @@ export default function FormBuilder() {
                   key={section.id}
                   section={section}
                   allSections={sections}
+                  newlyCreatedSectionId={newlyCreatedSectionId}
                   onUpdate={(updated) => {
                     setSections(sections.map(s => s.id === updated.id ? updated : s))
+                    setNewlyCreatedSectionId(null)
                   }}
                   onDelete={() => loadForm()} // Reload to handle recursive deletion cleanly
                   onAddSection={(newSection) => {
                     setSections([...sections, newSection])
+                    setNewlyCreatedSectionId(newSection.id)
                   }}
                 />
               ))}

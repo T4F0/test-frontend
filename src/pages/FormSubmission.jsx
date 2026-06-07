@@ -43,7 +43,7 @@ function SectionRenderer({ section, formData, onFieldChange }) {
 }
 
 export default function FormSubmission() {
-  const { id } = useParams()
+  const { id, submissionId } = useParams()
   const navigate = useNavigate()
   const [form, setForm] = useState(null)
   const [formData, setFormData] = useState({})
@@ -54,10 +54,53 @@ export default function FormSubmission() {
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [patientSearch, setPatientSearch] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
-    loadForm()
-  }, [id])
+    loadInitialData()
+  }, [id, submissionId])
+
+  const loadInitialData = async () => {
+    try {
+      setLoading(true)
+      
+      // Load Form
+      const formDataResponse = await getForm(id)
+      setForm(formDataResponse)
+      
+      let initialValues = {}
+      const initFields = (sections) => {
+        sections?.forEach(section => {
+          section.fields?.forEach(field => {
+            if (field.field_type === 'checkbox') {
+              initialValues[field.id] = (field.options && field.options.length > 0) ? [] : false
+            } else {
+              initialValues[field.id] = ''
+            }
+          })
+          if (section.children) initFields(section.children)
+        })
+      }
+      initFields(formDataResponse.sections)
+
+      // If editing, load submission data
+      if (submissionId) {
+        setIsEditing(true)
+        const { getSubmission } = await import('../api/submissionsApi')
+        const submission = await getSubmission(submissionId)
+        setSelectedPatient(submission.patient)
+        setFormData({ ...initialValues, ...submission.data })
+      } else {
+        setIsEditing(false)
+        setFormData(initialValues)
+      }
+    } catch (err) {
+      setError('Échec du chargement des données')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -75,33 +118,6 @@ export default function FormSubmission() {
       setPatients([])
     } finally {
       setPatientsLoading(false)
-    }
-  }
-
-  const loadForm = async () => {
-    try {
-      const data = await getForm(id)
-      setForm(data)
-      const initialData = {}
-      const initFields = (sections) => {
-        sections?.forEach(section => {
-          section.fields?.forEach(field => {
-            if (field.field_type === 'checkbox') {
-              initialData[field.id] = (field.options && field.options.length > 0) ? [] : false
-            } else {
-              initialData[field.id] = field.field_type === 'checkbox' ? false : ''
-            }
-          })
-          if (section.children) initFields(section.children)
-        })
-      }
-      initFields(data.sections)
-      setFormData(initialData)
-    } catch (err) {
-      setError('Échec du chargement du formulaire')
-      console.error(err)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -150,15 +166,26 @@ export default function FormSubmission() {
       findFiles(form.sections)
 
       // 2. Submit form JSON
-      const submission = await submitForm(id, jsonFormData, selectedPatient)
-      const submissionId = submission.id
+      let submission
+      const { submitForm, updateSubmission } = await import('../api/submissionsApi')
+      
+      if (isEditing) {
+        submission = await updateSubmission(submissionId, {
+          data: jsonFormData,
+          patient: selectedPatient
+        })
+      } else {
+        submission = await submitForm(id, jsonFormData, selectedPatient)
+      }
+      
+      const currentSubmissionId = submission.id
 
       // 3. Upload files linked to this submission
       if (filesToUpload.length > 0) {
         for (const item of filesToUpload) {
           const uploadData = new FormData()
           uploadData.append('file', item.file)
-          uploadData.append('submission', submissionId)
+          uploadData.append('submission', currentSubmissionId)
           uploadData.append('file_type', getFileType(item.file))
           
           try {
@@ -169,8 +196,8 @@ export default function FormSubmission() {
         }
       }
 
-      alert('Formulaire et fichiers soumis avec succès !')
-      navigate('/patients/' + selectedPatient)
+      alert(isEditing ? 'Soumission mise à jour avec succès !' : 'Formulaire et fichiers soumis avec succès !')
+      navigate('/forms/' + id + '/submissions/' + currentSubmissionId)
     } catch (err) {
       setError('Échec de la soumission du formulaire : ' + err.message)
       console.error(err)
@@ -179,13 +206,13 @@ export default function FormSubmission() {
     }
   }
 
-  if (loading) return <div className="loading">Chargement du formulaire...</div>
+  if (loading) return <div className="loading">Chargement...</div>
   if (error) return <div className="error">{error}</div>
   if (!form) return <div className="error">Formulaire introuvable</div>
 
   return (
     <div className="form-submission">
-      <h2>{form.name}</h2>
+      <h2>{isEditing ? `Modifier : ${form.name}` : form.name}</h2>
       {form.description && <p className="description">{form.description}</p>}
 
       <form onSubmit={handleSubmit} className="submission-form">
@@ -203,6 +230,7 @@ export default function FormSubmission() {
             onSearch={setPatientSearch}
             loading={patientsLoading}
             required
+            disabled={isEditing} // Often we don't want to change the patient once submitted
           />
         </div>
 
@@ -217,9 +245,9 @@ export default function FormSubmission() {
 
         <div className="form-actions">
           <button type="submit" disabled={submitting}>
-            {submitting ? 'Envoi en cours...' : 'Soumettre le formulaire'}
+            {submitting ? 'Envoi en cours...' : (isEditing ? 'Mettre à jour' : 'Soumettre le formulaire')}
           </button>
-          <button type="button" onClick={() => navigate('/')}>
+          <button type="button" onClick={() => navigate(-1)}>
             Annuler
           </button>
         </div>

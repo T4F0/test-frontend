@@ -71,12 +71,20 @@ export default function FormSubmissionsList() {
                   <td><span className="badge">{sub.status}</span></td>
                   <td>{new Date(sub.created_at).toLocaleString()}</td>
                   <td>
-                    <button
-                      className="btn-small btn-secondary"
-                      onClick={() => navigate(`/forms/${id}/submissions/${sub.id}`)}
-                    >
-                      Voir le détail
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        className="btn-small btn-secondary"
+                        onClick={() => navigate(`/forms/${id}/submissions/${sub.id}`)}
+                      >
+                        Voir le détail
+                      </button>
+                      <button
+                        className="btn-small btn-primary"
+                        onClick={() => navigate(`/forms/${id}/submissions/${sub.id}/edit`)}
+                      >
+                        Modifier
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

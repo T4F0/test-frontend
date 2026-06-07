@@ -64,6 +64,7 @@ function AppRoutes() {
             <Route path="/forms/:id/submit" element={<FormSubmission />} />
             <Route path="/forms/:id/submissions" element={<FormSubmissionsList />} />
             <Route path="/forms/:formId/submissions/:submissionId" element={<FormSubmissionDetail />} />
+            <Route path="/forms/:id/submissions/:submissionId/edit" element={<FormSubmission />} />
             <Route path="/users" element={<UserManagement />} />
             <Route path="/users/new" element={<UserForm />} />
             <Route path="/users/:id" element={<UserProfile />} />

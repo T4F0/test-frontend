@@ -59,6 +59,8 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
               placeholder="Nom du champ"
               value={data.name}
               onChange={(e) => setData({ ...data, name: e.target.value })}
+              onFocus={(e) => e.target.select()}
+              autoFocus
             />
             <select value={data.field_type} onChange={(e) => setData({ ...data, field_type: e.target.value })}>
               {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -138,7 +140,7 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
       ) : (
         <div className="field-display">
           <div className="field-info">
-            <span className="field-name">{data.name}</span>
+            <span className="field-name">{data.name || 'Sans titre'}</span>
             <span className="field-type">{data.field_type}</span>
             {data.required && <span className="badge">Obligatoire</span>}
             {data.show_rdv && <span className="badge badge-info">Afficher RDV</span>}

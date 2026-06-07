@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { getSubmission } from '../api/submissionsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
-import { Download, FileText, ExternalLink, Video, Image } from 'lucide-react'
+import { Download, FileText, ExternalLink, Video, Image, Edit } from 'lucide-react'
 
 function formatValue(value) {
   if (value === true) return 'Oui'
@@ -113,6 +113,14 @@ export default function FormSubmissionDetail() {
             onClick={() => navigate(-1)}
           >
             ← Retour
+          </button>
+          <button
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}
+            onClick={() => navigate(`/forms/${formId}/submissions/${submissionId}/edit`)}
+          >
+            <Edit size={18} />
+            Modifier la soumission
           </button>
         </header>
 

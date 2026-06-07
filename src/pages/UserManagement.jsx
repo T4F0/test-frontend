@@ -132,7 +132,17 @@ export default function UserManagement() {
       setServices(Array.isArray(updatedServices) ? updatedServices : (updatedServices?.results || []))
     } catch (err) {
       setServiceError("Échec de la mise à jour du service")
-      console.error(err)
+    }
+  }
+
+  const handleDisplayModeChange = async (serviceId, mode) => {
+    try {
+      setServiceError(null)
+      await updateService(serviceId, { patient_name_display_mode: mode })
+      const updatedServices = await getServices()
+      setServices(Array.isArray(updatedServices) ? updatedServices : (updatedServices?.results || []))
+    } catch (err) {
+      setServiceError("Échec de la mise à jour du mode d'affichage")
     }
   }
 
@@ -393,6 +403,7 @@ export default function UserManagement() {
                       <th>Nom</th>
                       <th>Slug / Code</th>
                       <th>Statut</th>
+                      <th>Affichage noms</th>
                       <th>Date de création</th>
                       <th>Actions</th>
                     </tr>
@@ -406,6 +417,16 @@ export default function UserManagement() {
                           <span className={`badge ${service.is_active ? 'badge-active' : 'badge-inactive'}`} style={{ backgroundColor: service.is_active ? '#def7ec' : '#fde8e8', color: service.is_active ? '#03543f' : '#9b1c1c', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
                             {service.is_active ? 'Actif' : 'Inactif'}
                           </span>
+                        </td>
+                        <td>
+                          <select
+                            value={service.patient_name_display_mode || 'MASKED_NAME'}
+                            onChange={(e) => handleDisplayModeChange(service.id, e.target.value)}
+                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                          >
+                            <option value="FULL_NAME">Nom complet</option>
+                            <option value="MASKED_NAME">Masqué (Jon***)</option>
+                          </select>
                         </td>
                         <td>{formatDate(service.created_at)}</td>
                         <td className="actions" style={{ display: 'flex', gap: '0.5rem' }}>

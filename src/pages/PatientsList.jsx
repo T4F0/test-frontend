@@ -112,7 +112,7 @@ export default function PatientsList() {
                 return (
                   <tr key={patient.id}>
                     <td className="name-cell">
-                      <strong>{patient.first_name} {patient.last_name}</strong>
+                      <strong>{`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}</strong>
                     </td>
                     <td>{ownerName}</td>
                     <td>{formatDate(patient.birth_date)}</td>

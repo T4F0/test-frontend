@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { createPatient, updatePatient, getPatient } from '../api/patientsApi'
+import { useAuth } from '../context/AuthContext'
 
 const GENDER_CHOICES = [
   { value: 'M', label: 'Homme' },
@@ -11,7 +12,9 @@ const GENDER_CHOICES = [
 export default function PatientForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const isEdit = !!id
+  const isMaskedMode = user?.patient_name_display_mode === 'MASKED_NAME'
 
   const [patient, setPatient] = useState({
     first_name: '',
@@ -87,10 +90,16 @@ export default function PatientForm() {
             <input
               type="text"
               value={patient.first_name}
-              onChange={(e) => setPatient({ ...patient, first_name: e.target.value.slice(0, 3).toUpperCase() })}
-              maxLength="3"
-              style={{ textTransform: 'uppercase' }}
-              placeholder="EX: JOH"
+              onChange={(e) => {
+                let val = e.target.value
+                if (isMaskedMode) {
+                  val = val.slice(0, 3).toUpperCase()
+                }
+                setPatient({ ...patient, first_name: val })
+              }}
+              maxLength={isMaskedMode ? "3" : "100"}
+              style={isMaskedMode ? { textTransform: 'uppercase' } : {}}
+              placeholder={isMaskedMode ? "EX: JON" : "Ex: Jonathan"}
               required
             />
           </div>
@@ -99,10 +108,16 @@ export default function PatientForm() {
             <input
               type="text"
               value={patient.last_name}
-              onChange={(e) => setPatient({ ...patient, last_name: e.target.value.slice(0, 3).toUpperCase() })}
-              maxLength="3"
-              style={{ textTransform: 'uppercase' }}
-              placeholder="EX: DOE"
+              onChange={(e) => {
+                let val = e.target.value
+                if (isMaskedMode) {
+                  val = val.slice(0, 3).toUpperCase()
+                }
+                setPatient({ ...patient, last_name: val })
+              }}
+              maxLength={isMaskedMode ? "3" : "100"}
+              style={isMaskedMode ? { textTransform: 'uppercase' } : {}}
+              placeholder={isMaskedMode ? "EX: DEO" : "Ex: Smith"}
               required
             />
           </div>

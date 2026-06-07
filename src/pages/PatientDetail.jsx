@@ -182,7 +182,7 @@ export default function PatientDetail() {
   return (
     <div className="patient-detail-container">
       <div className="detail-header">
-        <h1>👤 Dossier Patient : {patient.first_name} {patient.last_name}</h1>
+        <h1>👤 Dossier Patient : {`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}</h1>
         <div className="detail-actions">
           {/* Partage du dossier commented out
           {canShare && (
@@ -426,6 +426,13 @@ export default function PatientDetail() {
                             title="Voir les détails"
                           >
                             👁️ Voir
+                          </button>
+                          <button
+                            className="btn-small btn-outline"
+                            onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}/edit`)}
+                            title="Modifier la soumission"
+                          >
+                            ✏️ Modifier
                           </button>
                           <button
                             className="btn-small btn-outline"
