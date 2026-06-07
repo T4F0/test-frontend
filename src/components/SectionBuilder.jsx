@@ -1,14 +1,36 @@
 import { useState } from 'react'
-import { updateSection, deleteSection, createSection } from '../api/sectionsApi'
-import { createField } from '../api/fieldsApi'
+import { updateSection, deleteSection, createSection, reorderSections } from '../api/sectionsApi'
+import { createField, reorderFields } from '../api/fieldsApi'
 import FieldBuilder from './FieldBuilder'
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { SortableItem } from './SortableItem'
 
-export default function SectionBuilder({ section, allSections, onUpdate, onDelete, onAddSection, newlyCreatedSectionId = null }) {
+export default function SectionBuilder({ section, allSections, onUpdate, onReorderSections = () => {}, onDelete, onAddSection, newlyCreatedSectionId = null }) {
   const [isEditing, setIsEditing] = useState(section.id === newlyCreatedSectionId)
   const [name, setName] = useState(section.name)
   const [fields, setFields] = useState(section.fields || [])
   const [newlyCreatedFieldId, setNewlyCreatedFieldId] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const childSections = allSections ? allSections.filter(s => s.parent === section.id).sort((a,b) => a.order - b.order) : []
 
@@ -72,6 +94,44 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
     }
   }
 
+  const handleFieldDragEnd = async (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = fields.findIndex(f => f.id === active.id)
+    const newIndex = fields.findIndex(f => f.id === over.id)
+    
+    const reorderedFieldsList = arrayMove(fields, oldIndex, newIndex)
+    const updatedFields = reorderedFieldsList.map((f, index) => ({ ...f, order: index }))
+    setFields(updatedFields)
+
+    try {
+      await reorderFields(updatedFields.map((f, index) => ({ id: f.id, order: index })))
+    } catch (err) {
+      console.error('Failed to reorder fields:', err)
+    }
+  }
+
+  const handleChildSectionDragEnd = async (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = childSections.findIndex(s => s.id === active.id)
+    const newIndex = childSections.findIndex(s => s.id === over.id)
+    
+    const reorderedChildSections = arrayMove(childSections, oldIndex, newIndex)
+    const updatedChildren = reorderedChildSections.map((s, index) => ({ ...s, order: index }))
+    
+    // Update local state first
+    onReorderSections(updatedChildren)
+
+    try {
+      await reorderSections(updatedChildren.map((s, index) => ({ id: s.id, order: index })))
+    } catch (err) {
+      console.error('Failed to reorder sub-sections:', err)
+    }
+  }
+
   return (
     <div className={`section-builder ${section.parent ? 'nested' : ''}`}>
       <div className="section-header">
@@ -104,34 +164,59 @@ export default function SectionBuilder({ section, allSections, onUpdate, onDelet
       <div className="section-contents">
         {fields.length > 0 && (
           <div className="fields-list">
-            {fields.map(field => (
-              <FieldBuilder
-                key={field.id}
-                field={field}
-                initialEditing={field.id === newlyCreatedFieldId}
-                onUpdate={(updatedField) => {
-                  setFields(fields.map(f => f.id === updatedField.id ? updatedField : f))
-                  setNewlyCreatedFieldId(null)
-                }}
-                onDelete={(fieldId) => setFields(fields.filter(f => f.id !== fieldId))}
-              />
-            ))}
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleFieldDragEnd}
+            >
+              <SortableContext 
+                items={fields.map(f => f.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {fields.map(field => (
+                  <SortableItem key={field.id} id={field.id}>
+                    <FieldBuilder
+                      field={field}
+                      initialEditing={field.id === newlyCreatedFieldId}
+                      onUpdate={(updatedField) => {
+                        setFields(fields.map(f => f.id === updatedField.id ? updatedField : f))
+                        setNewlyCreatedFieldId(null)
+                      }}
+                      onDelete={(fieldId) => setFields(fields.filter(f => f.id !== fieldId))}
+                    />
+                  </SortableItem>
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         )}
 
         {childSections.length > 0 && (
           <div className="child-sections-list">
-            {childSections.map(child => (
-              <SectionBuilder
-                key={child.id}
-                section={child}
-                allSections={allSections}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-                onAddSection={onAddSection}
-                newlyCreatedSectionId={newlyCreatedSectionId}
-              />
-            ))}
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleChildSectionDragEnd}
+            >
+              <SortableContext 
+                items={childSections.map(s => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {childSections.map(child => (
+                  <SortableItem key={child.id} id={child.id}>
+                    <SectionBuilder
+                      section={child}
+                      allSections={allSections}
+                      onUpdate={onUpdate}
+                      onReorderSections={onReorderSections}
+                      onDelete={onDelete}
+                      onAddSection={onAddSection}
+                      newlyCreatedSectionId={newlyCreatedSectionId}
+                    />
+                  </SortableItem>
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         )}
 

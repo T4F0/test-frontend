@@ -1,8 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getForm, createForm, updateForm } from '../api/formsApi'
-import { getSections, createSection } from '../api/sectionsApi'
+import { getSections, createSection, reorderSections } from '../api/sectionsApi'
 import SectionBuilder from '../components/SectionBuilder'
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { SortableItem } from '../components/SortableItem'
 
 export default function FormBuilder() {
   const { id } = useParams()
@@ -18,6 +33,13 @@ export default function FormBuilder() {
   const [loading, setLoading] = useState(isEdit)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   useEffect(() => {
     if (isEdit) {
@@ -84,8 +106,37 @@ export default function FormBuilder() {
     }
   }
 
+  const handleDragEnd = async (event) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const rootSections = sections.filter(s => !s.parent).sort((a,b) => a.order - b.order)
+      const oldIndex = rootSections.findIndex(s => s.id === active.id)
+      const newIndex = rootSections.findIndex(s => s.id === over.id)
+      
+      const reorderedRoot = arrayMove(rootSections, oldIndex, newIndex)
+      
+      // Update local state first for responsiveness
+      const updatedRoot = reorderedRoot.map((s, index) => ({ ...s, order: index }))
+      const updatedRootIds = new Set(updatedRoot.map(s => s.id))
+      const otherSections = sections.filter(s => !updatedRootIds.has(s.id))
+      
+      setSections([...updatedRoot, ...otherSections])
+
+      // Persist to backend
+      try {
+        await reorderSections(updatedRoot.map((s, index) => ({ id: s.id, order: index })))
+      } catch (err) {
+        console.error('Failed to reorder sections:', err)
+        loadForm() // Revert on failure
+      }
+    }
+  }
+
   if (loading) return <div className="loading">Chargement du formulaire...</div>
   if (error) return <div className="error">{error}</div>
+
+  const rootSections = sections.filter(s => !s.parent).sort((a,b) => a.order - b.order)
 
   return (
     <div className="form-builder">
@@ -127,23 +178,42 @@ export default function FormBuilder() {
             <p className="empty">Aucune section. Ajoutez-en une pour commencer.</p>
           ) : (
             <div className="sections-list">
-              {sections.filter(s => !s.parent).sort((a,b) => a.order - b.order).map(section => (
-                <SectionBuilder
-                  key={section.id}
-                  section={section}
-                  allSections={sections}
-                  newlyCreatedSectionId={newlyCreatedSectionId}
-                  onUpdate={(updated) => {
-                    setSections(sections.map(s => s.id === updated.id ? updated : s))
-                    setNewlyCreatedSectionId(null)
-                  }}
-                  onDelete={() => loadForm()} // Reload to handle recursive deletion cleanly
-                  onAddSection={(newSection) => {
-                    setSections([...sections, newSection])
-                    setNewlyCreatedSectionId(newSection.id)
-                  }}
-                />
-              ))}
+              <DndContext 
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext 
+                  items={rootSections.map(s => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {rootSections.map(section => (
+                    <SortableItem key={section.id} id={section.id}>
+                      <SectionBuilder
+                        section={section}
+                        allSections={sections}
+                        newlyCreatedSectionId={newlyCreatedSectionId}
+                        onUpdate={(updated) => {
+                          setSections(sections.map(s => s.id === updated.id ? updated : s))
+                          setNewlyCreatedSectionId(null)
+                        }}
+                        onReorderSections={(updatedSections) => {
+                          const updatedIds = new Set(updatedSections.map(s => s.id))
+                          setSections([
+                            ...sections.filter(s => !updatedIds.has(s.id)),
+                            ...updatedSections
+                          ])
+                        }}
+                        onDelete={() => loadForm()} // Reload to handle recursive deletion cleanly
+                        onAddSection={(newSection) => {
+                          setSections([...sections, newSection])
+                          setNewlyCreatedSectionId(newSection.id)
+                        }}
+                      />
+                    </SortableItem>
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
           )}
 
@@ -157,3 +227,4 @@ export default function FormBuilder() {
     </div>
   )
 }
+

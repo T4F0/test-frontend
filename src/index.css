@@ -1414,6 +1414,29 @@ button:disabled {
   }
 }
 
+/* ===== DRAG AND DROP ===== */
+.sortable-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.drag-handle {
+  flex-shrink: 0;
+  padding: 8px 4px;
+  color: var(--gray-400);
+  transition: color 0.2s;
+}
+
+.drag-handle:hover {
+  color: var(--primary);
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
 /* ===== ROLE-BASED THEMES ===== */
 body.theme-admin {
   --primary: #4338ca; /* Indigo 700 */

@@ -26,3 +26,9 @@ export const deleteSection = async (id) => {
   const authAxios = getAuthAxios()
   await authAxios.delete(`${API_BASE}/sections/${id}/`)
 }
+
+export const reorderSections = async (orders) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/sections/reorder/`, { orders })
+  return data
+}
