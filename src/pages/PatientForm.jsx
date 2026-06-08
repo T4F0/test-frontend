@@ -175,7 +175,8 @@ export default function PatientForm() {
             type="text"
             value={patient.anonymized_code}
             onChange={(e) => setPatient({ ...patient, anonymized_code: e.target.value })}
-            placeholder="Identifiant anonymisé optionnel"
+            placeholder="Identifiant anonymisé"
+            required
           />
         </div>
 

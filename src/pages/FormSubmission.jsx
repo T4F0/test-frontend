@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { getForm } from '../api/formsApi'
 import { submitForm } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
@@ -46,6 +47,7 @@ function SectionRenderer({ section, formData, onFieldChange }) {
 export default function FormSubmission() {
   const { id, submissionId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [form, setForm] = useState(null)
   const [formData, setFormData] = useState({})
   const [patients, setPatients] = useState([])
