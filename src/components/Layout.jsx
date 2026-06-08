@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell, Send } from 'lucide-react'
+import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell, Send, UserCircle } from 'lucide-react'
 import { getNotifications, markNotificationRead } from '../api/authApi'
 import { formatDate } from '../lib/dateUtils'
 
@@ -216,18 +216,32 @@ export default function Layout() {
                   )}
 
                   <div className="navbar-user" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div className="user-name" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#0f172a' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                        {user?.first_name || user?.last_name ? (
-                          `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
-                        ) : (
-                          user?.username || 'Utilisateur'
-                        )}
-                      </span>
-                      <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.72rem', padding: '2px 8px', marginTop: '2px', fontWeight: 600 }}>
-                        {user?.role === 'MEDECIN' ? 'Médecin traitant' : user?.role === 'COORDINATEUR' ? 'Coordinateur' : user?.role === 'ADMIN' ? 'Administrateur' : user?.role}
-                      </span>
-                    </div>
+                    <Link
+                      to={user?.id ? `/users/${user.id}` : '#'}
+                      title="Mon profil"
+                      style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <div style={{
+                        width: 36, height: 36, borderRadius: '50%',
+                        background: 'var(--primary)', color: 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.9rem', fontWeight: 700, flexShrink: 0
+                      }}>
+                        {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                      <div className="user-name" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#0f172a' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                          {user?.first_name || user?.last_name ? (
+                            `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
+                          ) : (
+                            user?.username || 'Utilisateur'
+                          )}
+                        </span>
+                        <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.72rem', padding: '2px 8px', marginTop: '2px', fontWeight: 600 }}>
+                          {user?.role === 'MEDECIN' ? 'Médecin traitant' : user?.role === 'COORDINATEUR' ? 'Coordinateur' : user?.role === 'ADMIN' ? 'Administrateur' : user?.role}
+                        </span>
+                      </div>
+                    </Link>
                     <button onClick={handleLogout} className="btn-logout" title="Déconnexion" style={{display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
                       <LogOut size={18} />
                       <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Déconnexion</span>
