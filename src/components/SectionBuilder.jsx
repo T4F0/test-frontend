@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { updateSection, deleteSection, createSection } from '../api/sectionsApi'
 import FieldBuilder from './FieldBuilder'
 import {
   SortableContext,
@@ -19,7 +18,8 @@ export default function SectionBuilder({
   onUpdateField,
   onDeleteField,
   newlyCreatedSectionId = null,
-  newlyCreatedFieldId = null
+  newlyCreatedFieldId = null,
+  generateTempId
 }) {
   const [isEditing, setIsEditing] = useState(section.id === newlyCreatedSectionId)
   const [name, setName] = useState(section.name)
@@ -31,49 +31,34 @@ export default function SectionBuilder({
   // Combine and sort all items (fields and sub-sections) by their order
   const combinedItems = [...childSections, ...fields].sort((a, b) => a.order - b.order)
 
-  const handleSaveSection = async () => {
-    try {
-      setSaving(true)
-      const updated = await updateSection(section.id, { 
-        name,
-        form: section.form,
-        parent: section.parent,
-        order: section.order
-      })
-      onUpdate(updated)
-      setIsEditing(false)
-    } catch (err) {
-      console.error('Section update error:', err.response?.data || err)
-      alert('Échec de l\'enregistrement de la section : ' + (err.response?.data?.name?.[0] || err.message))
-    } finally {
-      setSaving(false)
+  const handleSaveSection = () => {
+    const updated = { 
+      ...section,
+      name,
+      form: section.form,
+      parent: section.parent,
+      order: section.order
     }
+    onUpdate(updated)
+    setIsEditing(false)
   }
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (confirm('Supprimer cette section et tout son contenu ?')) {
-      try {
-        await deleteSection(section.id)
-        onDelete(section.id)
-      } catch (err) {
-        alert('Échec de la suppression de la section')
-      }
+      onDelete(section.id)
     }
   }
 
-  const handleAddSubSection = async () => {
-    try {
-      const order = combinedItems.length
-      const newSection = await createSection({
-        form: section.form,
-        parent: section.id,
-        name: '',
-        order: order
-      })
-      onAddSection(newSection)
-    } catch (err) {
-      alert('Échec de la création de la sous-section')
+  const handleAddSubSection = () => {
+    const order = combinedItems.length
+    const newSection = {
+      id: generateTempId(),
+      form: section.form,
+      parent: section.id,
+      name: '',
+      order: order
     }
+    onAddSection(newSection)
   }
 
   return (
@@ -139,6 +124,7 @@ export default function SectionBuilder({
                   onDeleteField={onDeleteField}
                   newlyCreatedSectionId={newlyCreatedSectionId}
                   newlyCreatedFieldId={newlyCreatedFieldId}
+                  generateTempId={generateTempId}
                 />
               )}
             </SortableItem>

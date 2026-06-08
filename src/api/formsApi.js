@@ -30,3 +30,10 @@ export const deleteForm = async (id) => {
   const authAxios = getAuthAxios()
   await authAxios.delete(`${API_BASE}/forms/${id}/`)
 }
+
+export const syncForm = async (id, syncPayload) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.put(`${API_BASE}/forms/${id}/sync/`, syncPayload)
+  return data
+}
+

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { updateField, deleteField } from '../api/fieldsApi'
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Texte' },
@@ -21,31 +20,18 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
     setOptionsText(field.options ? field.options.join('\n') : '')
   }, [field])
 
-  const handleSave = async () => {
-    try {
-      setSaving(true)
-      const finalData = {
-        ...data,
-        options: optionsText.split('\n').map(o => o.trim()).filter(o => o !== '')
-      }
-      const updated = await updateField(field.id, finalData)
-      onUpdate(updated)
-      setIsEditing(false)
-    } catch (err) {
-      alert('Échec de l\'enregistrement du champ')
-    } finally {
-      setSaving(false)
+  const handleSave = () => {
+    const finalData = {
+      ...data,
+      options: optionsText.split('\n').map(o => o.trim()).filter(o => o !== '')
     }
+    onUpdate(finalData)
+    setIsEditing(false)
   }
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (confirm(`Supprimer le champ "${field.name}" ?`)) {
-      try {
-        await deleteField(field.id)
-        onDelete(field.id)
-      } catch (err) {
-        alert('Échec de la suppression du champ')
-      }
+      onDelete(field.id)
     }
   }
 
@@ -87,7 +73,7 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
               <label>Choix possibles:</label>
               <div className="options-list">
                 {optionsText.split('\n').map((option, index) => (
-                  <div key={index} className="option-item" style={{display: 'flex', gap: '5px', marginBottom: '5px'}}>
+                  <div key={index} className="option-item" style={{ display: 'flex', gap: '5px', marginBottom: '5px' }}>
                     <input
                       type="text"
                       value={option}
@@ -98,9 +84,9 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
                       }}
                     />
                     <button type="button" onClick={() => {
-                        const newOptions = optionsText.split('\n');
-                        newOptions.splice(index, 1);
-                        setOptionsText(newOptions.join('\n'));
+                      const newOptions = optionsText.split('\n');
+                      newOptions.splice(index, 1);
+                      setOptionsText(newOptions.join('\n'));
                     }}>-</button>
                   </div>
                 ))}
@@ -135,7 +121,7 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
               checked={data.show_rdv || false}
               onChange={(e) => setData({ ...data, show_rdv: e.target.checked })}
             />
-            Afficher RDV
+            Afficher rapport
           </label>
 
           <div className="form-actions-inline">

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getForm, createForm, updateForm } from '../api/formsApi'
-import { getSections, createSection, reorderSections, updateSection } from '../api/sectionsApi'
-import { createField, reorderFields, updateField } from '../api/fieldsApi'
+import { getForm, createForm, updateForm, syncForm } from '../api/formsApi'
+import { getSections } from '../api/sectionsApi'
 import SectionBuilder from '../components/SectionBuilder'
 import {
   DndContext, 
@@ -37,8 +36,15 @@ export default function FormBuilder() {
   const [newlyCreatedFieldId, setNewlyCreatedFieldId] = useState(null)
   const [loading, setLoading] = useState(isEdit)
   const [error, setError] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [activeId, setActiveId] = useState(null)
+  const [deletedSections, setDeletedSections] = useState([])
+  const [deletedFields, setDeletedFields] = useState([])
+  const [tempIdCounter, setTempIdCounter] = useState(1)
+
+  const generateTempId = () => {
+    const id = `temp-${Date.now()}-${tempIdCounter}`
+    setTempIdCounter(c => c + 1)
+    return id
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -80,23 +86,48 @@ export default function FormBuilder() {
     try {
       setSaving(true)
       let savedForm
-      const payload = {
+      const formPayload = {
         name: form.name,
         description: form.description,
         service: form.service
       }
-      if (isEdit) {
-        savedForm = await updateForm(id, payload)
-      } else {
-        savedForm = await createForm(payload)
-      }
-      setForm({ ...form, id: savedForm.id })
+
       if (!isEdit) {
+        savedForm = await createForm(formPayload)
+        // Redirect to edit mode so we can continue with the newly created form ID
         navigate(`/forms/${savedForm.id}/edit`)
-      } else {
-        alert('Formulaire mis à jour avec succès')
-        navigate('/forms')
+        return
       }
+
+      // If in edit mode, sync everything at once
+      const payload = {
+        form: formPayload,
+        sections: sections.map(s => ({
+          id: s.id,
+          form: id,
+          parent: s.parent,
+          name: s.name,
+          order: s.order
+        })),
+        fields: fields.map(f => ({
+          id: f.id,
+          section: f.section || f.section_id,
+          name: f.name,
+          field_type: f.field_type,
+          required: f.required,
+          placeholder: f.placeholder,
+          options: f.options,
+          accepted_file_types: f.accepted_file_types,
+          show_rdv: f.show_rdv,
+          order: f.order
+        })),
+        deleted_sections: deletedSections,
+        deleted_fields: deletedFields
+      }
+
+      await syncForm(id, payload)
+      alert('Formulaire mis à jour avec succès')
+      navigate('/forms')
     } catch (err) {
       setError('Échec de l\'enregistrement du formulaire')
       console.error(err)
@@ -105,45 +136,75 @@ export default function FormBuilder() {
     }
   }
 
-  const handleAddSection = async (parentId = null) => {
+  const handleAddSection = (parentId = null) => {
     if (!form.id) {
-      alert('Veuillez d\'abord enregistrer le formulaire')
+      alert('Veuillez d\'abord enregistrer le formulaire pour créer un brouillon')
       return
     }
-    try {
-      const order = sections.filter(s => s.parent === parentId).length
-      const newSection = await createSection({
-        form: form.id,
-        parent: parentId,
-        name: '',
-        order: order
-      })
-      setSections(prev => [...prev, newSection])
-      setNewlyCreatedSectionId(newSection.id)
-    } catch (err) {
-      setError('Échec de la création de la section')
+    const order = sections.filter(s => s.parent === parentId).length
+    const newSection = {
+      id: generateTempId(),
+      form: form.id,
+      parent: parentId,
+      name: '',
+      order: order
     }
+    setSections(prev => [...prev, newSection])
+    setNewlyCreatedSectionId(newSection.id)
   }
 
-  const handleAddField = async (sectionId) => {
-    try {
-      // Correctly filter existing fields to determine order
-      const sectionFields = fields.filter(f => (f.section === sectionId || f.section_id === sectionId))
-      const response = await createField({
-        section: sectionId,
-        name: '',
-        field_type: 'text',
-        order: sectionFields.length
-      })
-      
-      // Ensure we use 'section' consistently
-      const newField = { ...response, section: sectionId };
-      setFields(prev => [...prev, newField])
-      setNewlyCreatedFieldId(newField.id)
-    } catch (err) {
-      console.error('Field creation error:', err)
-      alert('Échec de la création du champ')
+  const handleAddField = (sectionId) => {
+    const sectionFields = fields.filter(f => (f.section === sectionId || f.section_id === sectionId))
+    const newField = {
+      id: generateTempId(),
+      section: sectionId,
+      name: '',
+      field_type: 'text',
+      required: false,
+      placeholder: '',
+      options: null,
+      accepted_file_types: '',
+      show_rdv: false,
+      order: sectionFields.length
     }
+    setFields(prev => [...prev, newField])
+    setNewlyCreatedFieldId(newField.id)
+  }
+
+  const handleDeleteSection = (sectionId) => {
+    if (typeof sectionId === 'number') {
+      setDeletedSections(prev => [...prev, sectionId])
+    }
+    setSections(prev => prev.filter(s => s.id !== sectionId))
+    
+    // Also remove any child sections or fields visually
+    // Note: The backend sync will handle cascading deletes, but we must update the UI state
+    const removeChildren = (parentId) => {
+      const children = sections.filter(s => s.parent === parentId)
+      children.forEach(c => {
+        if (typeof c.id === 'number') {
+          setDeletedSections(prev => [...prev, c.id])
+        }
+        removeChildren(c.id)
+      })
+      setSections(prev => prev.filter(s => s.parent !== parentId))
+      
+      const relatedFields = fields.filter(f => f.section === parentId || f.section_id === parentId)
+      relatedFields.forEach(f => {
+        if (typeof f.id === 'number') {
+          setDeletedFields(prev => [...prev, f.id])
+        }
+      })
+      setFields(prev => prev.filter(f => f.section !== parentId && f.section_id !== parentId))
+    }
+    removeChildren(sectionId)
+  }
+
+  const handleDeleteField = (fieldId) => {
+    if (typeof fieldId === 'number') {
+      setDeletedFields(prev => [...prev, fieldId])
+    }
+    setFields(prev => prev.filter(f => f.id !== fieldId))
   }
 
   const isDescendant = (parentId, childId) => {
@@ -153,29 +214,6 @@ export default function FormBuilder() {
       current = sections.find(s => s.id === current.parent);
     }
     return false;
-  }
-
-  const cleanFieldPayload = (field) => {
-    return {
-      section: field.section || field.section_id,
-      name: field.name,
-      field_type: field.field_type,
-      required: field.required,
-      placeholder: field.placeholder,
-      options: field.options,
-      accepted_file_types: field.accepted_file_types,
-      show_rdv: field.show_rdv,
-      order: field.order
-    };
-  }
-
-  const cleanSectionPayload = (section) => {
-    return {
-      form: section.form,
-      parent: section.parent,
-      name: section.name,
-      order: section.order
-    };
   }
 
   const handleDragStart = (event) => {
@@ -300,32 +338,20 @@ export default function FormBuilder() {
       const updatedSections = updated.filter(i => i.itemType === 'section')
       const updatedFields = updated.filter(i => i.itemType === 'field')
 
-      setSections(prev => {
-        const others = prev.filter(s => !updatedSections.find(u => u.id === s.id))
-        return [...others, ...updatedSections].sort((a,b) => a.order - b.order)
-      })
-      setFields(prev => {
-        const others = prev.filter(f => !updatedFields.find(u => u.id === f.id))
-        return [...others, ...updatedFields].sort((a,b) => a.order - b.order)
-      })
-
-      try {
-        if (isActiveSection) {
-          await updateSection(activeItem.id, { ...cleanSectionPayload(activeItem), parent: targetSectionId, order: newIndex })
-        } else {
-          await updateField(activeItem.id, { ...cleanFieldPayload(activeItem), section: targetSectionId, order: newIndex })
+      if (isActiveSection) {
+        const activeIndex = prevSections.findIndex(s => s.id === activeItem.id)
+        if (activeIndex !== -1) {
+          prevSections[activeIndex] = { ...prevSections[activeIndex], parent: targetSectionId, order: newIndex }
         }
-        
-        await Promise.all([
-          reorderSections(updatedSections.map(s => ({ id: s.id, order: s.order }))),
-          reorderFields(updatedFields.map(f => ({ id: f.id, order: f.order })))
-        ])
-      } catch (err) {
-        console.error('Failed to persist:', err)
-        loadForm()
+      } else {
+        const activeIndex = prevFields.findIndex(f => f.id === activeItem.id)
+        if (activeIndex !== -1) {
+          prevFields[activeIndex] = { ...prevFields[activeIndex], section: targetSectionId, order: newIndex }
+        }
       }
-    } else {
-      loadForm();
+      
+      setSections(prevSections.sort((a,b) => a.order - b.order))
+      setFields(prevFields.sort((a,b) => a.order - b.order))
     }
   }
 
@@ -397,14 +423,7 @@ export default function FormBuilder() {
                           setSections(prev => prev.map(s => s.id === updated.id ? updated : s))
                           setNewlyCreatedSectionId(null)
                         }}
-                        onReorderSections={(updatedSections) => {
-                          const updatedIds = new Set(updatedSections.map(s => s.id))
-                          setSections(prev => [
-                            ...prev.filter(s => !updatedIds.has(s.id)),
-                            ...updatedSections
-                          ])
-                        }}
-                        onDelete={() => loadForm()}
+                        onDelete={() => handleDeleteSection(section.id)}
                         onAddSection={(newSection) => {
                           setSections(prev => [...prev, newSection])
                           setNewlyCreatedSectionId(newSection.id)
@@ -414,7 +433,8 @@ export default function FormBuilder() {
                           setFields(prev => prev.map(f => f.id === updatedField.id ? updatedField : f))
                           setNewlyCreatedFieldId(null)
                         }}
-                        onDeleteField={(fieldId) => setFields(prev => prev.filter(f => f.id !== fieldId))}
+                        onDeleteField={handleDeleteField}
+                        generateTempId={generateTempId}
                       />
                     </SortableItem>
                   ))}
