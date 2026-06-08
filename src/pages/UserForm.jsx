@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { createUser, updateUser, getUsers, getServices } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { ALGERIA_WILAYAS } from '../lib/constants'
+import { validatePhoneNumber } from '../lib/validators'
 
 const ROLE_CHOICES = [
   { value: 'MEDECIN', label: 'Médecin traitant' },
@@ -78,6 +79,12 @@ export default function UserForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (user.phone_number && !validatePhoneNumber(user.phone_number)) {
+      setError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
+      return
+    }
+
     try {
       setSaving(true)
       setError(null)
@@ -228,7 +235,7 @@ export default function UserForm() {
             type="tel"
             value={user.phone_number || ''}
             onChange={(e) => setUser({ ...user, phone_number: e.target.value })}
-            placeholder="Ex: +213 6 12 34 56 78"
+            placeholder="Ex: +213612345678"
           />
         </div>
 

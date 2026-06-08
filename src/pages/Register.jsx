@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { register, getPublicServices } from '../api/authApi'
 import { ALGERIA_WILAYAS } from '../lib/constants'
+import { validatePhoneNumber } from '../lib/validators'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -38,6 +39,12 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (formData.phone_number && !validatePhoneNumber(formData.phone_number)) {
+      setError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -161,7 +168,7 @@ export default function Register() {
               name="phone_number"
               value={formData.phone_number}
               onChange={handleChange}
-              placeholder="Ex: +213 6 12 34 56 78"
+              placeholder="Ex: +213612345678"
             />
           </div>
 

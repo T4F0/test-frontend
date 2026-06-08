@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getUsers, getServices, updateUser, changePassword } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { ALGERIA_WILAYAS } from '../lib/constants'
+import { validatePhoneNumber } from '../lib/validators'
 import {
   User, Mail, Phone, MapPin, Activity, Lock, Edit3, Save, X,
   CheckCircle2, AlertCircle, Shield, ChevronRight, Building2, BadgeCheck
@@ -101,6 +102,12 @@ export default function UserProfile() {
   /* ── Save info ────────────────────────────────────────── */
   const handleSaveInfo = async (e) => {
     e.preventDefault()
+
+    if (editData.phone_number && !validatePhoneNumber(editData.phone_number)) {
+      setSaveError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
+      return
+    }
+
     try {
       setSaveLoading(true)
       setSaveError(null)
@@ -377,7 +384,7 @@ export default function UserProfile() {
                       type="tel"
                       value={editData.phone_number}
                       onChange={e => setEditData(p => ({ ...p, phone_number: e.target.value }))}
-                      placeholder="+213 6 12 34 56 78"
+                      placeholder="+213612345678"
                       style={inputStyle}
                     />
                   </FormField>

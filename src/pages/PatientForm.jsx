@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { createPatient, updatePatient, getPatient } from '../api/patientsApi'
 import { useAuth } from '../context/AuthContext'
+import { validatePhoneNumber } from '../lib/validators'
 
 const GENDER_CHOICES = [
   { value: 'M', label: 'Homme' },
@@ -52,6 +53,12 @@ export default function PatientForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (patient.phone_number && !validatePhoneNumber(patient.phone_number)) {
+      setError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
+      return
+    }
+
     try {
       setSaving(true)
       setError(null)
@@ -168,7 +175,7 @@ export default function PatientForm() {
             type="tel"
             value={patient.phone_number || ''}
             onChange={(e) => setPatient({ ...patient, phone_number: e.target.value })}
-            placeholder="Ex: +213 6 12 34 56 78"
+            placeholder="Ex: +213612345678"
           />
         </div>
 
