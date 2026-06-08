@@ -75,7 +75,7 @@ export default function PatientsList() {
       <div className="search-bar">
         <input
           type="text"
-          placeholder="Rechercher par nom..."
+          placeholder="Rechercher par nom du patient ou du médecin..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="search-input"
