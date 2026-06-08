@@ -52,6 +52,22 @@ export default function Layout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const getNotificationRedirect = (notification) => {
+    const title = notification.title || '';
+    const titleLower = title.toLowerCase();
+
+    if (titleLower.includes('registration') || titleLower.includes('inscription') || titleLower.includes('nouveau médecin')) {
+      return { path: '/users', search: '?tab=pending' };
+    }
+    if (titleLower.includes('demande')) {
+      return { path: '/meetings/requests', search: '' };
+    }
+    if (titleLower.includes('réunion') || titleLower.includes('planifiée') || titleLower.includes('meeting')) {
+      return { path: '/meetings', search: '' };
+    }
+    return null;
+  };
+
   const handleReadNotification = async (id) => {
     try {
       await markNotificationRead(id)
@@ -147,7 +163,33 @@ export default function Layout() {
                               <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>Aucune notification</div>
                             ) : (
                               notifications.map(n => (
-                                <div key={n.id} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', background: n.is_read ? 'white' : '#f0f9ff', opacity: n.is_read ? 0.7 : 1 }}>
+                                <div 
+                                  key={n.id} 
+                                  onClick={() => {
+                                    if (!n.is_read) {
+                                      handleReadNotification(n.id)
+                                    }
+                                    setShowNotifications(false)
+                                    const redirect = getNotificationRedirect(n)
+                                    if (redirect) {
+                                      navigate(redirect.path + redirect.search)
+                                    }
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = n.is_read ? '#f8fafc' : '#e0f2fe'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = n.is_read ? 'white' : '#f0f9ff'
+                                  }}
+                                  style={{ 
+                                    padding: '1rem', 
+                                    borderBottom: '1px solid #f1f5f9', 
+                                    background: n.is_read ? 'white' : '#f0f9ff', 
+                                    opacity: n.is_read ? 0.7 : 1,
+                                    cursor: 'pointer',
+                                    transition: 'background-color 0.2s'
+                                  }}
+                                >
                                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                                     <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#0f172a' }}>{n.title}</span>
                                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{formatDate(n.created_at)}</span>
@@ -155,7 +197,10 @@ export default function Layout() {
                                   <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0, marginBottom: '0.5rem' }}>{n.message}</p>
                                   {!n.is_read && (
                                     <button 
-                                      onClick={() => handleReadNotification(n.id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleReadNotification(n.id)
+                                      }}
                                       style={{ fontSize: '0.75rem', color: '#2563eb', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontWeight: 500 }}
                                     >
                                       Marquer comme lu
