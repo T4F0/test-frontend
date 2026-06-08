@@ -25,13 +25,15 @@ export default function MedicalCaseCard({ submission, onRemove, onViewDetails, a
       <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>Soumis le {formatDate(submission.created_at)}</p>
       
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => onViewDetails && onViewDetails(submission)}
-          className={`medical-case-btn medical-case-btn--details ${isActive ? 'medical-case-btn--details-active' : ''}`}
-          title="Voir les détails du formulaire"
-        >
-          <ClipboardList size={14} /> Détails
-        </button>
+        {currentUserRole !== 'COORDINATEUR' && (
+          <button
+            onClick={() => onViewDetails && onViewDetails(submission)}
+            className={`medical-case-btn medical-case-btn--details ${isActive ? 'medical-case-btn--details-active' : ''}`}
+            title="Voir les détails du formulaire"
+          >
+            <ClipboardList size={14} /> Détails
+          </button>
+        )}
         <button
           onClick={() => navigate(`/patients/${submission.patient_id}`)}
           className="medical-case-btn medical-case-btn--view"

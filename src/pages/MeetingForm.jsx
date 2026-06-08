@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { getMeeting, createMeeting, updateMeeting } from '../api/meetingsApi'
-import { getSubmissionsByPatient, getSubmissions } from '../api/submissionsApi'
+import { getSubmissionsByPatient } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
@@ -26,34 +26,44 @@ export default function MeetingForm() {
 
   const [form, setForm] = useState({
     name: '',
-    submissions: preselectData.preselectSubmissions ? preselectData.preselectSubmissions.map(id => String(id)) : [],
+    submissions: preselectData.preselectSubmissions
+      ? preselectData.preselectSubmissions.map((sid) => String(sid))
+      : [],
     coordinator: '',
     scheduled_date: '',
     scheduled_time: '09:00',
     meeting_link: '',
     participants: preselectData.preselectDoctor ? [String(preselectData.preselectDoctor)] : [],
   })
+
+  // Cache of all fetched submission objects (for building payload & display)
   const [allSubmissions, setAllSubmissions] = useState([])
+  // Patients whose cases have been added to this meeting
+  const [selectedPatients, setSelectedPatients] = useState([])
+  // Patient search autocomplete state
   const [patients, setPatients] = useState([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
+  const [patientSearch, setPatientSearch] = useState('')
+  const [patientsLoading, setPatientsLoading] = useState(false)
+  const [addingPatient, setAddingPatient] = useState(false)
+
   const [users, setUsers] = useState([])
+  const [participantSearch, setParticipantSearch] = useState('')
+
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
-  const [participantSearch, setParticipantSearch] = useState('')
-  const [patientSearch, setPatientSearch] = useState('')
-  const [patientsLoading, setPatientsLoading] = useState(false)
 
+  // ─── Load on mount ────────────────────────────────────────────────────────
   useEffect(() => {
     if (id) loadMeeting()
   }, [id])
 
   useEffect(() => {
     loadUsers()
-    loadInitialSubmissions()
   }, [])
 
+  // Debounced patient search
   useEffect(() => {
     const timer = setTimeout(() => {
       loadPatients(patientSearch)
@@ -61,50 +71,62 @@ export default function MeetingForm() {
     return () => clearTimeout(timer)
   }, [patientSearch])
 
-  useEffect(() => {
-    if (selectedPatientId) {
-      loadSubmissionsForPatient(selectedPatientId)
-    }
-  }, [selectedPatientId])
+  // ─── Derived data ─────────────────────────────────────────────────────────
+  const normalizedCoordinatorId = isEdit ? form.coordinator : user?.id || ''
+  const usersById = useMemo(() => new Map(users.map((u) => [String(u.id), u])), [users])
+  const submissionsById = useMemo(
+    () => new Map(allSubmissions.map((s) => [String(s.id), s])),
+    [allSubmissions],
+  )
 
+  const selectedParticipantIds = useMemo(() => new Set(form.participants), [form.participants])
+
+  const selectedParticipants = useMemo(
+    () => form.participants.map((pId) => usersById.get(String(pId))).filter(Boolean),
+    [form.participants, usersById],
+  )
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   const formatUserName = (candidate) => {
     if (!candidate) return 'Utilisateur inconnu'
     const fullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim()
     return fullName || candidate.username || candidate.email || 'Utilisateur inconnu'
   }
 
-  const formatUserMeta = (candidate) => {
-    return [candidate.email, candidate.role].filter(Boolean).join(' • ')
-  }
+  const formatUserMeta = (candidate) =>
+    [candidate.email, candidate.role].filter(Boolean).join(' • ')
 
   const getInitials = (candidate) => {
     const source = `${candidate?.first_name || ''} ${candidate?.last_name || ''}`.trim()
     if (!source) {
       return (candidate?.username || candidate?.email || '?').slice(0, 2).toUpperCase()
     }
-    return source.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
+    return source
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('')
   }
 
-  const normalizedCoordinatorId = isEdit ? form.coordinator : user?.id || ''
-  const usersById = useMemo(() => new Map(users.map((u) => [String(u.id), u])), [users])
-  const submissionsById = useMemo(() => new Map(allSubmissions.map((s) => [String(s.id), s])), [allSubmissions])
+  // Count how many submissions in the form belong to a given patient
+  const countSubmissionsForPatient = (patientId) =>
+    allSubmissions.filter(
+      (s) => String(s.patient) === String(patientId) && form.submissions.includes(String(s.id)),
+    ).length
 
-  const selectedParticipantIds = useMemo(() => new Set(form.participants), [form.participants])
-  const coordinatorUser = useMemo(() => {
-    if (!normalizedCoordinatorId) return user || null
-    return usersById.get(normalizedCoordinatorId) || (user?.id === normalizedCoordinatorId ? user : null)
-  }, [normalizedCoordinatorId, user, usersById])
-  
-  const selectedParticipants = useMemo(
-    () => form.participants.map((pId) => usersById.get(String(pId))).filter(Boolean),
-    [form.participants, usersById],
-  )
+  const filteredUsers = useMemo(() => {
+    const q = participantSearch.toLowerCase()
+    return users.filter(
+      (u) =>
+        u.id !== user?.id &&
+        (formatUserName(u).toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q) ||
+          u.role?.toLowerCase().includes(q)),
+    )
+  }, [users, participantSearch, user])
 
-  const selectedSubmissions = useMemo(
-    () => form.submissions.map((sId) => submissionsById.get(String(sId))).filter(Boolean),
-    [form.submissions, submissionsById],
-  )
-
+  // ─── API calls ────────────────────────────────────────────────────────────
   const loadUsers = async () => {
     try {
       const usersData = await getUsers()
@@ -112,37 +134,12 @@ export default function MeetingForm() {
     } catch (e) {
       console.error(e)
       if (e.response?.status === 403) {
-        setError('Accès refusé : Seuls les administrateurs et les coordinateurs peuvent créer ou modifier des réunions.')
+        setError(
+          'Accès refusé : Seuls les administrateurs et les coordinateurs peuvent créer ou modifier des réunions.',
+        )
       } else {
         setError('Échec du chargement des utilisateurs')
       }
-    }
-  }
-
-  const loadInitialSubmissions = async () => {
-    try {
-      const data = await getSubmissions()
-      const newSubs = Array.isArray(data) ? data : []
-      setAllSubmissions(prev => {
-        const existingIds = new Set(prev.map(s => String(s.id)))
-        return [...prev, ...newSubs.filter(s => !existingIds.has(String(s.id)))]
-      })
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  const loadSubmissionsForPatient = async (patientId) => {
-    try {
-      const data = await getSubmissionsByPatient(patientId)
-      const newSubs = Array.isArray(data) ? data : []
-      setAllSubmissions(prev => {
-        const existingIds = new Set(prev.map(s => String(s.id)))
-        const combined = [...prev, ...newSubs.filter(s => !existingIds.has(String(s.id)))]
-        return combined
-      })
-    } catch (e) {
-      console.error(e)
     }
   }
 
@@ -151,9 +148,13 @@ export default function MeetingForm() {
       setPatientsLoading(true)
       const data = await getPatients(1, query)
       const patientsData = Array.isArray(data) ? data : []
-      setPatients([...patientsData].sort((a, b) => 
-        `${a.first_name || ''} ${a.last_name || ''}`.localeCompare(`${b.first_name || ''} ${b.last_name || ''}`)
-      ))
+      setPatients(
+        [...patientsData].sort((a, b) =>
+          `${a.first_name || ''} ${a.last_name || ''}`.localeCompare(
+            `${b.first_name || ''} ${b.last_name || ''}`,
+          ),
+        ),
+      )
     } catch (e) {
       console.error(e)
     } finally {
@@ -161,32 +162,51 @@ export default function MeetingForm() {
     }
   }
 
-  const filteredUsers = useMemo(() => {
-    const q = participantSearch.toLowerCase()
-    return users.filter(u => 
-      u.id !== user?.id && 
-      (formatUserName(u).toLowerCase().includes(q) || 
-       u.email?.toLowerCase().includes(q) || 
-       u.role?.toLowerCase().includes(q))
-    )
-  }, [users, participantSearch, user])
-
   const loadMeeting = async () => {
     try {
       const data = await getMeeting(id)
       const dt = data.scheduled_date ? new Date(data.scheduled_date) : new Date()
-      
-      if (data.submission_details) {
-        setAllSubmissions(prev => {
-          const existingIds = new Set(prev.map(s => String(s.id)))
-          const newOnes = data.submission_details.filter(s => !existingIds.has(String(s.id)))
-          return [...prev, ...newOnes]
+
+      // Reconstruct selectedPatients from submission_details returned by the API
+      const submissionDetails = data.submission_details || []
+      if (submissionDetails.length > 0) {
+        // Merge into allSubmissions cache (normalise to match FormSubmission shape)
+        setAllSubmissions((prev) => {
+          const existingIds = new Set(prev.map((s) => String(s.id)))
+          const normalised = submissionDetails
+            .filter((s) => !existingIds.has(String(s.id)))
+            .map((s) => ({
+              id: s.id,
+              patient: s.patient_id,   // keep "patient" field for consistency
+              patient_id: s.patient_id,
+              patient_name: s.patient_name,
+              form_name: s.form_name,
+              name: s.form_name,
+              created_at: s.created_at,
+              status: s.status,
+            }))
+          return [...prev, ...normalised]
         })
+
+        // Build unique patient list from submission details
+        const patientsMap = new Map()
+        submissionDetails.forEach((sub) => {
+          if (sub.patient_id && !patientsMap.has(String(sub.patient_id))) {
+            const nameParts = (sub.patient_name || '').split(' ')
+            patientsMap.set(String(sub.patient_id), {
+              id: sub.patient_id,
+              first_name: nameParts[0] || '',
+              last_name: nameParts.slice(1).join(' ') || '',
+              display_name: sub.patient_name || '',
+            })
+          }
+        })
+        setSelectedPatients(Array.from(patientsMap.values()))
       }
 
       setForm({
         name: data.name || '',
-        submissions: (data.submissions || []).map(id => String(id)),
+        submissions: (data.submissions || []).map((sid) => String(sid)),
         coordinator: data.coordinator?.id || data.coordinator || '',
         scheduled_date: dt.toISOString().slice(0, 10),
         scheduled_time: dt.toTimeString().slice(0, 5),
@@ -202,28 +222,61 @@ export default function MeetingForm() {
     }
   }
 
-  const filteredSubmissions = useMemo(() => {
-    if (!selectedPatientId) return []
-    return allSubmissions.filter((s) => String(s.patient) === String(selectedPatientId))
-  }, [allSubmissions, selectedPatientId])
+  // ─── Handlers ─────────────────────────────────────────────────────────────
+  /** Called when the user picks a patient from the SearchableSelect */
+  const handleAddPatient = async (patientId) => {
+    if (!patientId) return
 
-  const handlePatientChange = (patientId) => {
-    setSelectedPatientId(patientId)
-    setSelectedSubmissionId('')
-  }
-
-  const handleAddSubmission = () => {
-    if (!selectedSubmissionId) return
-    if (form.submissions.includes(selectedSubmissionId)) {
-      alert('Cette soumission est déjà ajoutée à la réunion.')
+    // Already added — silently reset the picker
+    if (selectedPatients.some((p) => String(p.id) === String(patientId))) {
+      setSelectedPatientId('')
       return
     }
-    setForm(f => ({ ...f, submissions: [...f.submissions, selectedSubmissionId] }))
-    setSelectedSubmissionId('')
+
+    const patient = patients.find((p) => String(p.id) === String(patientId))
+    if (!patient) return
+
+    try {
+      setAddingPatient(true)
+      const subs = await getSubmissionsByPatient(patientId)
+      const newSubs = Array.isArray(subs) ? subs : []
+
+      // Merge into allSubmissions cache
+      setAllSubmissions((prev) => {
+        const existingIds = new Set(prev.map((s) => String(s.id)))
+        return [...prev, ...newSubs.filter((s) => !existingIds.has(String(s.id)))]
+      })
+
+      // Add all submission IDs to the form (deduplicated)
+      setForm((f) => {
+        const existingSet = new Set(f.submissions)
+        const toAdd = newSubs.map((s) => String(s.id)).filter((sid) => !existingSet.has(sid))
+        return { ...f, submissions: [...f.submissions, ...toAdd] }
+      })
+
+      // Add patient to the chip list
+      setSelectedPatients((prev) => [...prev, patient])
+    } catch (e) {
+      console.error(e)
+      setError('Impossible de charger les dossiers du patient.')
+    } finally {
+      setAddingPatient(false)
+      setSelectedPatientId('')
+    }
   }
 
-  const handleRemoveSubmission = (sId) => {
-    setForm(f => ({ ...f, submissions: f.submissions.filter(id => id !== sId) }))
+  /** Remove a patient chip → remove all their submissions from the form */
+  const handleRemovePatient = (patientId) => {
+    const patientSubIds = new Set(
+      allSubmissions
+        .filter((s) => String(s.patient) === String(patientId))
+        .map((s) => String(s.id)),
+    )
+    setForm((f) => ({
+      ...f,
+      submissions: f.submissions.filter((sid) => !patientSubIds.has(sid)),
+    }))
+    setSelectedPatients((prev) => prev.filter((p) => String(p.id) !== String(patientId)))
   }
 
   const handleChange = (field, value) => {
@@ -260,21 +313,24 @@ export default function MeetingForm() {
         navigate(`/meetings/${created.id}`)
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Échec de l\'enregistrement de la réunion')
+      setError(err.response?.data?.detail || "Échec de l'enregistrement de la réunion")
       console.error(err)
     } finally {
       setSaving(false)
     }
   }
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   if (loading) return <div className="loading">Chargement de la réunion...</div>
 
   return (
     <div className="form-details">
       <h2>{isEdit ? 'Modifier la réunion' : 'Nouvelle réunion'}</h2>
       {error && <div className="error">{error}</div>}
+
       <form onSubmit={handleSubmit} className="submission-form">
-        
+
+        {/* ── Meeting title ─────────────────────────────────────────────── */}
         <div className="form-group">
           <label>Titre de la réunion (Optionnel)</label>
           <input
@@ -285,72 +341,182 @@ export default function MeetingForm() {
           />
         </div>
 
-        <div className="form-section-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Sélection des dossiers (soumissions) à discuter</h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
-            <SearchableSelect 
-              label="Rechercher un patient"
-              placeholder="Tapez pour rechercher..."
-              options={patients.map(p => ({
+        {/* ── Patient selection ─────────────────────────────────────────── */}
+        <div
+          className="form-section-card"
+          style={{
+            marginBottom: '2rem',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          <h3
+            style={{
+              marginBottom: '0.5rem',
+              fontSize: '1.1rem',
+              fontWeight: '600',
+              color: '#0f172a',
+            }}
+          >
+            Patients à discuter
+          </h3>
+          <p
+            style={{
+              fontSize: '0.875rem',
+              color: '#64748b',
+              marginBottom: '1.25rem',
+            }}
+          >
+            Sélectionnez un patient pour inclure automatiquement tous ses dossiers médicaux dans
+            la réunion.
+          </p>
+
+          <SearchableSelect
+            label="Rechercher et ajouter un patient"
+            placeholder="Tapez le nom du patient..."
+            options={patients
+              .filter((p) => !selectedPatients.some((sp) => String(sp.id) === String(p.id)))
+              .map((p) => ({
                 value: p.id,
                 label: `${p.first_name} ${p.last_name}`,
-                subLabel: `DDN : ${formatDate(p.birth_date)}`
+                subLabel: `DDN : ${formatDate(p.birth_date)}`,
               }))}
-              value={selectedPatientId}
-              onChange={handlePatientChange}
-              onSearch={setPatientSearch}
-              loading={patientsLoading}
-            />
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Sélectionner le dossier</label>
-              <select
-                value={selectedSubmissionId}
-                onChange={(e) => setSelectedSubmissionId(e.target.value)}
-                disabled={!selectedPatientId}
-                style={{ height: '42px' }}
-              >
-                <option value="">{selectedPatientId ? 'Choisir une soumission...' : 'Rechercher le patient d\'abord'}</option>
-                {filteredSubmissions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name || s.form_name} ({formatDate(s.created_at)})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button 
-              type="button" 
-              onClick={handleAddSubmission}
-              className="btn-primary"
-              disabled={!selectedSubmissionId}
-              style={{ height: '42px', padding: '0 1.5rem' }}
-            >
-              Ajouter
-            </button>
-          </div>
+            value={selectedPatientId}
+            onChange={(patientId) => {
+              setSelectedPatientId(patientId)
+              if (patientId) handleAddPatient(patientId)
+            }}
+            onSearch={setPatientSearch}
+            loading={patientsLoading || addingPatient}
+          />
 
-          <div className="selected-cases-list">
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>Dossiers sélectionnés ({form.submissions.length})</label>
-            {form.submissions.length > 0 ? (
+          {/* Spinner while fetching submissions */}
+          {addingPatient && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                fontSize: '0.875rem',
+                color: '#3b82f6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '14px',
+                  height: '14px',
+                  border: '2px solid #bfdbfe',
+                  borderTopColor: '#3b82f6',
+                  borderRadius: '50%',
+                  animation: 'spin 0.6s linear infinite',
+                }}
+              />
+              Chargement des dossiers du patient…
+            </div>
+          )}
+
+          {/* Selected patients chips */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '0.75rem',
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                color: '#64748b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              Patients sélectionnés ({selectedPatients.length}) —{' '}
+              <span style={{ color: '#2563eb' }}>{form.submissions.length} dossier(s) inclus</span>
+            </label>
+
+            {selectedPatients.length > 0 ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                {form.submissions.map(sId => {
-                  const s = submissionsById.get(String(sId))
+                {selectedPatients.map((patient) => {
+                  const subCount = countSubmissionsForPatient(patient.id)
+                  const initials =
+                    `${patient.first_name?.[0] || ''}${patient.last_name?.[0] || ''}`.toUpperCase() ||
+                    '?'
+                  const displayName =
+                    patient.display_name ||
+                    `${patient.first_name} ${patient.last_name}`.trim()
+
                   return (
-                    <div key={sId} className="case-selection-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #e2e8f0', padding: '0.5rem 0.75rem', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                      <div>
-                        {s ? (
-                          <>
-                            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{s.patient_name}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{s.name || s.form_name}</div>
-                          </>
-                        ) : (
-                          <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Dossier ID: {String(sId).substring(0,8)}... (Chargement)</div>
-                        )}
+                    <div
+                      key={patient.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        background: 'white',
+                        border: '1.5px solid #bfdbfe',
+                        padding: '0.6rem 1rem 0.6rem 0.75rem',
+                        borderRadius: '10px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                        transition: 'box-shadow 0.2s',
+                      }}
+                    >
+                      {/* Avatar */}
+                      <div
+                        style={{
+                          width: '34px',
+                          height: '34px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #2563eb, #6366f1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: '700',
+                          fontSize: '0.75rem',
+                          flexShrink: 0,
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        {initials}
                       </div>
-                      <button 
-                        type="button" 
-                        onClick={() => handleRemoveSubmission(sId)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0.25rem' }}
+
+                      {/* Info */}
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: '600',
+                            fontSize: '0.9rem',
+                            color: '#1e293b',
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {displayName}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '1px' }}>
+                          {subCount > 0
+                            ? `${subCount} dossier(s)`
+                            : 'Aucun dossier'}
+                        </div>
+                      </div>
+
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePatient(patient.id)}
+                        title="Retirer ce patient et ses dossiers"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: '1.25rem',
+                          lineHeight: 1,
+                          padding: '0 0.1rem',
+                          marginLeft: '0.25rem',
+                          boxShadow: 'none',
+                        }}
                       >
                         ×
                       </button>
@@ -359,100 +525,217 @@ export default function MeetingForm() {
                 })}
               </div>
             ) : (
-              <div style={{ padding: '1rem', textAlign: 'center', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
-                Aucun dossier ajouté pour le moment.
+              <div
+                style={{
+                  padding: '1.25rem',
+                  textAlign: 'center',
+                  background: 'white',
+                  border: '1px dashed #cbd5e1',
+                  borderRadius: '8px',
+                  color: '#94a3b8',
+                  fontSize: '0.9rem',
+                }}
+              >
+                Aucun patient sélectionné. Recherchez un patient ci-dessus pour ajouter ses
+                dossiers.
               </div>
             )}
           </div>
         </div>
 
-        <div className="form-section-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Participants</h3>
+        {/* ── Participants ──────────────────────────────────────────────── */}
+        <div
+          className="form-section-card"
+          style={{
+            marginBottom: '2rem',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>
+              Participants
+            </h3>
             <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
               {selectedParticipants.length} sélectionnés • {filteredUsers.length} affichés
             </div>
           </div>
 
+          {/* Search box */}
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <input 
-              type="text" 
-              placeholder="Rechercher par nom, email ou rôle..." 
+            <input
+              type="text"
+              placeholder="Rechercher par nom, email ou rôle..."
               value={participantSearch}
               onChange={(e) => setParticipantSearch(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+              }}
             />
           </div>
 
-          <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '60px' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '0.5rem' }}>Participants sélectionnés</div>
+          {/* Selected participants chips */}
+          <div
+            style={{
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: '#fff',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              minHeight: '60px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                color: '#0f172a',
+                marginBottom: '0.5rem',
+              }}
+            >
+              Participants sélectionnés
+            </div>
             {selectedParticipants.length > 0 ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {selectedParticipants.map(p => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.85rem' }}>
+                {selectedParticipants.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                    }}
+                  >
                     <span>{formatUserName(p)}</span>
-                    <button type="button" onClick={() => handleParticipantToggle(p.id)} style={{ border: 'none', background: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
+                    <button
+                      type="button"
+                      onClick={() => handleParticipantToggle(p.id)}
+                      style={{
+                        border: 'none',
+                        background: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        boxShadow: 'none',
+                      }}
+                    >
+                      ×
+                    </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>Aucun participant sélectionné pour le moment.</div>
+              <div style={{ color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                Aucun participant sélectionné pour le moment.
+              </div>
             )}
           </div>
 
-          <div className="participants-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', overflowY: 'auto' }}>
-            {filteredUsers.map(u => (
-              <div 
-                key={u.id} 
+          {/* User list */}
+          <div
+            className="participants-list"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              maxHeight: '400px',
+              overflowY: 'auto',
+            }}
+          >
+            {filteredUsers.map((u) => (
+              <div
+                key={u.id}
                 className="participant-row"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  padding: '1rem', 
-                  background: 'white', 
-                  borderRadius: '8px', 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '1rem',
+                  background: 'white',
+                  borderRadius: '8px',
                   border: '1px solid #e2e8f0',
-                  transition: 'background 0.2s'
+                  transition: 'background 0.2s',
                 }}
               >
-                <div style={{ 
-                  width: '40px', 
-                  height: '40px', 
-                  borderRadius: '50%', 
-                  background: '#f1f5f9', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  fontWeight: 'bold',
-                  color: '#3b82f6',
-                  marginRight: '1rem',
-                  fontSize: '0.85rem',
-                  flexShrink: 0
-                }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: '#f1f5f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    color: '#3b82f6',
+                    marginRight: '1rem',
+                    fontSize: '0.85rem',
+                    flexShrink: 0,
+                  }}
+                >
                   {getInitials(u)}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', color: u.has_pending_request ? '#16a34a' : '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div
+                    style={{
+                      fontWeight: '600',
+                      color: u.has_pending_request ? '#16a34a' : '#1e293b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
                     {formatUserName(u)}
                     {u.has_pending_request && (
-                      <span style={{ fontSize: '0.65rem', background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: '4px', fontWeight: 'bold' }}>EN ATTENTE</span>
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          background: '#dcfce7',
+                          color: '#16a34a',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        EN ATTENTE
+                      </span>
                     )}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{formatUserMeta(u)}</div>
                 </div>
-                <button 
-                  type="button" 
-                  className={selectedParticipantIds.has(String(u.id)) ? 'btn-danger-outline' : 'btn-primary-outline'}
+                <button
+                  type="button"
+                  className={
+                    selectedParticipantIds.has(String(u.id))
+                      ? 'btn-danger-outline'
+                      : 'btn-primary-outline'
+                  }
                   onClick={() => handleParticipantToggle(u.id)}
-                  style={{ 
-                    padding: '0.4rem 1rem', 
-                    borderRadius: '6px', 
+                  style={{
+                    padding: '0.4rem 1rem',
+                    borderRadius: '6px',
                     fontSize: '0.85rem',
                     border: '1px solid',
                     borderColor: selectedParticipantIds.has(String(u.id)) ? '#ef4444' : '#2563eb',
                     color: selectedParticipantIds.has(String(u.id)) ? '#ef4444' : '#2563eb',
                     background: 'transparent',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                 >
                   {selectedParticipantIds.has(String(u.id)) ? 'Retirer' : 'Ajouter'}
@@ -460,23 +743,40 @@ export default function MeetingForm() {
               </div>
             ))}
             {filteredUsers.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>Aucun utilisateur trouvé.</div>
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                Aucun utilisateur trouvé.
+              </div>
             )}
           </div>
         </div>
 
+        {/* ── Date & Time ───────────────────────────────────────────────── */}
         <div className="form-group">
           <label>Date *</label>
-          <input type="date" value={form.scheduled_date} onChange={(e) => handleChange('scheduled_date', e.target.value)} required />
+          <input
+            type="date"
+            value={form.scheduled_date}
+            onChange={(e) => handleChange('scheduled_date', e.target.value)}
+            required
+          />
         </div>
         <div className="form-group">
           <label>Heure</label>
-          <input type="time" value={form.scheduled_time} onChange={(e) => handleChange('scheduled_time', e.target.value)} />
+          <input
+            type="time"
+            value={form.scheduled_time}
+            onChange={(e) => handleChange('scheduled_time', e.target.value)}
+          />
         </div>
 
+        {/* ── Actions ───────────────────────────────────────────────────── */}
         <div className="form-actions">
-          <button type="submit" disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
-          <button type="button" onClick={() => navigate(-1)}>Annuler</button>
+          <button type="submit" disabled={saving}>
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+          <button type="button" onClick={() => navigate(-1)}>
+            Annuler
+          </button>
         </div>
       </form>
     </div>
