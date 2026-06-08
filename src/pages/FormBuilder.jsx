@@ -80,12 +80,17 @@ export default function FormBuilder() {
     try {
       setSaving(true)
       let savedForm
-      if (isEdit) {
-        savedForm = await updateForm(id, form)
-      } else {
-        savedForm = await createForm(form)
+      const payload = {
+        name: form.name,
+        description: form.description,
+        service: form.service
       }
-      setForm(savedForm)
+      if (isEdit) {
+        savedForm = await updateForm(id, payload)
+      } else {
+        savedForm = await createForm(payload)
+      }
+      setForm({ ...form, id: savedForm.id })
       if (!isEdit) {
         navigate(`/forms/${savedForm.id}/edit`)
       } else {
@@ -151,13 +156,26 @@ export default function FormBuilder() {
   }
 
   const cleanFieldPayload = (field) => {
-    const { section_id, sortId, itemType, ...rest } = field;
-    return rest;
+    return {
+      section: field.section || field.section_id,
+      name: field.name,
+      field_type: field.field_type,
+      required: field.required,
+      placeholder: field.placeholder,
+      options: field.options,
+      accepted_file_types: field.accepted_file_types,
+      show_rdv: field.show_rdv,
+      order: field.order
+    };
   }
 
   const cleanSectionPayload = (section) => {
-    const { fields, children, sortId, itemType, ...rest } = section;
-    return rest;
+    return {
+      form: section.form,
+      parent: section.parent,
+      name: section.name,
+      order: section.order
+    };
   }
 
   const handleDragStart = (event) => {
@@ -183,8 +201,12 @@ export default function FormBuilder() {
       overSectionId = overField.section || overField.section_id
     } else if (String(overId).startsWith('section-')) {
       const overSectId = parseInt(overId.split('-')[1])
-      const overSection = sections.find(s => s.id === overSectId)
-      overSectionId = overSection.parent
+      if (isActiveField) {
+        overSectionId = overSectId
+      } else {
+        const overSection = sections.find(s => s.id === overSectId)
+        overSectionId = overSection ? overSection.parent : null
+      }
     } else if (String(overId).startsWith('empty-')) {
       overSectionId = parseInt(overId.split('-')[1])
     }
@@ -235,7 +257,12 @@ export default function FormBuilder() {
 
     let targetSectionId = null
     if (String(overId).startsWith('section-')) {
-      targetSectionId = sections.find(s => s.id === parseInt(overId.split('-')[1])).parent
+      const overSectId = parseInt(overId.split('-')[1])
+      if (isActiveField) {
+        targetSectionId = overSectId
+      } else {
+        targetSectionId = sections.find(s => s.id === overSectId)?.parent
+      }
     } else if (String(overId).startsWith('field-')) {
       const field = fields.find(f => f.id === parseInt(overId.split('-')[1]))
       targetSectionId = field.section || field.section_id
