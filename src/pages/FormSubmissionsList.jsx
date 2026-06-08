@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { getSubmissions } from '../api/submissionsApi'
+import { useAuth } from '../context/AuthContext'
 
 export default function FormSubmissionsList() {
   const { id } = useParams()
@@ -10,10 +11,15 @@ export default function FormSubmissionsList() {
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { user } = useAuth()
 
   useEffect(() => {
+    if (user?.role === 'COORDINATEUR') {
+      navigate('/forms', { replace: true })
+      return
+    }
     loadData()
-  }, [id])
+  }, [id, user, navigate])
 
   const loadData = async () => {
     try {

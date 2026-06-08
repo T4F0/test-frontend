@@ -4,6 +4,7 @@ import { getForm } from '../api/formsApi'
 import { getSubmission } from '../api/submissionsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { Download, FileText, ExternalLink, Video, Image, Edit } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 function formatValue(value) {
   if (value === true) return 'Oui'
@@ -78,10 +79,15 @@ export default function FormSubmissionDetail() {
   const [attachments, setAttachments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { user } = useAuth()
 
   useEffect(() => {
+    if (user?.role === 'COORDINATEUR') {
+      navigate('/forms', { replace: true })
+      return
+    }
     loadData()
-  }, [formId, submissionId])
+  }, [formId, submissionId, user, navigate])
 
   const loadData = async () => {
     try {

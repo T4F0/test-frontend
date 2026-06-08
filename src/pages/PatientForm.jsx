@@ -29,10 +29,14 @@ export default function PatientForm() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (user?.role === 'COORDINATEUR') {
+      navigate('/patients', { replace: true })
+      return
+    }
     if (isEdit) {
       loadPatient()
     }
-  }, [id])
+  }, [id, user, navigate])
 
   const loadPatient = async () => {
     try {

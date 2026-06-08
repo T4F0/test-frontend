@@ -60,12 +60,14 @@ export default function PatientsList() {
     <div className="list-container">
       <div className="list-header">
         <h1>👥 {doctorFilter ? 'Patients du médecin' : user?.role === 'ADMIN' ? 'Patients' : 'Mes Patients'}</h1>
-        <button
-          className="btn-primary"
-          onClick={() => navigate('/patients/new')}
-        >
-          + Nouveau Patient
-        </button>
+        {user?.role !== 'COORDINATEUR' && (
+          <button
+            className="btn-primary"
+            onClick={() => navigate('/patients/new')}
+          >
+            + Nouveau Patient
+          </button>
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -139,19 +141,23 @@ export default function PatientsList() {
                       >
                         Dossier patient
                       </button>
-                      <button
-                        className="btn-small btn-secondary"
-                        onClick={() => navigate(`/patients/${patient.id}/edit`)}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        className="btn-small btn-danger"
-                        onClick={() => handleDelete(patient.id)}
-                        disabled={deleting === patient.id}
-                      >
-                        {deleting === patient.id ? '...' : 'Supprimer'}
-                      </button>
+                      {user?.role !== 'COORDINATEUR' && (
+                        <>
+                          <button
+                            className="btn-small btn-secondary"
+                            onClick={() => navigate(`/patients/${patient.id}/edit`)}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            className="btn-small btn-danger"
+                            onClick={() => handleDelete(patient.id)}
+                            disabled={deleting === patient.id}
+                          >
+                            {deleting === patient.id ? '...' : 'Supprimer'}
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 )

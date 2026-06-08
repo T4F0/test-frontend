@@ -58,8 +58,12 @@ export default function FormSubmission() {
   const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
+    if (user?.role === 'COORDINATEUR') {
+      navigate('/forms', { replace: true })
+      return
+    }
     loadInitialData()
-  }, [id, submissionId])
+  }, [id, submissionId, user, navigate])
 
   const loadInitialData = async () => {
     try {
