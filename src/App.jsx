@@ -4,6 +4,8 @@ import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPasswordConfirm from './pages/ResetPasswordConfirm'
 import FormsList from './pages/FormsList'
 import FormBuilder from './pages/FormBuilder'
 import FormSubmission from './pages/FormSubmission'
@@ -53,6 +55,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordConfirm />} />
       
       <Route element={<Layout />}>
         {authenticated ? (

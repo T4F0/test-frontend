@@ -79,6 +79,9 @@ export default function Login() {
           Identifiants : Utilisez votre compte hospitalier
         </p>
         <p className="login-footer" style={{ marginTop: '0.5rem' }}>
+          <Link to="/forgot-password">Mot de passe oublié ?</Link>
+        </p>
+        <p className="login-footer" style={{ marginTop: '0.5rem' }}>
           Vous n'avez pas de compte ? <Link to="/register">Inscrivez-vous ici</Link>
         </p>
       </div>

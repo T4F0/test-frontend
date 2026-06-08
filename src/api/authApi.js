@@ -101,6 +101,28 @@ export const register = async (userData) => {
   return data
 }
 
+export const forgotPassword = async (email) => {
+  const { data } = await axios.post(`${API_BASE}/auth/forgot-password/`, { email })
+  return data
+}
+
+export const resetPasswordConfirm = async (uidb64, token, password) => {
+  const { data } = await axios.post(`${API_BASE}/auth/reset-password-confirm/`, {
+    uidb64,
+    token,
+    password
+  })
+  return data
+}
+
+export const changePassword = async (oldPassword, newPassword) => {
+  const { data } = await authAxios.post(`${API_BASE}/users/change_password/`, {
+    old_password: oldPassword,
+    new_password: newPassword
+  })
+  return data
+}
+
 export const getPendingRegistrations = async () => {
   const { data } = await authAxios.get(`${API_BASE}/users/pending_registrations/`)
   return data.results || data

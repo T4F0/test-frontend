@@ -9,6 +9,7 @@ export default function PatientsList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [deleting, setDeleting] = useState(null)
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -22,14 +23,21 @@ export default function PatientsList() {
   }
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
     loadPatients()
-  }, [search, doctorFilter])
+  }, [debouncedSearch, doctorFilter])
 
   const loadPatients = async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getPatients(1, search, doctorFilter)
+      const data = await getPatients(1, debouncedSearch, doctorFilter)
       setPatients(Array.isArray(data) ? data : [data])
     } catch (err) {
       setError('Échec du chargement des patients')
@@ -54,8 +62,6 @@ export default function PatientsList() {
     }
   }
 
-  if (loading) return <div className="loading">Chargement des patients...</div>
-
   return (
     <div className="list-container">
       <div className="list-header">
@@ -75,14 +81,16 @@ export default function PatientsList() {
       <div className="search-bar">
         <input
           type="text"
-          placeholder="Rechercher par nom du patient ou du médecin..."
+          placeholder="Rechercher par nom, code anonymisé ou médecin..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="search-input"
         />
       </div>
 
-      {patients.length === 0 ? (
+      {loading ? (
+        <div className="loading" style={{ textAlign: 'center', padding: '2rem' }}>Chargement des patients...</div>
+      ) : patients.length === 0 ? (
         <div className="empty-state">
           <p>Aucun patient trouvé</p>
         </div>
