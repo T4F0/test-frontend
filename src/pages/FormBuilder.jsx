@@ -34,7 +34,9 @@ export default function FormBuilder() {
   const [fields, setFields] = useState([])
   const [newlyCreatedSectionId, setNewlyCreatedSectionId] = useState(null)
   const [newlyCreatedFieldId, setNewlyCreatedFieldId] = useState(null)
+  const [activeId, setActiveId] = useState(null)
   const [loading, setLoading] = useState(isEdit)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [deletedSections, setDeletedSections] = useState([])
   const [deletedFields, setDeletedFields] = useState([])
@@ -331,27 +333,36 @@ export default function FormBuilder() {
     let newIndex = containerItems.findIndex(i => i.sortId === overId)
     if (newIndex === -1) newIndex = containerItems.length
 
-    if (oldIndex !== -1 || !isActiveSection) { // isActiveSection reordering is handled by SortableContext but cross-container needs careful handling
-      const reordered = arrayMove(containerItems, oldIndex !== -1 ? oldIndex : containerItems.length, newIndex)
+    if (oldIndex !== -1 || !isActiveSection) { 
+      const itemsToMove = oldIndex !== -1 
+        ? containerItems 
+        : [...containerItems, { ...activeItem, itemType: isActiveSection ? 'section' : 'field', sortId: activeId }]
+      
+      const effectiveOldIndex = oldIndex !== -1 ? oldIndex : itemsToMove.length - 1
+      const reordered = arrayMove(itemsToMove, effectiveOldIndex, newIndex)
       const updated = reordered.map((item, index) => ({ ...item, order: index }))
-      
-      const updatedSections = updated.filter(i => i.itemType === 'section')
-      const updatedFields = updated.filter(i => i.itemType === 'field')
 
-      if (isActiveSection) {
-        const activeIndex = prevSections.findIndex(s => s.id === activeItem.id)
-        if (activeIndex !== -1) {
-          prevSections[activeIndex] = { ...prevSections[activeIndex], parent: targetSectionId, order: newIndex }
-        }
-      } else {
-        const activeIndex = prevFields.findIndex(f => f.id === activeItem.id)
-        if (activeIndex !== -1) {
-          prevFields[activeIndex] = { ...prevFields[activeIndex], section: targetSectionId, order: newIndex }
-        }
-      }
-      
-      setSections(prevSections.sort((a,b) => a.order - b.order))
-      setFields(prevFields.sort((a,b) => a.order - b.order))
+      setSections(prev => {
+        const next = [...prev]
+        updated.forEach(u => {
+          if (u.itemType === 'section') {
+            const idx = next.findIndex(s => s.id === u.id)
+            if (idx !== -1) next[idx] = { ...next[idx], order: u.order, parent: targetSectionId }
+          }
+        })
+        return next.sort((a, b) => a.order - b.order)
+      })
+
+      setFields(prev => {
+        const next = [...prev]
+        updated.forEach(u => {
+          if (u.itemType === 'field') {
+            const idx = next.findIndex(f => f.id === u.id)
+            if (idx !== -1) next[idx] = { ...next[idx], order: u.order, section: targetSectionId }
+          }
+        })
+        return next.sort((a, b) => a.order - b.order)
+      })
     }
   }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient /*, getShareableDoctors, sharePatient*/ } from '../api/patientsApi'
-import { getSubmissionsByPatient, updateSubmission } from '../api/submissionsApi'
+import { getSubmissionsByPatient, updateSubmission, deleteSubmission } from '../api/submissionsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
 
@@ -137,6 +137,17 @@ export default function PatientDetail() {
       loadSubmissions()
     } catch (err) {
       alert('Échec de la mise à jour du statut')
+      console.error(err)
+    }
+  }
+
+  const handleDeleteSubmission = async (submissionId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce dossier RCP ? Cette action est irréversible.')) return
+    try {
+      await deleteSubmission(submissionId)
+      loadSubmissions()
+    } catch (err) {
+      alert('Échec de la suppression du dossier')
       console.error(err)
     }
   }
@@ -456,15 +467,15 @@ export default function PatientDetail() {
                             >
                               📎 Fichiers
                             </button>
-                            {/* 
-                            <button
-                              className="btn-small btn-outline"
-                              onClick={() => navigate(`/meetings?submission=${sub.id}`)}
-                              title="Voir les réunions"
-                            >
-                              📅 RCP
-                            </button>
-                            */}
+                            {(user?.role === 'ADMIN' || user?.role === 'MEDECIN') && (
+                              <button
+                                className="btn-small btn-danger"
+                                onClick={() => handleDeleteSubmission(sub.id)}
+                                title="Supprimer le dossier"
+                              >
+                                🗑️ Supprimer
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <span className="text-muted">—</span>
