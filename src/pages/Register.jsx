@@ -12,7 +12,7 @@ export default function Register() {
     last_name: '',
     password: '',
     hospital: '',
-    phone_number: '',
+    phone_number: '+213',
     service: ''
   })
   const [services, setServices] = useState([])
@@ -35,6 +35,15 @@ export default function Register() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handlePhoneChange = (e) => {
+    const val = e.target.value
+    // Always enforce +213 prefix — cannot be deleted
+    const safe = !val.startsWith('+213')
+      ? ('+213'.startsWith(val) ? '+213' : '+213' + val.replace(/^\+?2?1?3?/, ''))
+      : val
+    setFormData({ ...formData, phone_number: safe })
   }
 
   const handleSubmit = async (e) => {
@@ -166,9 +175,9 @@ export default function Register() {
             <input
               type="tel"
               name="phone_number"
-              value={formData.phone_number}
-              onChange={handleChange}
-              placeholder="Ex: +213612345678"
+              value={formData.phone_number || '+213'}
+              onChange={handlePhoneChange}
+              placeholder="+213612345678"
             />
           </div>
 

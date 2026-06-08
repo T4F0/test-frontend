@@ -23,7 +23,7 @@ export default function PatientForm() {
     birth_date: '',
     gender: 'O',
     anonymized_code: '',
-    phone_number: ''
+    phone_number: '+213'
   })
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -39,10 +39,20 @@ export default function PatientForm() {
     }
   }, [id, user, navigate])
 
+  const handlePhoneChange = (e) => {
+    const val = e.target.value
+    // Always enforce +213 prefix — cannot be deleted
+    const safe = !val.startsWith('+213')
+      ? ('+213'.startsWith(val) ? '+213' : '+213' + val.replace(/^\+?2?1?3?/, ''))
+      : val
+    setPatient(prev => ({ ...prev, phone_number: safe }))
+  }
+
   const loadPatient = async () => {
     try {
       const data = await getPatient(id)
-      setPatient(data)
+      // Ensure loaded phone_number keeps the prefix
+      setPatient({ ...data, phone_number: data.phone_number || '+213' })
     } catch (err) {
       setError('Échec du chargement du patient')
       console.error(err)
@@ -173,9 +183,9 @@ export default function PatientForm() {
           <label>Numéro de téléphone</label>
           <input
             type="tel"
-            value={patient.phone_number || ''}
-            onChange={(e) => setPatient({ ...patient, phone_number: e.target.value })}
-            placeholder="Ex: +213612345678"
+            value={patient.phone_number || '+213'}
+            onChange={handlePhoneChange}
+            placeholder="+213612345678"
           />
         </div>
 

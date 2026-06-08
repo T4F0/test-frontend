@@ -82,13 +82,18 @@ export const getUsers = async () => {
   return data.results || data
 }
 
+export const getUser = async (id) => {
+  const { data } = await authAxios.get(`${API_BASE}/users/${id}/`)
+  return data
+}
+
 export const createUser = async (userData) => {
   const { data } = await authAxios.post(`${API_BASE}/users/`, userData)
   return data
 }
 
 export const updateUser = async (id, userData) => {
-  const { data } = await authAxios.put(`${API_BASE}/users/${id}/`, userData)
+  const { data } = await authAxios.patch(`${API_BASE}/users/${id}/`, userData)
   return data
 }
 

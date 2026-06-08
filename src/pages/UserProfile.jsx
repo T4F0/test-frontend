@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getUsers, getServices, updateUser, changePassword } from '../api/authApi'
+import { getCurrentUser, getUser, getServices, updateUser, changePassword } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 import { validatePhoneNumber } from '../lib/validators'
@@ -31,7 +31,8 @@ export default function UserProfile() {
   const navigate = useNavigate()
   const { user: currentUser, setUser: setAuthUser } = useAuth()
 
-  const isOwnProfile = currentUser?.id === id
+  // Use loose equality: URL param `id` is always a string, currentUser.id may be a UUID string or number
+  const isOwnProfile = currentUser?.id != null && String(currentUser.id) === String(id)
   const canAdminEdit = ['ADMIN', 'COORDINATEUR'].includes(currentUser?.role)
 
   /* ── Data ─────────────────────────────────────────────── */
@@ -64,10 +65,11 @@ export default function UserProfile() {
     const fetchUser = async () => {
       try {
         setLoading(true)
-        const users = await getUsers()
-        const found = Array.isArray(users)
-          ? users.find(u => u.id === id)
-          : users.find(u => u.id === id)
+
+        // When viewing own profile, use /users/me/ to bypass queryset filtering
+        // that would cause 403 for Medecin users who may not have a service.
+        const isSelf = currentUser?.id != null && String(currentUser.id) === String(id)
+        const found = isSelf ? await getCurrentUser() : await getUser(id)
 
         if (found) {
           setUser(found)
@@ -75,7 +77,7 @@ export default function UserProfile() {
             first_name:   found.first_name  || '',
             last_name:    found.last_name   || '',
             email:        found.email       || '',
-            phone_number: found.phone_number|| '',
+            phone_number: found.phone_number|| '+213',
             hospital:     found.hospital    || '',
           })
           if (found.service) {
@@ -97,13 +99,16 @@ export default function UserProfile() {
       }
     }
     fetchUser()
-  }, [id])
+  }, [id, currentUser?.id])
 
   /* ── Save info ────────────────────────────────────────── */
   const handleSaveInfo = async (e) => {
     e.preventDefault()
 
-    if (editData.phone_number && !validatePhoneNumber(editData.phone_number)) {
+    const payload = { ...editData }
+    if (payload.phone_number === '+213' || !payload.phone_number) {
+      payload.phone_number = ''
+    } else if (!validatePhoneNumber(payload.phone_number)) {
       setSaveError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
       return
     }
@@ -112,7 +117,7 @@ export default function UserProfile() {
       setSaveLoading(true)
       setSaveError(null)
       setSaveSuccess(null)
-      const updated = await updateUser(id, editData)
+      const updated = await updateUser(id, payload)
       setUser(prev => ({ ...prev, ...updated }))
       if (isOwnProfile) setAuthUser({ ...currentUser, ...updated })
       setSaveSuccess('Profil mis à jour avec succès.')
@@ -140,7 +145,7 @@ export default function UserProfile() {
       first_name:   user.first_name   || '',
       last_name:    user.last_name    || '',
       email:        user.email        || '',
-      phone_number: user.phone_number || '',
+      phone_number: user.phone_number || '+213',
       hospital:     user.hospital     || '',
     })
   }
@@ -379,11 +384,17 @@ export default function UserProfile() {
                       required
                     />
                   </FormField>
-                  <FormField label="Numéro de téléphone" icon={<Phone size={16} />}>
+                   <FormField label="Numéro de téléphone" icon={<Phone size={16} />}>
                     <input
                       type="tel"
-                      value={editData.phone_number}
-                      onChange={e => setEditData(p => ({ ...p, phone_number: e.target.value }))}
+                      value={editData.phone_number || '+213'}
+                      onChange={e => {
+                        const val = e.target.value
+                        setEditData(p => ({
+                          ...p,
+                          phone_number: !val.startsWith('+213') ? ('+213'.startsWith(val) ? '+213' : '+213' + val.replace(/^\+?2?1?3?/, '')) : val
+                        }))
+                      }}
                       placeholder="+213612345678"
                       style={inputStyle}
                     />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { createUser, updateUser, getUsers, getServices } from '../api/authApi'
+import { createUser, updateUser, getUsers, getUser, getServices } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 import { validatePhoneNumber } from '../lib/validators'
@@ -31,7 +31,7 @@ export default function UserForm() {
     password: '',
     role: 'MEDECIN',
     hospital: '',
-    phone_number: '',
+    phone_number: '+213',
     service: ''
   })
   const [services, setServices] = useState([])
@@ -61,11 +61,11 @@ export default function UserForm() {
 
   const loadUser = async () => {
     try {
-      const users = await getUsers()
-      const foundUser = Array.isArray(users) ? users.find(u => u.id === id) : users.find(u => u.id === id)
+      const foundUser = await getUser(id)
       if (foundUser) {
         setUser({
           ...foundUser,
+          phone_number: foundUser.phone_number || '+213',
           service: foundUser.service || ''
         })
       }
@@ -80,7 +80,10 @@ export default function UserForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (user.phone_number && !validatePhoneNumber(user.phone_number)) {
+    const payload = { ...user }
+    if (payload.phone_number === '+213' || !payload.phone_number) {
+      payload.phone_number = ''
+    } else if (!validatePhoneNumber(payload.phone_number)) {
       setError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
       return
     }
@@ -88,9 +91,6 @@ export default function UserForm() {
     try {
       setSaving(true)
       setError(null)
-
-      // Copy user data to avoid modifying state directly
-      const payload = { ...user }
 
       if (isEdit) {
         if (!payload.password) {
@@ -233,9 +233,15 @@ export default function UserForm() {
           <label>Numéro de téléphone</label>
           <input
             type="tel"
-            value={user.phone_number || ''}
-            onChange={(e) => setUser({ ...user, phone_number: e.target.value })}
-            placeholder="Ex: +213612345678"
+            value={user.phone_number || '+213'}
+            onChange={(e) => {
+              const val = e.target.value
+              const safe = !val.startsWith('+213')
+                ? ('+213'.startsWith(val) ? '+213' : '+213' + val.replace(/^\+?2?1?3?/, ''))
+                : val
+              setUser({ ...user, phone_number: safe })
+            }}
+            placeholder="+213612345678"
           />
         </div>
 
