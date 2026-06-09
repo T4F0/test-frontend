@@ -243,7 +243,7 @@ export default function UserProfile() {
             }}>
               {ROLE_LABELS[user.role] || user.role}
             </span>
-            {serviceName && (
+            {serviceName && currentUser?.is_global_admin && (
               <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <Building2 size={15} /> {serviceName}
               </span>
@@ -444,7 +444,7 @@ export default function UserProfile() {
                 <InfoRow icon={<Shield size={17} />}      label="Nom d'utilisateur"  value={user.username} readonly />
                 <InfoRow icon={<Phone size={17} />}       label="Téléphone"          value={user.phone_number} />
                 <InfoRow icon={<MapPin size={17} />}      label="Hôpital / Wilaya"   value={user.hospital} />
-                {serviceName && (
+                {serviceName && currentUser?.is_global_admin && (
                   <InfoRow icon={<Building2 size={17} />} label="Service"            value={serviceName} readonly />
                 )}
                 <InfoRow icon={<Activity size={17} />} label="Rôle" readonly
