@@ -31,6 +31,10 @@ import VideoConferenceRoom from './pages/VideoConferenceRoom'
 function HomeRedirect() {
   const { user } = useAuth()
   
+  if (user?.role === 'MEDECIN_EXPERT') {
+    return <Navigate to="/meetings" replace />
+  }
+  
   if (user?.role === 'MEDECIN') {
     return <Navigate to="/patients" replace />
   }
@@ -74,6 +78,7 @@ function AppRoutes() {
             <Route path="/users/:id" element={<UserProfile />} />
             <Route path="/users/:id/edit" element={<UserForm />} />
             <Route path="/patients" element={<PatientsList />} />
+
             <Route path="/patients/new" element={<PatientForm />} />
             <Route path="/patients/:id" element={<PatientDetail />} />
             <Route path="/patients/:id/edit" element={<PatientForm />} />

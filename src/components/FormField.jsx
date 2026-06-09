@@ -14,7 +14,7 @@ export default function FormField({ field, value, onChange }) {
         {field.required && <span className="required">*</span>}
         {field.show_rdv && (
           <span 
-            title="Champ RDV"
+            title="Champ Report"
             style={{ 
               marginLeft: '8px', 
               fontSize: '0.75em', 
@@ -25,7 +25,7 @@ export default function FormField({ field, value, onChange }) {
               fontWeight: '500',
               border: '1px solid #bae6fd'
             }}>
-            📅 Champ RDV
+            📅 Champ Report
           </span>
         )}
       </label>

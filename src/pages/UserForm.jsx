@@ -7,6 +7,7 @@ import { validatePhoneNumber } from '../lib/validators'
 
 const ROLE_CHOICES = [
   { value: 'MEDECIN', label: 'Médecin traitant' },
+  { value: 'MEDECIN_EXPERT', label: 'Médecin expert' },
   { value: 'COORDINATEUR', label: 'Coordinateur' },
   { value: 'ADMIN', label: 'Administrateur' }
 ]
@@ -18,7 +19,7 @@ export default function UserForm() {
   const isEdit = !!id
 
   useEffect(() => {
-    if (currentUser?.role === 'MEDECIN') {
+    if (['MEDECIN', 'MEDECIN_EXPERT'].includes(currentUser?.role)) {
       navigate('/')
     }
   }, [currentUser, navigate])
@@ -189,7 +190,10 @@ export default function UserForm() {
               value={user.role}
               onChange={(e) => setUser({ ...user, role: e.target.value })}
             >
-              {ROLE_CHOICES.map(role => (
+              {ROLE_CHOICES.filter(role => 
+                currentUser?.role === 'ADMIN' || 
+                (currentUser?.role === 'COORDINATEUR' && ['MEDECIN', 'MEDECIN_EXPERT', 'COORDINATEUR'].includes(role.value))
+              ).map(role => (
                 <option key={role.value} value={role.value}>
                   {role.label}
                 </option>

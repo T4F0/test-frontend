@@ -305,7 +305,7 @@ export default function MeetingDetail() {
               {creatingConference ? 'Ouverture...' : 'Rejoindre la visio'}
             </button>
           )}
-          {user?.role !== 'MEDECIN' && (
+          {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
             <>
               <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Modifier</button>
               <button className="btn-danger" onClick={handleDelete}>Supprimer</button>

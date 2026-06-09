@@ -90,7 +90,7 @@ export default function MeetingsList() {
             <option value="LIVE">En cours</option>
             <option value="FINISHED">Terminée</option>
           </select>
-          {user?.role !== 'MEDECIN' && (
+          {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
             <button className="btn-primary" onClick={() => navigate('/meetings/new')}>
               + Nouvelle réunion
             </button>
@@ -147,7 +147,7 @@ export default function MeetingsList() {
                     {!m.participants?.some(pId => (pId.id || pId) === user?.id) && (
                       <button className="btn-small btn-info" onClick={() => handleJoin(m.id)}>S'inscrire</button>
                     )}
-                    {user?.role !== 'MEDECIN' && (
+                    {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
                       <>
                         <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
                         <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>

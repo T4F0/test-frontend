@@ -7,6 +7,7 @@ import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import SearchableSelect from '../components/SearchableSelect'
 import { formatDate } from '../lib/dateUtils'
+import { Users } from 'lucide-react'
 
 export default function MeetingForm() {
   const { id } = useParams()
@@ -17,7 +18,7 @@ export default function MeetingForm() {
 
   useEffect(() => {
     // Restrict access for Medecins - they cannot create or edit meetings
-    if (user && user.role === 'MEDECIN') {
+    if (user && ['MEDECIN', 'MEDECIN_EXPERT'].includes(user.role)) {
       navigate('/meetings')
     }
   }, [user, navigate])
@@ -120,11 +121,28 @@ export default function MeetingForm() {
     return users.filter(
       (u) =>
         u.id !== user?.id &&
+        u.role !== 'MEDECIN_EXPERT' &&
         (formatUserName(u).toLowerCase().includes(q) ||
           u.email?.toLowerCase().includes(q) ||
           u.role?.toLowerCase().includes(q)),
     )
   }, [users, participantSearch, user])
+
+  const expertUsers = useMemo(() => users.filter(u => u.role === 'MEDECIN_EXPERT'), [users])
+  const allExpertsSelected = expertUsers.length > 0 && expertUsers.every(u => selectedParticipantIds.has(String(u.id)))
+
+  const handleToggleAllExperts = () => {
+    if (expertUsers.length === 0) return
+    
+    if (allExpertsSelected) {
+      const expertIds = new Set(expertUsers.map(u => String(u.id)))
+      setForm(f => ({ ...f, participants: f.participants.filter(pId => !expertIds.has(pId)) }))
+    } else {
+      const newParticipants = new Set(form.participants)
+      expertUsers.forEach(u => newParticipants.add(String(u.id)))
+      setForm(f => ({ ...f, participants: Array.from(newParticipants) }))
+    }
+  }
 
   // ─── API calls ────────────────────────────────────────────────────────────
   const loadUsers = async () => {
@@ -659,6 +677,72 @@ export default function MeetingForm() {
               overflowY: 'auto',
             }}
           >
+            {expertUsers.length > 0 && !participantSearch && (
+              <div
+                className="participant-row"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '1rem',
+                  background: '#faf5ff',
+                  borderRadius: '8px',
+                  border: '1px solid #d8b4fe',
+                  transition: 'background 0.2s',
+                  marginBottom: '0.5rem'
+                }}
+              >
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: '#e9d5ff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#7c3aed',
+                    marginRight: '1rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Users size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontWeight: '600',
+                      color: '#6d28d9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    Tous les médecins experts
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#7c3aed' }}>
+                    Ajouter les {expertUsers.length} médecins experts d'un seul clic
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={expertUsers.length === 0}
+                  className={allExpertsSelected ? 'btn-danger-outline' : 'btn-primary-outline'}
+                  onClick={handleToggleAllExperts}
+                  style={{
+                    padding: '0.4rem 1rem',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    border: '1px solid',
+                    borderColor: expertUsers.length === 0 ? '#cbd5e1' : (allExpertsSelected ? '#ef4444' : '#7c3aed'),
+                    color: expertUsers.length === 0 ? '#94a3b8' : (allExpertsSelected ? '#ef4444' : '#7c3aed'),
+                    background: 'transparent',
+                    cursor: expertUsers.length === 0 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {expertUsers.length === 0 ? 'Aucun expert' : (allExpertsSelected ? 'Retirer tous' : 'Ajouter tous')}
+                </button>
+              </div>
+            )}
             {filteredUsers.map((u) => (
               <div
                 key={u.id}

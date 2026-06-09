@@ -19,6 +19,7 @@ import MeetingTab from '../components/MeetingTab'
 
 const ROLE_LABELS = {
   'MEDECIN': 'Médecin traitant',
+  'MEDECIN_EXPERT': 'Médecin expert',
   'COORDINATEUR': 'Coordinateur',
   'ADMIN': 'Administrateur'
 }
@@ -175,7 +176,7 @@ export default function UserManagement() {
   const activeUsers = users.filter(u => 
     u.approval_status !== 'PENDING' && 
     u.approval_status !== 'REJECTED' &&
-    (!isCoordinateur || u.role === 'MEDECIN')
+    (!isCoordinateur || ['MEDECIN', 'MEDECIN_EXPERT'].includes(u.role))
   )
   
   const searchLower = search.toLowerCase()

@@ -174,32 +174,33 @@ export default function FormBuilder() {
   }
 
   const handleDeleteSection = (sectionId) => {
-    if (typeof sectionId === 'number') {
-      setDeletedSections(prev => [...prev, sectionId])
-    }
-    setSections(prev => prev.filter(s => s.id !== sectionId))
-    
-    // Also remove any child sections or fields visually
-    // Note: The backend sync will handle cascading deletes, but we must update the UI state
-    const removeChildren = (parentId) => {
-      const children = sections.filter(s => s.parent === parentId)
+    let sectionIdsToRemove = [sectionId];
+    let fieldIdsToRemove = [];
+
+    const getChildren = (parentId) => {
+      const children = sections.filter(s => s.parent === parentId);
       children.forEach(c => {
-        if (typeof c.id === 'number') {
-          setDeletedSections(prev => [...prev, c.id])
-        }
-        removeChildren(c.id)
-      })
-      setSections(prev => prev.filter(s => s.parent !== parentId))
-      
-      const relatedFields = fields.filter(f => f.section === parentId || f.section_id === parentId)
-      relatedFields.forEach(f => {
-        if (typeof f.id === 'number') {
-          setDeletedFields(prev => [...prev, f.id])
-        }
-      })
-      setFields(prev => prev.filter(f => f.section !== parentId && f.section_id !== parentId))
+        sectionIdsToRemove.push(c.id);
+        getChildren(c.id);
+      });
+      const relatedFields = fields.filter(f => f.section === parentId || f.section_id === parentId);
+      relatedFields.forEach(f => fieldIdsToRemove.push(f.id));
+    };
+
+    getChildren(sectionId);
+
+    const sectionIdsForBackend = sectionIdsToRemove.filter(id => typeof id === 'number');
+    const fieldIdsForBackend = fieldIdsToRemove.filter(id => typeof id === 'number');
+
+    if (sectionIdsForBackend.length > 0) {
+      setDeletedSections(prev => [...prev, ...sectionIdsForBackend]);
     }
-    removeChildren(sectionId)
+    if (fieldIdsForBackend.length > 0) {
+      setDeletedFields(prev => [...prev, ...fieldIdsForBackend]);
+    }
+
+    setSections(prev => prev.filter(s => !sectionIdsToRemove.includes(s.id)));
+    setFields(prev => prev.filter(f => !fieldIdsToRemove.includes(f.id)));
   }
 
   const handleDeleteField = (fieldId) => {
@@ -222,6 +223,14 @@ export default function FormBuilder() {
     setActiveId(event.active.id)
   }
 
+  const extractId = (strId) => {
+    if (typeof strId !== 'string') return strId;
+    const parts = strId.split('-');
+    const rawId = parts.slice(1).join('-');
+    const numId = parseInt(rawId, 10);
+    return isNaN(numId) || rawId.startsWith('temp-') ? rawId : numId;
+  };
+
   const handleDragOver = (event) => {
     const { active, over } = event
     if (!over) return
@@ -236,11 +245,11 @@ export default function FormBuilder() {
     
     let overSectionId = null
     if (String(overId).startsWith('field-')) {
-      const overFieldId = parseInt(overId.split('-')[1])
+      const overFieldId = extractId(overId)
       const overField = fields.find(f => f.id === overFieldId)
-      overSectionId = overField.section || overField.section_id
+      overSectionId = overField ? (overField.section || overField.section_id) : null
     } else if (String(overId).startsWith('section-')) {
-      const overSectId = parseInt(overId.split('-')[1])
+      const overSectId = extractId(overId)
       if (isActiveField) {
         overSectionId = overSectId
       } else {
@@ -248,11 +257,11 @@ export default function FormBuilder() {
         overSectionId = overSection ? overSection.parent : null
       }
     } else if (String(overId).startsWith('empty-')) {
-      overSectionId = parseInt(overId.split('-')[1])
+      overSectionId = extractId(overId)
     }
 
     if (isActiveField) {
-      const activeFieldId = parseInt(activeId.split('-')[1])
+      const activeFieldId = extractId(activeId)
       if (overSectionId !== null) {
         setFields(prev => {
           const newFields = [...prev]
@@ -264,7 +273,7 @@ export default function FormBuilder() {
         })
       }
     } else if (isActiveSection) {
-      const activeSectionId = parseInt(activeId.split('-')[1])
+      const activeSectionId = extractId(activeId)
       if (overSectionId !== undefined) { // parent can be null
         if (isDescendant(activeSectionId, overSectionId)) return;
 
@@ -285,7 +294,6 @@ export default function FormBuilder() {
     setActiveId(null)
 
     if (!over) {
-        loadForm();
         return;
     }
 
@@ -297,35 +305,33 @@ export default function FormBuilder() {
 
     let targetSectionId = null
     if (String(overId).startsWith('section-')) {
-      const overSectId = parseInt(overId.split('-')[1])
+      const overSectId = extractId(overId)
       if (isActiveField) {
         targetSectionId = overSectId
       } else {
         targetSectionId = sections.find(s => s.id === overSectId)?.parent
       }
     } else if (String(overId).startsWith('field-')) {
-      const field = fields.find(f => f.id === parseInt(overId.split('-')[1]))
-      targetSectionId = field.section || field.section_id
+      const field = fields.find(f => f.id === extractId(overId))
+      targetSectionId = field ? (field.section || field.section_id) : null
     } else if (String(overId).startsWith('empty-')) {
-      targetSectionId = parseInt(overId.split('-')[1])
+      targetSectionId = extractId(overId)
     }
 
-    if (isActiveField && targetSectionId === null) {
-        loadForm();
+    if (isActiveField && targetSectionId == null) {
         return;
     }
 
     const activeItem = isActiveSection 
-        ? sections.find(s => s.id === parseInt(activeId.split('-')[1]))
-        : fields.find(f => f.id === parseInt(activeId.split('-')[1]));
+        ? sections.find(s => s.id === extractId(activeId))
+        : fields.find(f => f.id === extractId(activeId));
 
     if (!activeItem) {
-        loadForm();
         return;
     }
 
     const containerItems = [
-      ...sections.filter(s => s.parent === targetSectionId).map(s => ({ ...s, itemType: 'section', sortId: `section-${s.id}` })),
+      ...sections.filter(s => s.parent === targetSectionId || (s.parent == null && targetSectionId == null)).map(s => ({ ...s, itemType: 'section', sortId: `section-${s.id}` })),
       ...fields.filter(f => (f.section === targetSectionId || f.section_id === targetSectionId)).map(f => ({ ...f, itemType: 'field', sortId: `field-${f.id}` }))
     ].sort((a,b) => a.order - b.order)
 

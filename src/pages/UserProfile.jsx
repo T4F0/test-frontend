@@ -11,14 +11,16 @@ import {
 
 const ROLE_LABELS = {
   MEDECIN: 'Médecin traitant',
+  MEDECIN_EXPERT: 'Médecin expert',
   COORDINATEUR: 'Coordinateur',
   ADMIN: 'Administrateur'
 }
 
 const ROLE_COLORS = {
-  MEDECIN:      { bg: '#ecfdf5', color: '#059669', border: '#6ee7b7' },
-  COORDINATEUR: { bg: '#fffbeb', color: '#d97706', border: '#fcd34d' },
-  ADMIN:        { bg: '#eef2ff', color: '#4f46e5', border: '#a5b4fc' }
+  MEDECIN:        { bg: '#ecfdf5', color: '#059669', border: '#6ee7b7' },
+  MEDECIN_EXPERT: { bg: '#f5f3ff', color: '#7c3aed', border: '#a78bfa' },
+  COORDINATEUR:   { bg: '#fffbeb', color: '#d97706', border: '#fcd34d' },
+  ADMIN:          { bg: '#eef2ff', color: '#4f46e5', border: '#a5b4fc' }
 }
 
 const TABS = [

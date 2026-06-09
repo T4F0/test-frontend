@@ -27,7 +27,7 @@ export default function Layout() {
 
   useEffect(() => {
     let interval;
-    if (authenticated && ['ADMIN', 'COORDINATEUR', 'MEDECIN'].includes(user?.role)) {
+    if (authenticated && ['ADMIN', 'COORDINATEUR', 'MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role)) {
       const loadNotifications = async () => {
         try {
           const data = await getNotifications()
@@ -82,9 +82,9 @@ export default function Layout() {
     navigate('/login')
   }
 
-  const patientsLabel = user?.role === 'ADMIN' ? 'Patients' : 'Mes Patients'
+  const patientsLabel = ['ADMIN', 'COORDINATEUR'].includes(user?.role) ? 'Patients' : 'Mes Patients'
 
-  const homePath = !authenticated ? '/login' : (user?.role === 'MEDECIN' ? '/patients' : '/users')
+  const homePath = !authenticated ? '/login' : '/'
 
   const navLinks = [
     { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN', 'COORDINATEUR'] },
@@ -139,7 +139,7 @@ export default function Layout() {
                 </div>
                 
                 <div className="navbar-controls" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  {['ADMIN', 'COORDINATEUR', 'MEDECIN'].includes(user?.role) && (
+                  {['ADMIN', 'COORDINATEUR', 'MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
                     <div className="notifications-wrapper" ref={notifRef} style={{ position: 'relative' }}>
                       <button 
                         onClick={() => setShowNotifications(!showNotifications)}
@@ -238,7 +238,7 @@ export default function Layout() {
                           )}
                         </span>
                         <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.72rem', padding: '2px 8px', marginTop: '2px', fontWeight: 600 }}>
-                          {user?.role === 'MEDECIN' ? 'Médecin traitant' : user?.role === 'COORDINATEUR' ? 'Coordinateur' : user?.role === 'ADMIN' ? 'Administrateur' : user?.role}
+                          {user?.role === 'MEDECIN' ? 'Médecin traitant' : user?.role === 'MEDECIN_EXPERT' ? 'Médecin expert' : user?.role === 'COORDINATEUR' ? 'Coordinateur' : user?.role === 'ADMIN' ? 'Administrateur' : user?.role}
                         </span>
                       </div>
                     </Link>

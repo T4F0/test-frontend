@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getForm } from '../api/formsApi'
-import { submitForm } from '../api/submissionsApi'
+import { submitForm, getSubmission, updateSubmission } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
 import { uploadAttachment } from '../api/attachmentsApi'
 import { formatDate } from '../lib/dateUtils'
@@ -93,7 +93,6 @@ export default function FormSubmission() {
       // If editing, load submission data
       if (submissionId) {
         setIsEditing(true)
-        const { getSubmission } = await import('../api/submissionsApi')
         const submission = await getSubmission(submissionId)
         setSelectedPatient(submission.patient)
         setFormData({ ...initialValues, ...submission.data })
@@ -174,8 +173,6 @@ export default function FormSubmission() {
 
       // 2. Submit form JSON
       let submission
-      const { submitForm, updateSubmission } = await import('../api/submissionsApi')
-      
       if (isEditing) {
         submission = await updateSubmission(submissionId, {
           data: jsonFormData,

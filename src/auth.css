@@ -227,6 +227,17 @@
   color: white;
 }
 
+.badge-medecin_expert {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #8b5cf6;
+}
+
+.badge-medecin_expert:hover {
+  background: #8b5cf6;
+  color: white;
+}
+
 .badge-coordinateur {
   background: #fffbeb;
   color: #d97706;

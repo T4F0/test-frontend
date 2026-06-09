@@ -21,7 +21,7 @@ export default function Login() {
       // Reload user data
       const userData = await getCurrentUser()
       setUser(userData)
-      navigate('/patients')
+      navigate('/')
     } catch (err) {
       setError(err.response?.data?.detail || 'Échec de la connexion')
       console.error(err)
