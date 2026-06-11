@@ -62,37 +62,39 @@ export default function FormsList() {
       {forms.length === 0 ? (
         <p className="empty">Aucun formulaire. <Link to="/forms/new">Créez-en un</Link></p>
       ) : (
-        <table className="forms-table">
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Description</th>
-              <th>Créé</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {forms.map(form => (
-              <tr key={form.id}>
-                <td>{form.name}</td>
-                <td>{form.description}</td>
-                <td>{formatDate(form.created_at)}</td>
-                <td className="actions">
-                  {user?.role !== 'COORDINATEUR' && (
-                    <>
-                      <button onClick={() => navigate(`/forms/${form.id}/submit`)}>Remplir</button>
-                      <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>
-                    </>
-                  )}
-                  <button onClick={() => navigate(`/forms/${form.id}/edit`)}>Modifier</button>
-                  {isAdmin && (
-                    <button onClick={() => handleDelete(form.id)} className="btn-danger">Supprimer</button>
-                  )}
-                </td>
+        <div className="table-responsive-wrapper">
+          <table className="forms-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Description</th>
+                <th>Créé</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {forms.map(form => (
+                <tr key={form.id}>
+                  <td>{form.name}</td>
+                  <td>{form.description}</td>
+                  <td>{formatDate(form.created_at)}</td>
+                  <td className="actions">
+                    {user?.role !== 'COORDINATEUR' && (
+                      <>
+                        <button onClick={() => navigate(`/forms/${form.id}/submit`)}>Remplir</button>
+                        <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>
+                      </>
+                    )}
+                    <button onClick={() => navigate(`/forms/${form.id}/edit`)}>Modifier</button>
+                    {isAdmin && (
+                      <button onClick={() => handleDelete(form.id)} className="btn-danger">Supprimer</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

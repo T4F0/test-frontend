@@ -102,7 +102,7 @@ export default function AuditLogsList() {
       {filteredLogs.length === 0 ? (
         <p className="empty">Aucun journal d'audit trouvé.</p>
       ) : (
-        <div className="table-wrapper">
+        <div className="table-responsive-wrapper">
           <table className="forms-table">
             <thead>
               <tr>

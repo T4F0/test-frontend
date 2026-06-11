@@ -6,6 +6,8 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPasswordConfirm from './pages/ResetPasswordConfirm'
+import SecureAccount from './pages/SecureAccount'
+import RemoveAccount from './pages/RemoveAccount'
 import FormsList from './pages/FormsList'
 import FormBuilder from './pages/FormBuilder'
 import FormSubmission from './pages/FormSubmission'
@@ -61,6 +63,8 @@ function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordConfirm />} />
+      <Route path="/secure-account/:uidb64/:token" element={<SecureAccount />} />
+      <Route path="/remove-account/:uidb64/:token" element={<RemoveAccount />} />
       
       <Route element={<Layout />}>
         {authenticated ? (

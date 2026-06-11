@@ -178,40 +178,42 @@ export default function AttachmentsList() {
       ) : attachments.length === 0 ? (
         <p className="empty">Aucune pièce jointe pour ce dossier.</p>
       ) : (
-        <table className="forms-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Nom du fichier</th>
-              <th>Dossier RCP</th>
-              <th>Téléchargé par</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attachments.map((a) => (
-              <tr key={a.id}>
-                <td><span className={`file-type-badge ${a.file_type.toLowerCase()}`}>{FILE_TYPE_LABELS[a.file_type] ?? a.file_type}</span></td>
-                <td><strong>{a.file_name || 'Sans titre'}</strong></td>
-                <td className="text-muted">{a.submission_name || '—'}</td>
-                <td>{a.uploaded_by_name ?? '—'}</td>
-                <td>{formatDate(a.uploaded_at)}</td>
-                <td className="actions">
-                  {a.file && (
-                    <button 
-                      className="btn-small btn-secondary" 
-                      onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}
-                    >
-                      Ouvrir
-                    </button>
-                  )}
-                  <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
-                </td>
+        <div className="table-responsive-wrapper">
+          <table className="forms-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Nom du fichier</th>
+                <th>Dossier RCP</th>
+                <th>Téléchargé par</th>
+                <th>Date</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {attachments.map((a) => (
+                <tr key={a.id}>
+                  <td><span className={`file-type-badge ${a.file_type.toLowerCase()}`}>{FILE_TYPE_LABELS[a.file_type] ?? a.file_type}</span></td>
+                  <td><strong>{a.file_name || 'Sans titre'}</strong></td>
+                  <td className="text-muted">{a.submission_name || '—'}</td>
+                  <td>{a.uploaded_by_name ?? '—'}</td>
+                  <td>{formatDate(a.uploaded_at)}</td>
+                  <td className="actions">
+                    {a.file && (
+                      <button 
+                        className="btn-small btn-secondary" 
+                        onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}
+                      >
+                        Ouvrir
+                      </button>
+                    )}
+                    <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

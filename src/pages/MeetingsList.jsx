@@ -103,62 +103,64 @@ export default function MeetingsList() {
           <p>Aucune réunion trouvée.</p>
         </div>
       ) : (
-        <table className="forms-table">
-          <thead>
-            <tr>
-              <th>Date & Heure</th>
-              <th>Dossiers / Soumissions</th>
-              <th>Statut</th>
-              <th>Visioconférence</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {meetings.map((m) => (
-              <tr key={m.id}>
-                <td>
-                  <strong>{m.title || formatDate(m.scheduled_date)}</strong>
-                  <div className="text-muted" style={{fontSize: '0.8rem'}}>
-                    {formatDateTime(m.scheduled_date)}
-                  </div>
-                </td>
-                <td>
-                  <span className="badge badge-neutral">
-                    {m.submissions?.length || 0} dossier(s)
-                  </span>
-                </td>
-                <td><span className={`status-badge ${m.status.toLowerCase()}`}>{STATUS_LABELS[m.status] ?? m.status}</span></td>
-                <td>
-                  {m.status !== 'FINISHED' && (
-                    <button 
-                      className="btn-small btn-primary btn-with-icon" 
-                      onClick={() => handleQuickJoin(m.id)}
-                      disabled={joiningId === m.id}
-                      style={{ padding: '0.4rem 0.8rem' }}
-                    >
-                      <Video size={14} />
-                      {joiningId === m.id ? 'Ouverture...' : (m.status === 'LIVE' ? 'Rejoindre' : 'Démarrer')}
-                    </button>
-                  )}
-                </td>
-                <td className="actions">
-                  <div className="action-group-horizontal">
-                    <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
-                    {!m.participants?.some(pId => (pId.id || pId) === user?.id) && (
-                      <button className="btn-small btn-info" onClick={() => handleJoin(m.id)}>S'inscrire</button>
-                    )}
-                    {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
-                      <>
-                        <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
-                        <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
-                      </>
-                    )}
-                  </div>
-                </td>
+        <div className="table-responsive-wrapper">
+          <table className="forms-table">
+            <thead>
+              <tr>
+                <th>Date & Heure</th>
+                <th>Dossiers / Soumissions</th>
+                <th>Statut</th>
+                <th>Visioconférence</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {meetings.map((m) => (
+                <tr key={m.id}>
+                  <td>
+                    <strong>{m.title || formatDate(m.scheduled_date)}</strong>
+                    <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                      {formatDateTime(m.scheduled_date)}
+                    </div>
+                  </td>
+                  <td>
+                    <span className="badge badge-neutral">
+                      {m.submissions?.length || 0} dossier(s)
+                    </span>
+                  </td>
+                  <td><span className={`status-badge ${m.status.toLowerCase()}`}>{STATUS_LABELS[m.status] ?? m.status}</span></td>
+                  <td>
+                    {m.status !== 'FINISHED' && (
+                      <button 
+                        className="btn-small btn-primary btn-with-icon" 
+                        onClick={() => handleQuickJoin(m.id)}
+                        disabled={joiningId === m.id}
+                        style={{ padding: '0.4rem 0.8rem' }}
+                      >
+                        <Video size={14} />
+                        {joiningId === m.id ? 'Ouverture...' : (m.status === 'LIVE' ? 'Rejoindre' : 'Démarrer')}
+                      </button>
+                    )}
+                  </td>
+                  <td className="actions">
+                    <div className="action-group-horizontal">
+                      <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
+                      {!m.participants?.some(pId => (pId.id || pId) === user?.id) && (
+                        <button className="btn-small btn-info" onClick={() => handleJoin(m.id)}>S'inscrire</button>
+                      )}
+                      {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
+                        <>
+                          <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
+                          <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

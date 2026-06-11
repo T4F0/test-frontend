@@ -54,35 +54,37 @@ export default function ReportsList() {
           <p>Aucun rapport généré pour le moment.</p>
         </div>
       ) : (
-        <table className="forms-table">
-          <thead>
-            <tr>
-              <th>Dossier / Soumission</th>
-              <th>Date de création</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((r) => (
-              <tr key={r.id}>
-                <td>
-                  <strong>{r.submission_name || 'Sans titre'}</strong>
-                  <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name}</div>
-                </td>
-                <td>{new Date(r.created_at).toLocaleString()}</td>
-                <td>
-                  <button
-                    className="btn-small btn-primary"
-                    disabled={downloading === r.id}
-                    onClick={() => handleDownload(r.id)}
-                  >
-                    {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
-                  </button>
-                </td>
+        <div className="table-responsive-wrapper">
+          <table className="forms-table">
+            <thead>
+              <tr>
+                <th>Dossier / Soumission</th>
+                <th>Date de création</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {reports.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    <strong>{r.submission_name || 'Sans titre'}</strong>
+                    <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name}</div>
+                  </td>
+                  <td>{new Date(r.created_at).toLocaleString()}</td>
+                  <td>
+                    <button
+                      className="btn-small btn-primary"
+                      disabled={downloading === r.id}
+                      onClick={() => handleDownload(r.id)}
+                    >
+                      {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

@@ -381,9 +381,9 @@ button:disabled {
   border-spacing: 0;
   background: white;
   border-radius: 16px;
-  overflow: hidden;
   box-shadow: var(--shadow-sm);
   border: 1px solid rgba(226, 232, 240, 0.8);
+  min-width: max-content;
 }
 
 .forms-table thead {
@@ -1146,6 +1146,8 @@ button:disabled {
 
 .submissions-table-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 16px;
 }
 
 .submission-data-row td {
@@ -2473,4 +2475,14 @@ body.theme-medecin_expert .navbar {
   border-radius: 8px;
   font-size: 0.95rem;
 }
+
+/* Responsive Table Wrapper */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1.5rem;
+  border-radius: 16px;
+}
+
 

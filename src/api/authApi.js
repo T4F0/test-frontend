@@ -120,6 +120,23 @@ export const resetPasswordConfirm = async (uidb64, token, password) => {
   return data
 }
 
+export const secureAccount = async (uidb64, token) => {
+  const { data } = await axios.post(`${API_BASE}/auth/secure-account/`, {
+    uidb64,
+    token
+  })
+  return data
+}
+
+export const removeUnauthorizedAccount = async (uidb64, token) => {
+  const { data } = await axios.post(`${API_BASE}/auth/remove-unauthorized-account/`, {
+    uidb64,
+    token
+  })
+  return data
+}
+
+
 export const changePassword = async (oldPassword, newPassword) => {
   const { data } = await authAxios.post(`${API_BASE}/users/change_password/`, {
     old_password: oldPassword,

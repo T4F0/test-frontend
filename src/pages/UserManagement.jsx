@@ -14,7 +14,7 @@ import {
 } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
-import { Calendar, Users, ChevronRight, FileText, Activity, Search } from 'lucide-react'
+import { Calendar, Users, ChevronRight, FileText, Activity, Search, Filter, FilterX } from 'lucide-react'
 import MeetingTab from '../components/MeetingTab'
 
 const ROLE_LABELS = {
@@ -36,12 +36,37 @@ export default function UserManagement() {
   const tabFromUrl = searchParams.get('tab')
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'active')
   const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const [serviceFilter, setServiceFilter] = useState('')
+  const [hospitalFilter, setHospitalFilter] = useState('')
+  const [activeDropdown, setActiveDropdown] = useState(null)
 
   useEffect(() => {
     if (tabFromUrl) {
       setActiveTab(tabFromUrl)
     }
+    setRoleFilter('')
+    setServiceFilter('')
+    setHospitalFilter('')
+    setActiveDropdown(null)
   }, [tabFromUrl])
+
+  useEffect(() => {
+    setRoleFilter('')
+    setServiceFilter('')
+    setHospitalFilter('')
+    setActiveDropdown(null)
+  }, [activeTab])
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.filter-header')) {
+        setActiveDropdown(null)
+      }
+    }
+    document.addEventListener('click', handleOutsideClick)
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [])
 
   // Service creation state
   const [newServiceName, setNewServiceName] = useState('')
@@ -178,15 +203,25 @@ export default function UserManagement() {
     u.approval_status !== 'REJECTED' &&
     (!isCoordinateur || ['MEDECIN', 'MEDECIN_EXPERT'].includes(u.role))
   )
+
+  const uniqueRoles = [...new Set(activeUsers.map(u => u.role))].filter(Boolean)
+  const uniqueServices = [...new Set(activeUsers.map(u => u.service_name))].filter(Boolean)
+  const uniqueHospitals = [...new Set(activeUsers.map(u => u.hospital))].filter(Boolean)
   
   const searchLower = search.toLowerCase()
-  const filteredUsers = activeUsers.filter(u =>
-    !search ||
-    `${u.first_name} ${u.last_name}`.toLowerCase().includes(searchLower) ||
-    (u.email || '').toLowerCase().includes(searchLower) ||
-    (u.hospital || '').toLowerCase().includes(searchLower) ||
-    (u.service_name || '').toLowerCase().includes(searchLower)
-  )
+  const filteredUsers = activeUsers.filter(u => {
+    const matchesSearch = !search ||
+      `${u.first_name} ${u.last_name}`.toLowerCase().includes(searchLower) ||
+      (u.email || '').toLowerCase().includes(searchLower) ||
+      (u.hospital || '').toLowerCase().includes(searchLower) ||
+      (u.service_name || '').toLowerCase().includes(searchLower);
+
+    const matchesRole = !roleFilter || u.role === roleFilter;
+    const matchesService = !serviceFilter || u.service_name === serviceFilter;
+    const matchesHospital = !hospitalFilter || u.hospital === hospitalFilter;
+
+    return matchesSearch && matchesRole && matchesService && matchesHospital;
+  })
 
   return (
     <div className="users-management">
@@ -232,30 +267,138 @@ export default function UserManagement() {
 
       {activeTab === 'active' && (
         <div>
-          <div className="modern-search-container">
-            <Search className="search-icon" size={18} />
-            <input
-              type="text"
-              placeholder="Rechercher par nom, email, hôpital ou service..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="modern-search-input"
-            />
+          <div className="modern-search-container" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search className="search-icon" size={18} />
+              <input
+                type="text"
+                placeholder="Rechercher par nom, email, hôpital ou service..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="modern-search-input"
+              />
+            </div>
+            {(roleFilter || serviceFilter || hospitalFilter) && (
+              <button 
+                onClick={() => {
+                  setRoleFilter('');
+                  setServiceFilter('');
+                  setHospitalFilter('');
+                }}
+                className="btn-small btn-outline"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', height: '100%', padding: '0.5rem 1rem' }}
+              >
+                <FilterX size={14} /> Réinitialiser les filtres
+              </button>
+            )}
           </div>
           {users.length === 0 ? (
             <div className="empty" style={{ padding: '2rem' }}>Aucun utilisateur trouvé</div>
           ) : filteredUsers.length === 0 ? (
             <div className="empty" style={{ padding: '2rem' }}>Aucun résultat pour "{search}"</div>
           ) : (
-            <table className="users-table">
+            <div className="table-responsive-wrapper">
+              <table className="users-table">
               {/* ... table content remains the same ... */}
               <thead>
                 <tr>
                   <th>Nom</th>
                   <th>Email</th>
-                  <th>Rôle</th>
-                  {currentUser?.is_global_admin && <th>Service</th>}
-                  <th>Hôpital</th>
+                  <th style={{ position: 'relative' }}>
+                    <div 
+                      className="filter-header"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDropdown(activeDropdown === 'role' ? null : 'role');
+                      }}
+                    >
+                      <span>Rôle</span>
+                      <Filter size={14} className={roleFilter ? "filter-icon-active" : "filter-icon-inactive"} style={{ marginLeft: '4px' }} />
+                    </div>
+                    {activeDropdown === 'role' && (
+                      <div className="filter-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          className={`filter-dropdown-item ${!roleFilter ? 'active' : ''}`}
+                          onClick={() => { setRoleFilter(''); setActiveDropdown(null); }}
+                        >
+                          Tous
+                        </div>
+                        {uniqueRoles.map(role => (
+                          <div 
+                            key={role} 
+                            className={`filter-dropdown-item ${roleFilter === role ? 'active' : ''}`}
+                            onClick={() => { setRoleFilter(role); setActiveDropdown(null); }}
+                          >
+                            {ROLE_LABELS[role] || role}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </th>
+                  {currentUser?.is_global_admin && (
+                    <th style={{ position: 'relative' }}>
+                      <div 
+                        className="filter-header"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdown(activeDropdown === 'service' ? null : 'service');
+                        }}
+                      >
+                        <span>Service</span>
+                        <Filter size={14} className={serviceFilter ? "filter-icon-active" : "filter-icon-inactive"} style={{ marginLeft: '4px' }} />
+                      </div>
+                      {activeDropdown === 'service' && (
+                        <div className="filter-dropdown" onClick={(e) => e.stopPropagation()}>
+                          <div 
+                            className={`filter-dropdown-item ${!serviceFilter ? 'active' : ''}`}
+                            onClick={() => { setServiceFilter(''); setActiveDropdown(null); }}
+                          >
+                            Tous
+                          </div>
+                          {uniqueServices.map(service => (
+                            <div 
+                              key={service} 
+                              className={`filter-dropdown-item ${serviceFilter === service ? 'active' : ''}`}
+                              onClick={() => { setServiceFilter(service); setActiveDropdown(null); }}
+                            >
+                              {service}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </th>
+                  )}
+                  <th style={{ position: 'relative' }}>
+                    <div 
+                      className="filter-header"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDropdown(activeDropdown === 'hospital' ? null : 'hospital');
+                      }}
+                    >
+                      <span>Hôpital</span>
+                      <Filter size={14} className={hospitalFilter ? "filter-icon-active" : "filter-icon-inactive"} style={{ marginLeft: '4px' }} />
+                    </div>
+                    {activeDropdown === 'hospital' && (
+                      <div className="filter-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          className={`filter-dropdown-item ${!hospitalFilter ? 'active' : ''}`}
+                          onClick={() => { setHospitalFilter(''); setActiveDropdown(null); }}
+                        >
+                          Tous
+                        </div>
+                        {uniqueHospitals.map(hospital => (
+                          <div 
+                            key={hospital} 
+                            className={`filter-dropdown-item ${hospitalFilter === hospital ? 'active' : ''}`}
+                            onClick={() => { setHospitalFilter(hospital); setActiveDropdown(null); }}
+                          >
+                            {hospital}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </th>
                   <th>Téléphone</th>
                   <th>Actions</th>
                 </tr>
@@ -310,6 +453,7 @@ export default function UserManagement() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -318,7 +462,8 @@ export default function UserManagement() {
         pendingUsers.length === 0 ? (
           <div className="empty">Aucune inscription en attente trouvée</div>
         ) : (
-          <table className="users-table">
+          <div className="table-responsive-wrapper">
+            <table className="users-table">
             <thead>
               <tr>
                 <th>Nom</th>
@@ -354,6 +499,7 @@ export default function UserManagement() {
               ))}
             </tbody>
           </table>
+          </div>
         )
       )}
 
@@ -406,7 +552,8 @@ export default function UserManagement() {
             ) : (
               <div>
                 {serviceError && <div className="error" style={{ marginBottom: '1rem' }}>{serviceError}</div>}
-                <table className="users-table">
+                <div className="table-responsive-wrapper">
+                  <table className="users-table">
                   <thead>
                     <tr>
                       <th>Nom</th>
@@ -459,6 +606,7 @@ export default function UserManagement() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>

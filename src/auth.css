@@ -152,7 +152,6 @@
   background: white;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-md);
-  overflow: hidden;
 }
 
 .users-header {
@@ -172,6 +171,7 @@
 .users-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: max-content;
 }
 
 .users-table thead {
@@ -326,6 +326,67 @@
   display: flex;
   gap: 1rem;
   margin-top: 1rem;
+}
+
+/* ===== FILTER DROPDOWN AND HEADER ===== */
+.filter-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-header:hover {
+  opacity: 0.8;
+}
+
+.filter-icon-active {
+  color: var(--primary) !important;
+}
+
+.filter-icon-inactive {
+  color: var(--gray-400);
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 0.5rem;
+  background: white;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+  max-height: 250px;
+  overflow-y: auto;
+  text-transform: none; /* overrides uppercase of th */
+  font-weight: 500;
+  letter-spacing: normal;
+  font-size: 0.85rem;
+  color: var(--gray-700);
+}
+
+.filter-dropdown-item {
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: left;
+}
+
+.filter-dropdown-item:hover {
+  background-color: var(--gray-50);
+}
+
+.filter-dropdown-item.active {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {
