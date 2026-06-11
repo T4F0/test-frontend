@@ -51,6 +51,8 @@
 }
 
 .table-container {
+  display: block;
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding: 2rem;
@@ -209,6 +211,8 @@
 }
 
 .submissions-list-container {
+  display: block;
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }

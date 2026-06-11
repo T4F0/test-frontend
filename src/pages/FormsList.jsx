@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getForms, deleteForm } from '../api/formsApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
+import { Search } from 'lucide-react'
 
 export default function FormsList() {
   const [forms, setForms] = useState([])
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
@@ -45,6 +47,14 @@ export default function FormsList() {
     }
   }
 
+  const filteredForms = forms.filter(form => {
+    const searchLower = search.toLowerCase()
+    return (
+      (form.name || '').toLowerCase().includes(searchLower) ||
+      (form.description || '').toLowerCase().includes(searchLower)
+    )
+  })
+
   if (loading) return <div className="loading">Chargement des formulaires...</div>
   if (error) return <div className="error">{error}</div>
 
@@ -59,8 +69,24 @@ export default function FormsList() {
         </div>
       </div>
       
+      {forms.length > 0 && (
+        <div style={{ position: 'relative', maxWidth: '500px', marginBottom: '1.5rem' }}>
+          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+          <input
+            type="text"
+            placeholder="Rechercher un formulaire..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="modern-search-input"
+            style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem' }}
+          />
+        </div>
+      )}
+      
       {forms.length === 0 ? (
         <p className="empty">Aucun formulaire. <Link to="/forms/new">Créez-en un</Link></p>
+      ) : filteredForms.length === 0 ? (
+        <p className="empty">Aucun formulaire ne correspond à votre recherche "{search}"</p>
       ) : (
         <div className="table-responsive-wrapper">
           <table className="forms-table">
@@ -73,7 +99,7 @@ export default function FormsList() {
               </tr>
             </thead>
             <tbody>
-              {forms.map(form => (
+              {filteredForms.map(form => (
                 <tr key={form.id}>
                   <td>{form.name}</td>
                   <td>{form.description}</td>
