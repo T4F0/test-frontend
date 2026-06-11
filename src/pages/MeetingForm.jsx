@@ -320,6 +320,7 @@ export default function MeetingForm() {
       const payload = {
         name: form.name,
         submissions: form.submissions,
+        patients: selectedPatients.map(p => String(p.id)),
         scheduled_date,
         participants: form.participants,
       }

@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient /*, getShareableDoctors, sharePatient*/ } from '../api/patientsApi'
 import { getSubmissionsByPatient, updateSubmission, deleteSubmission } from '../api/submissionsApi'
+import { getNextPlannedMeeting, addPatientToMeeting } from '../api/meetingsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
+import { CalendarPlus, UserPlus, CheckCircle2 } from 'lucide-react'
 
 const STATUS_LABELS = {
   SUBMITTED: 'Soumis',
@@ -27,6 +29,12 @@ export default function PatientDetail() {
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Meeting integration state
+  const [nextMeeting, setNextMeeting] = useState(null)
+  const [patientInNextMeeting, setPatientInNextMeeting] = useState(false)
+  const [addingToMeeting, setAddingToMeeting] = useState(false)
+  const [meetingActionSuccess, setMeetingActionSuccess] = useState(null)
   
   /* Partage du dossier commented out
   const [shareOpen, setShareOpen] = useState(false)
@@ -41,6 +49,7 @@ export default function PatientDetail() {
   useEffect(() => {
     loadPatient()
     loadSubmissions()
+    loadNextMeeting()
   }, [id])
 
   /*
@@ -63,6 +72,38 @@ export default function PatientDetail() {
       setSubmissions(Array.isArray(data) ? data : [])
     } catch (e) {
       console.error('Failed to load submissions:', e)
+    }
+  }
+
+  const loadNextMeeting = async () => {
+    try {
+      const meeting = await getNextPlannedMeeting()
+      setNextMeeting(meeting)
+      if (meeting) {
+        // Check if this patient is already in the meeting (via patients M2M or submissions)
+        const patientIds = (meeting.patients || []).map(p => String(p))
+        const submissionPatientIds = (meeting.submission_details || []).map(s => String(s.patient_id))
+        const allPatientIds = new Set([...patientIds, ...submissionPatientIds])
+        setPatientInNextMeeting(allPatientIds.has(String(id)))
+      }
+    } catch (e) {
+      console.error('Failed to load next meeting:', e)
+    }
+  }
+
+  const handleAddToNextMeeting = async () => {
+    if (!nextMeeting) return
+    try {
+      setAddingToMeeting(true)
+      await addPatientToMeeting(nextMeeting.id, id)
+      setPatientInNextMeeting(true)
+      setMeetingActionSuccess('Patient ajouté à la prochaine réunion avec succès !')
+      setTimeout(() => setMeetingActionSuccess(null), 4000)
+    } catch (err) {
+      console.error('Failed to add patient to meeting:', err)
+      setError('Échec de l\'ajout du patient à la réunion.')
+    } finally {
+      setAddingToMeeting(false)
     }
   }
 
@@ -253,6 +294,75 @@ export default function PatientDetail() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Meeting Actions ────────────────────────────────────── */}
+        <div className="detail-section meeting-actions-section">
+          <h2>📅 Réunions RCP</h2>
+
+          {/* Success toast */}
+          {meetingActionSuccess && (
+            <div className="meeting-action-toast">
+              <CheckCircle2 size={18} />
+              {meetingActionSuccess}
+            </div>
+          )}
+
+          {patientInNextMeeting ? (
+            /* Patient is already in the next meeting — show indicator */
+            <div className="meeting-already-included">
+              <div className="meeting-already-included-icon">
+                <CheckCircle2 size={24} />
+              </div>
+              <div className="meeting-already-included-info">
+                <div className="meeting-already-included-title">
+                  Patient inclus dans la prochaine réunion
+                </div>
+                <div className="meeting-already-included-detail">
+                  {nextMeeting?.title || `Réunion du ${formatDate(nextMeeting?.scheduled_date)}`}
+                </div>
+              </div>
+              <button
+                className="btn-small btn-outline"
+                onClick={() => navigate(`/meetings/${nextMeeting.id}`)}
+              >
+                Voir la réunion
+              </button>
+            </div>
+          ) : (
+            /* Show the two action buttons */
+            <div className="meeting-actions-row">
+              {nextMeeting && (
+                <button
+                  className="btn-meeting-add"
+                  onClick={handleAddToNextMeeting}
+                  disabled={addingToMeeting}
+                >
+                  <UserPlus size={18} />
+                  <div className="btn-meeting-text">
+                    <span className="btn-meeting-label">
+                      {addingToMeeting ? 'Ajout en cours…' : 'Ajouter à la prochaine réunion'}
+                    </span>
+                    <span className="btn-meeting-sub">
+                      {nextMeeting.title || formatDate(nextMeeting.scheduled_date)}
+                    </span>
+                  </div>
+                </button>
+              )}
+              <button
+                className="btn-meeting-plan"
+                onClick={() => navigate('/meetings/new', {
+                  state: {
+                    preselectPatientId: id,
+                    preselectPatientName: `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
+                  }
+                })}
+              >
+                <CalendarPlus size={16} />
+                Planifier une nouvelle réunion
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Partage du dossier section commented out

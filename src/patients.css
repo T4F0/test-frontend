@@ -629,3 +629,192 @@
   font-style: italic;
   border: 2px dashed var(--gray-200);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Meeting Actions Section — Patient Detail
+   ══════════════════════════════════════════════════════════════ */
+
+.meeting-actions-section {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.meeting-actions-section h2 {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ── Two buttons row ─────────────────────────────────────────── */
+
+.meeting-actions-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-meeting-add {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  text-align: left;
+  font-family: inherit;
+}
+
+.btn-meeting-add:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+.btn-meeting-add:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-meeting-add:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-meeting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-meeting-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.btn-meeting-sub {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+.btn-meeting-plan {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  background: white;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn-meeting-plan:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+/* ── Already included indicator ──────────────────────────────── */
+
+.meeting-already-included {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 10px;
+  animation: slideInMeeting 0.4s ease;
+}
+
+.meeting-already-included-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.meeting-already-included-info {
+  flex: 1;
+}
+
+.meeting-already-included-title {
+  font-weight: 700;
+  color: #15803d;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.meeting-already-included-detail {
+  font-size: 0.8rem;
+  color: #22c55e;
+  margin-top: 2px;
+}
+
+/* ── Success toast ───────────────────────────────────────────── */
+
+.meeting-action-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  animation: slideInMeeting 0.3s ease;
+}
+
+@keyframes slideInMeeting {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .meeting-actions-row {
+    flex-direction: column;
+  }
+
+  .btn-meeting-add {
+    min-width: unset;
+  }
+
+  .meeting-already-included {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+}
