@@ -20,7 +20,6 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 700,
     title: 'e-RCP — Réunion de Concertation Pluridisciplinaire',
-    icon: path.join(__dirname, '../public/favicon.ico'), // adjust if you have one
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
