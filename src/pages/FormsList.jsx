@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { getForms, deleteForm } from '../api/formsApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
@@ -11,6 +11,8 @@ export default function FormsList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
+  const preselectPatientId = location.state?.preselectPatientId
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
 
@@ -107,7 +109,7 @@ export default function FormsList() {
                   <td className="actions">
                     {user?.role !== 'COORDINATEUR' && (
                       <>
-                        <button onClick={() => navigate(`/forms/${form.id}/submit`)}>Remplir</button>
+                        <button onClick={() => navigate(`/forms/${form.id}/submit`, { state: { preselectPatientId } })}>Remplir</button>
                         <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>
                       </>
                     )}

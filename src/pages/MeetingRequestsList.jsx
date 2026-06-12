@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMeetingRequests, getMeetingRequestSubmissionResume } from '../api/meetingsApi'
+import { getMeetingRequests, getMeetingRequestSubmissionResume, getNextPlannedMeeting, addPatientToMeeting } from '../api/meetingsApi'
 import { fetchFileAsBlob } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
@@ -50,6 +50,24 @@ export default function MeetingRequestsList() {
   const [selectedSubmission, setSelectedSubmission] = useState(null)
   const [resumeLoading, setResumeLoading] = useState(false)
   const [viewingFileId, setViewingFileId] = useState(null)
+  const [nextMeeting, setNextMeeting] = useState(null)
+  const [addingToMeeting, setAddingToMeeting] = useState(null)
+
+  const nextMeetingPatientIds = useMemo(() => {
+    if (!nextMeeting) return new Set()
+    const pIds = (nextMeeting.patients || []).map(p => String(p))
+    const sIds = (nextMeeting.submission_details || []).map(s => String(s.patient_id))
+    return new Set([...pIds, ...sIds])
+  }, [nextMeeting])
+
+  const loadNextMeeting = async () => {
+    try {
+      const meeting = await getNextPlannedMeeting()
+      setNextMeeting(meeting)
+    } catch (e) {
+      console.error('Failed to load next meeting:', e)
+    }
+  }
 
   const handleViewFile = async (fileUrl, fileId, fileType) => {
     setViewingFileId(fileId)
@@ -86,6 +104,9 @@ export default function MeetingRequestsList() {
 
   useEffect(() => {
     loadRequests()
+    if (user && ['ADMIN', 'COORDINATEUR'].includes(user.role)) {
+      loadNextMeeting()
+    }
   }, [])
 
   const loadRequests = async () => {
@@ -108,6 +129,22 @@ export default function MeetingRequestsList() {
     } else {
       setExpandedRequestId(id)
       setSelectedSubmission(null)
+    }
+  }
+
+  const handleAddToNextMeeting = async (requestId, patientId) => {
+    if (!nextMeeting || !patientId) return
+    try {
+      setAddingToMeeting(requestId)
+      await addPatientToMeeting(nextMeeting.id, patientId)
+      alert('Patient ajouté à la prochaine réunion avec succès !')
+      // Remove request from list or mark as accepted (depending on backend logic, typically the request is marked ACCEPTED when added to a meeting, but if not we might need to manually handle it. For now let's just reload requests)
+      loadRequests()
+    } catch (err) {
+      console.error('Failed to add patient to meeting:', err)
+      alert('Échec de l\'ajout à la réunion.')
+    } finally {
+      setAddingToMeeting(null)
     }
   }
 
@@ -150,12 +187,18 @@ export default function MeetingRequestsList() {
         </div>
       ) : (
         <div className="requests-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {requests.map(req => (
+          {requests.map(req => {
+            const reqPIds = new Set()
+            if (req.patient_details) req.patient_details.forEach(p => reqPIds.add(String(p.id)))
+            if (req.submission_details) req.submission_details.forEach(s => reqPIds.add(String(s.patient_id)))
+            const isIncluded = reqPIds.size > 0 && Array.from(reqPIds).every(id => nextMeetingPatientIds.has(id))
+
+            return (
             <div key={req.id} className="request-card" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div 
                 className="request-summary" 
                 onClick={() => toggleExpand(req.id)}
-                style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'center', cursor: 'pointer', gap: '1rem' }}
+                style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 1fr auto auto', alignItems: 'center', cursor: 'pointer', gap: '1rem' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -169,7 +212,14 @@ export default function MeetingRequestsList() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569' }}>
                   <FileText size={18} style={{ color: '#94a3b8' }} />
-                  <span style={{ fontWeight: '500' }}>{req.submissions.length} dossier(s) joint(s)</span>
+                  {req.patient_details?.length > 0 || req.submission_details?.length > 0 ? (
+                    <span style={{ fontWeight: '500' }}>
+                      Patient: {req.patient_details?.[0] ? `${req.patient_details[0].first_name} ${req.patient_details[0].last_name}` : req.submission_details?.[0]?.patient_name}
+                      <span style={{ color: '#94a3b8', fontSize: '0.85rem', marginLeft: '0.5rem' }}>({req.submissions.length} dossier(s))</span>
+                    </span>
+                  ) : (
+                    <span style={{ fontWeight: '500' }}>{req.submissions.length} dossier(s) joint(s)</span>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569' }}>
@@ -177,8 +227,39 @@ export default function MeetingRequestsList() {
                   <span>Soumis le {formatDate(req.created_at)}</span>
                 </div>
 
-                <div style={{ color: '#94a3b8' }}>
-                  {expandedRequestId === req.id ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {isIncluded ? (
+                    <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      ✓ Inclus dans la réunion
+                    </div>
+                  ) : nextMeeting && (req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id) && (
+                    <button
+                      className="btn-small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const pId = req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id;
+                        handleAddToNextMeeting(req.id, pId);
+                      }}
+                      disabled={addingToMeeting === req.id}
+                      style={{ 
+                        padding: '0.4rem 0.75rem', 
+                        fontSize: '0.8rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem',
+                        background: addingToMeeting === req.id ? '#6ee7b7' : '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: addingToMeeting === req.id ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {addingToMeeting === req.id ? 'Ajout...' : 'Ajouter à la prochaine réunion'}
+                    </button>
+                  )}
+                  <div style={{ color: '#94a3b8' }}>
+                    {expandedRequestId === req.id ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                  </div>
                 </div>
               </div>
 
@@ -214,13 +295,61 @@ export default function MeetingRequestsList() {
                         </div>
                       </div>
 
-                      <button 
-                        className="btn-primary" 
-                        onClick={() => navigate('/meetings/new', { state: { preselectDoctor: req.doctor, preselectSubmissions: req.submissions } })}
-                        style={{ marginTop: '2rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem' }}
-                      >
-                        Planifier la réunion <ArrowRight size={20} />
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2rem' }}>
+                        {isIncluded ? (
+                          <div style={{ padding: '1rem', background: '#dcfce7', color: '#166534', borderRadius: '8px', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '500' }}>
+                            <span style={{ fontSize: '1.2rem' }}>✓</span>
+                            Ce patient est déjà inclus dans la réunion prévue le {formatDate(nextMeeting?.scheduled_date)}.
+                          </div>
+                        ) : (
+                          <>
+                            <button 
+                              className="btn-primary" 
+                              onClick={() => {
+                                const pId = req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id;
+                                const pName = req.patient_details?.[0] ? `${req.patient_details[0].first_name} ${req.patient_details[0].last_name}` : req.submission_details?.[0]?.patient_name;
+                                navigate('/meetings/new', { 
+                                  state: { 
+                                    preselectDoctor: req.doctor, 
+                                    preselectSubmissions: req.submissions,
+                                    preselectPatientId: pId,
+                                    preselectPatientName: pName
+                                  } 
+                                });
+                              }}
+                              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem' }}
+                            >
+                              Planifier une nouvelle réunion <ArrowRight size={20} />
+                            </button>
+
+                            {nextMeeting && (req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id) && (
+                              <button 
+                                onClick={() => {
+                                  const pId = req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id;
+                                  handleAddToNextMeeting(req.id, pId);
+                                }}
+                                disabled={addingToMeeting === req.id}
+                                style={{ 
+                                  width: '100%', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center', 
+                                  gap: '0.5rem', 
+                                  padding: '1rem', 
+                                  background: addingToMeeting === req.id ? '#6ee7b7' : '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontWeight: '600',
+                                  cursor: addingToMeeting === req.id ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                {addingToMeeting === req.id ? 'Ajout en cours...' : `Ajouter à la réunion du ${formatDate(nextMeeting.scheduled_date)}`}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', minHeight: '400px' }}>
@@ -280,7 +409,8 @@ export default function MeetingRequestsList() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

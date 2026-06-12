@@ -31,10 +31,26 @@ export default function DoctorCaseSection({ doctorName, hospital, cases, onRemov
 
       {isOpen && (
         <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-          {cases.map(sub => (
+          {Array.from(
+            cases.reduce((map, sub) => {
+              if (!map.has(sub.patient_id)) {
+                map.set(sub.patient_id, { ...sub, cases_count: 1 });
+              } else {
+                map.get(sub.patient_id).cases_count += 1;
+              }
+              return map;
+            }, new Map()).values()
+          ).map(grouped => (
             <MedicalCaseCard
-              key={sub.id}
-              submission={sub}
+              key={grouped.patient_id}
+              submission={{
+                id: grouped.id,
+                patient_id: grouped.patient_id,
+                patient_name: grouped.patient_name,
+                form_name: `${grouped.cases_count} dossier${grouped.cases_count > 1 ? 's' : ''} médical${grouped.cases_count > 1 ? 'aux' : ''}`,
+                status: grouped.status,
+                created_at: grouped.created_at
+              }}
               onRemove={onRemoveCase}
               onViewDetails={onViewDetails}
               activeDetailId={activeDetailId}

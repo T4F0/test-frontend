@@ -58,6 +58,9 @@ export default function MeetingForm() {
   // ─── Load on mount ────────────────────────────────────────────────────────
   useEffect(() => {
     if (id) loadMeeting()
+    else if (preselectData.preselectPatientId) {
+      initPreselectedPatient()
+    }
   }, [id])
 
   useEffect(() => {
@@ -237,6 +240,41 @@ export default function MeetingForm() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const initPreselectedPatient = async () => {
+    try {
+      setAddingPatient(true)
+      const patientId = preselectData.preselectPatientId
+      const subs = await getSubmissionsByPatient(patientId)
+      const newSubs = Array.isArray(subs) ? subs : []
+
+      // Merge into allSubmissions cache
+      setAllSubmissions((prev) => {
+        const existingIds = new Set(prev.map((s) => String(s.id)))
+        return [...prev, ...newSubs.filter((s) => !existingIds.has(String(s.id)))]
+      })
+
+      // Add all submission IDs to the form (deduplicated)
+      setForm((f) => {
+        const existingSet = new Set(f.submissions)
+        const toAdd = newSubs.map((s) => String(s.id)).filter((sid) => !existingSet.has(sid))
+        return { ...f, submissions: [...f.submissions, ...toAdd] }
+      })
+
+      // Construct a basic patient object for the UI chips
+      const nameParts = (preselectData.preselectPatientName || '').split(' ')
+      setSelectedPatients([{
+        id: patientId,
+        first_name: nameParts[0] || 'Patient',
+        last_name: nameParts.slice(1).join(' ') || '',
+        display_name: preselectData.preselectPatientName || 'Patient',
+      }])
+    } catch (e) {
+      console.error('Failed to init preselected patient', e)
+    } finally {
+      setAddingPatient(false)
     }
   }
 

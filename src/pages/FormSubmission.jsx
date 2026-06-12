@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getForm } from '../api/formsApi'
 import { submitForm, getSubmission, updateSubmission } from '../api/submissionsApi'
-import { getPatients } from '../api/patientsApi'
+import { getPatients, getPatient } from '../api/patientsApi'
 import { uploadAttachment } from '../api/attachmentsApi'
 import { formatDate } from '../lib/dateUtils'
 import FormField from '../components/FormField'
@@ -47,17 +47,20 @@ function SectionRenderer({ section, formData, onFieldChange }) {
 export default function FormSubmission() {
   const { id, submissionId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const preselectPatientId = location.state?.preselectPatientId
   const { user } = useAuth()
   const [form, setForm] = useState(null)
   const [formData, setFormData] = useState({})
   const [patients, setPatients] = useState([])
-  const [selectedPatient, setSelectedPatient] = useState('')
+  const [selectedPatient, setSelectedPatient] = useState(preselectPatientId || '')
   const [loading, setLoading] = useState(true)
   const [patientsLoading, setPatientsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [patientSearch, setPatientSearch] = useState('')
   const [isEditing, setIsEditing] = useState(false)
+  const [patientError, setPatientError] = useState(null)
 
   useEffect(() => {
     if (user?.role === 'COORDINATEUR') {
@@ -96,9 +99,24 @@ export default function FormSubmission() {
         const submission = await getSubmission(submissionId)
         setSelectedPatient(submission.patient)
         setFormData({ ...initialValues, ...submission.data })
+        
+        try {
+          const patient = await getPatient(submission.patient)
+          setPatients(prev => prev.find(p => p.id === patient.id) ? prev : [patient, ...prev])
+        } catch (e) {
+          console.error('Failed to load patient details', e)
+        }
       } else {
         setIsEditing(false)
         setFormData(initialValues)
+        if (preselectPatientId) {
+          try {
+            const patient = await getPatient(preselectPatientId)
+            setPatients(prev => prev.find(p => p.id === patient.id) ? prev : [patient, ...prev])
+          } catch (e) {
+            console.error('Failed to load preselected patient details', e)
+          }
+        }
       }
     } catch (err) {
       setError('Échec du chargement des données')
@@ -142,11 +160,15 @@ export default function FormSubmission() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setPatientError(null)
+
+    if (!selectedPatient) {
+      setPatientError('Veuillez sélectionner un patient.')
+      return
+    }
+
     try {
       setSubmitting(true)
-      if (!selectedPatient) {
-        throw new Error('Veuillez sélectionner un patient.')
-      }
 
       // 1. Separate files from JSON data
       const jsonFormData = { ...formData }
@@ -230,10 +252,14 @@ export default function FormSubmission() {
               subLabel: `DDN : ${formatDate(p.birth_date)}`
             }))}
             value={selectedPatient}
-            onChange={setSelectedPatient}
+            onChange={(val) => {
+              setSelectedPatient(val);
+              setPatientError(null);
+            }}
             onSearch={setPatientSearch}
             loading={patientsLoading}
             required
+            error={patientError}
             disabled={isEditing} // Often we don't want to change the patient once submitted
           />
         </div>

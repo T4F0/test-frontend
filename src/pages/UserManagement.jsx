@@ -405,7 +405,16 @@ export default function UserManagement() {
               </thead>
               <tbody>
                 {filteredUsers.map(user => (
-                  <tr key={user.id}>
+                  <tr 
+                    key={user.id}
+                    onClick={(e) => {
+                      if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('select')) {
+                        navigate(`/users/${user.id}`);
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="hover-row-highlight"
+                  >
                     <td>{user.first_name} {user.last_name}</td>
                     <td>{user.email}</td>
                     <td>

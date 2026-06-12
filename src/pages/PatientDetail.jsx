@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient /*, getShareableDoctors, sharePatient*/ } from '../api/patientsApi'
 import { getSubmissionsByPatient, updateSubmission, deleteSubmission } from '../api/submissionsApi'
-import { getNextPlannedMeeting, addPatientToMeeting } from '../api/meetingsApi'
+import { getNextPlannedMeeting, addPatientToMeeting, createMeetingRequestForPatient } from '../api/meetingsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
-import { CalendarPlus, UserPlus, CheckCircle2 } from 'lucide-react'
+import { CalendarPlus, UserPlus, CheckCircle2, Send } from 'lucide-react'
 
 const STATUS_LABELS = {
   SUBMITTED: 'Soumis',
@@ -34,6 +34,7 @@ export default function PatientDetail() {
   const [nextMeeting, setNextMeeting] = useState(null)
   const [patientInNextMeeting, setPatientInNextMeeting] = useState(false)
   const [addingToMeeting, setAddingToMeeting] = useState(false)
+  const [requestingMeeting, setRequestingMeeting] = useState(false)
   const [meetingActionSuccess, setMeetingActionSuccess] = useState(null)
   
   /* Partage du dossier commented out
@@ -104,6 +105,20 @@ export default function PatientDetail() {
       setError('Échec de l\'ajout du patient à la réunion.')
     } finally {
       setAddingToMeeting(false)
+    }
+  }
+
+  const handleRequestMeeting = async () => {
+    try {
+      setRequestingMeeting(true)
+      await createMeetingRequestForPatient(id, 'Demande de réunion RCP pour ce patient')
+      setMeetingActionSuccess('Demande de réunion envoyée au coordinateur avec succès !')
+      setTimeout(() => setMeetingActionSuccess(null), 4000)
+    } catch (err) {
+      console.error('Failed to request meeting:', err)
+      setError('Échec de l\'envoi de la demande de réunion.')
+    } finally {
+      setRequestingMeeting(false)
     }
   }
 
@@ -330,37 +345,58 @@ export default function PatientDetail() {
               </button>
             </div>
           ) : (
-            /* Show the two action buttons */
+            /* Show the action buttons */
             <div className="meeting-actions-row">
-              {nextMeeting && (
+              {['COORDINATEUR', 'ADMIN'].includes(user?.role) ? (
+                <>
+                  {nextMeeting && (
+                    <button
+                      className="btn-meeting-add"
+                      onClick={handleAddToNextMeeting}
+                      disabled={addingToMeeting}
+                    >
+                      <UserPlus size={18} />
+                      <div className="btn-meeting-text">
+                        <span className="btn-meeting-label">
+                          {addingToMeeting ? 'Ajout en cours…' : 'Ajouter à la prochaine réunion'}
+                        </span>
+                        <span className="btn-meeting-sub">
+                          {nextMeeting.title || formatDate(nextMeeting.scheduled_date)}
+                        </span>
+                      </div>
+                    </button>
+                  )}
+                  <button
+                    className="btn-meeting-plan"
+                    onClick={() => navigate('/meetings/new', {
+                      state: {
+                        preselectPatientId: id,
+                        preselectPatientName: `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
+                      }
+                    })}
+                  >
+                    <CalendarPlus size={16} />
+                    Planifier une nouvelle réunion
+                  </button>
+                </>
+              ) : (
                 <button
                   className="btn-meeting-add"
-                  onClick={handleAddToNextMeeting}
-                  disabled={addingToMeeting}
+                  style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                  onClick={handleRequestMeeting}
+                  disabled={requestingMeeting}
                 >
-                  <UserPlus size={18} />
+                  <Send size={18} />
                   <div className="btn-meeting-text">
                     <span className="btn-meeting-label">
-                      {addingToMeeting ? 'Ajout en cours…' : 'Ajouter à la prochaine réunion'}
+                      {requestingMeeting ? 'Envoi en cours…' : 'Demander une réunion RCP'}
                     </span>
                     <span className="btn-meeting-sub">
-                      {nextMeeting.title || formatDate(nextMeeting.scheduled_date)}
+                      Notifier le coordinateur pour ce patient
                     </span>
                   </div>
                 </button>
               )}
-              <button
-                className="btn-meeting-plan"
-                onClick={() => navigate('/meetings/new', {
-                  state: {
-                    preselectPatientId: id,
-                    preselectPatientName: `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
-                  }
-                })}
-              >
-                <CalendarPlus size={16} />
-                Planifier une nouvelle réunion
-              </button>
             </div>
           )}
         </div>
@@ -487,7 +523,7 @@ export default function PatientDetail() {
           <div className="section-header-row">
             <h2>📑 Dossiers RCP & Soumissions</h2>
             {user?.role !== 'COORDINATEUR' && (
-              <button className="btn-primary" onClick={() => navigate('/forms')}>
+              <button className="btn-primary" onClick={() => navigate('/forms', { state: { preselectPatientId: id } })}>
                 + Nouveau Dossier / Soumission
               </button>
             )}

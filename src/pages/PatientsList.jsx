@@ -120,7 +120,16 @@ export default function PatientsList() {
                 const ownerName = formatDoctorName(patient.created_by_info)
 
                 return (
-                  <tr key={patient.id}>
+                  <tr 
+                    key={patient.id}
+                    onClick={(e) => {
+                      if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('select')) {
+                        navigate(`/patients/${patient.id}`);
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="hover-row-highlight"
+                  >
                     <td className="name-cell">
                       <strong>{`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}</strong>
                     </td>

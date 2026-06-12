@@ -116,7 +116,16 @@ export default function MeetingsList() {
             </thead>
             <tbody>
               {meetings.map((m) => (
-                <tr key={m.id}>
+                <tr 
+                  key={m.id}
+                  onClick={(e) => {
+                    if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('select')) {
+                      navigate(`/meetings/${m.id}`);
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                  className="hover-row-highlight"
+                >
                   <td>
                     <strong>{m.title || formatDate(m.scheduled_date)}</strong>
                     <div className="text-muted" style={{fontSize: '0.8rem'}}>
