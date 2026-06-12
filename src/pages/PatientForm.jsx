@@ -28,6 +28,7 @@ export default function PatientForm() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [noPhone, setNoPhone] = useState(false)
 
   useEffect(() => {
     if (user?.role === 'COORDINATEUR') {
@@ -52,7 +53,13 @@ export default function PatientForm() {
     try {
       const data = await getPatient(id)
       // Ensure loaded phone_number keeps the prefix
-      setPatient({ ...data, phone_number: data.phone_number || '+213' })
+      if (!data.phone_number || data.phone_number.trim() === '') {
+        setNoPhone(true)
+        setPatient({ ...data, phone_number: '+213' })
+      } else {
+        setNoPhone(false)
+        setPatient({ ...data, phone_number: data.phone_number })
+      }
     } catch (err) {
       setError('Échec du chargement du patient')
       console.error(err)
@@ -64,9 +71,14 @@ export default function PatientForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (patient.phone_number && !validatePhoneNumber(patient.phone_number)) {
-      setError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
-      return
+    const payload = { ...patient }
+    if (noPhone) {
+      payload.phone_number = null
+    } else {
+      if (!payload.phone_number || payload.phone_number === '+213' || !validatePhoneNumber(payload.phone_number)) {
+        setError('Le numéro de téléphone doit commencer par +213 suivi de 9 chiffres.')
+        return
+      }
     }
 
     try {
@@ -74,9 +86,9 @@ export default function PatientForm() {
       setError(null)
       
       if (isEdit) {
-        await updatePatient(id, patient)
+        await updatePatient(id, payload)
       } else {
-        await createPatient(patient)
+        await createPatient(payload)
       }
       
       navigate('/patients')
@@ -181,12 +193,25 @@ export default function PatientForm() {
         </div>
 
         <div className="form-group">
-          <label>Numéro de téléphone</label>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Numéro de téléphone</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'normal', fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
+              <input 
+                type="checkbox" 
+                checked={noPhone} 
+                onChange={(e) => setNoPhone(e.target.checked)} 
+                style={{ width: 'auto', margin: 0 }}
+              />
+              Le patient n'a pas de numéro
+            </label>
+          </label>
           <input
             type="tel"
             value={patient.phone_number || '+213'}
             onChange={handlePhoneChange}
             placeholder="+213612345678"
+            disabled={noPhone}
+            style={noPhone ? { opacity: 0.5, backgroundColor: '#f1f5f9', cursor: 'not-allowed' } : {}}
           />
         </div>
 
