@@ -139,17 +139,33 @@ export default function MeetingsList() {
                   </td>
                   <td><span className={`status-badge ${m.status.toLowerCase()}`}>{STATUS_LABELS[m.status] ?? m.status}</span></td>
                   <td>
-                    {m.status !== 'FINISHED' && (
-                      <button 
-                        className="btn-small btn-primary btn-with-icon" 
-                        onClick={() => handleQuickJoin(m.id)}
-                        disabled={joiningId === m.id}
-                        style={{ padding: '0.4rem 0.8rem' }}
-                      >
-                        <Video size={14} />
-                        {joiningId === m.id ? 'Ouverture...' : (m.status === 'LIVE' ? 'Rejoindre' : 'Démarrer')}
-                      </button>
-                    )}
+                    {m.status !== 'FINISHED' && (() => {
+                      const isToday = new Date(m.scheduled_date).toDateString() === new Date().toDateString();
+                      const isCoordinatorOrAdmin = user?.id === (m.coordinator_details?.id || m.coordinator) || user?.role === 'ADMIN';
+                      const buttonText = isCoordinatorOrAdmin ? 'Démarrer' : 'Rejoindre';
+
+                      let disableReason = "";
+                      if (!isToday) {
+                        disableReason = "La réunion n'est accessible que le jour prévu";
+                      } else if (!isCoordinatorOrAdmin && m.status !== 'LIVE') {
+                        disableReason = "La réunion n'a pas encore commencé";
+                      }
+
+                      const isDisabled = joiningId === m.id || disableReason !== "";
+
+                      return (
+                        <button 
+                          className="btn-small btn-primary btn-with-icon" 
+                          onClick={() => handleQuickJoin(m.id)}
+                          disabled={isDisabled}
+                          title={disableReason}
+                          style={{ padding: '0.4rem 0.8rem' }}
+                        >
+                          <Video size={14} />
+                          {joiningId === m.id ? 'Ouverture...' : buttonText}
+                        </button>
+                      );
+                    })()}
                   </td>
                   <td className="actions">
                     <div className="action-group-horizontal">

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { getMeeting, deleteMeeting, getSubmissionResume, addSubmissionToMeeting, removeSubmissionFromMeeting } from '../api/meetingsApi'
+import { getMeeting, deleteMeeting, getSubmissionResume, addSubmissionToMeeting, removeSubmissionFromMeeting, updateMeeting } from '../api/meetingsApi'
 import { getSubmissions, getSubmission } from '../api/submissionsApi'
 import { getForm } from '../api/formsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
@@ -294,16 +294,51 @@ export default function MeetingDetail() {
   if (error && !meeting) return <div className="error">{error}</div>
   if (!meeting) return <div className="error">Réunion introuvable</div>
 
+  const isToday = meeting?.scheduled_date && new Date(meeting.scheduled_date).toDateString() === new Date().toDateString();
+  const isCoordinatorOrAdmin = user?.id === (meeting?.coordinator_details?.id || meeting?.coordinator) || user?.role === 'ADMIN';
+
+  let disableReason = "";
+  if (!isToday) {
+    disableReason = "La réunion n'est accessible que le jour prévu";
+  } else if (!isCoordinatorOrAdmin && meeting?.status !== 'LIVE') {
+    disableReason = "La réunion n'a pas encore commencé";
+  }
+
+  const isDisabled = creatingConference || disableReason !== "";
+  const buttonText = isCoordinatorOrAdmin ? 'Démarrer la visio' : 'Rejoindre la visio';
+
   return (
     <div className="meeting-detail-container">
       <div className="detail-header">
         <h1>📅 {meeting.title || 'Détails de la réunion RCP'}</h1>
         <div className="detail-actions">
           {meeting.status !== 'FINISHED' && (
-            <button className="btn-primary btn-with-icon" onClick={handleJoinConference} disabled={creatingConference}>
+            <button 
+              className="btn-primary btn-with-icon" 
+              onClick={handleJoinConference} 
+              disabled={isDisabled}
+              title={disableReason}
+            >
               <Video size={18} />
-              {creatingConference ? 'Ouverture...' : 'Rejoindre la visio'}
+              {creatingConference ? 'Ouverture...' : buttonText}
             </button>
+          )}
+          {meeting.status !== 'FINISHED' && isCoordinatorOrAdmin && (
+             <button 
+               className="btn-secondary" 
+               onClick={async () => {
+                 if (window.confirm('Voulez-vous clôturer cette réunion ?')) {
+                   try {
+                     await updateMeeting(id, { status: 'FINISHED' });
+                     loadMeeting();
+                   } catch (err) {
+                     setError("Échec de la clôture de la réunion");
+                   }
+                 }
+               }}
+             >
+               Terminer/Clôturer la réunion
+             </button>
           )}
           {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
             <>
