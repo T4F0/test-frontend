@@ -211,6 +211,7 @@ export default function FormBuilder() {
   }
 
   const isDescendant = (parentId, childId) => {
+    if (parentId === childId) return true;
     let current = sections.find(s => s.id === childId);
     while (current && current.parent) {
       if (current.parent === parentId) return true;
