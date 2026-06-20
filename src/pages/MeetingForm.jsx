@@ -34,7 +34,10 @@ export default function MeetingForm() {
     scheduled_date: '',
     scheduled_time: '09:00',
     meeting_link: '',
-    participants: preselectData.preselectDoctor ? [String(preselectData.preselectDoctor)] : [],
+    participants: Array.from(new Set([
+      ...(preselectData.preselectDoctor ? [String(preselectData.preselectDoctor)] : []),
+      ...(user?.id ? [String(user.id)] : [])
+    ])),
   })
 
   // Cache of all fetched submission objects (for building payload & display)
