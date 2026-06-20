@@ -81,7 +81,7 @@ export default function PatientsList() {
       <div className="search-bar">
         <input
           type="text"
-          placeholder="Rechercher par nom, code anonymisé ou médecin..."
+          placeholder="Rechercher par nom, identifiant patient ou médecin..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="search-input"
@@ -103,7 +103,7 @@ export default function PatientsList() {
                 <th>Responsable</th>
                 <th>Date de naissance</th>
                 <th>Sexe</th>
-                <th>Code anonymisé</th>
+                <th>Identifiant patient</th>
                 {/* <th>Accès</th> */}
                 <th>Créé le</th>
                 <th>Actions</th>

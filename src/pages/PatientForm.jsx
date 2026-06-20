@@ -182,7 +182,7 @@ export default function PatientForm() {
         </div>
 
         <div className="form-group">
-          <label>Code anonymisé</label>
+          <label>Identifiant patient</label>
           <input
             type="text"
             value={patient.anonymized_code}

@@ -48,8 +48,14 @@ authAxios.interceptors.response.use(
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         // Only redirect if not already on login page
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login'
+        if (window.location.protocol === 'file:') {
+          if (!window.location.hash.startsWith('#/login')) {
+            window.location.hash = '#/login'
+          }
+        } else {
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login'
+          }
         }
       }
     }
