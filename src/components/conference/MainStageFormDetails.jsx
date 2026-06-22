@@ -8,13 +8,19 @@ function formatFieldValue(value) {
   return value == null || value === '' ? '—' : String(value)
 }
 
+function shouldShowField(field, submissionData) {
+  const value = submissionData[field.id]
+  const hasValue = value !== undefined && value !== '' && value !== '—'
+  return hasValue || field.required || field.show_rdv
+}
+
 function hasDataInChildren(section, submissionData) {
-  if (section.fields?.some(f => submissionData[f.id] !== undefined)) return true
+  if (section.fields?.some(f => shouldShowField(f, submissionData))) return true
   return section.children?.some(child => hasDataInChildren(child, submissionData)) || false
 }
 
 function SectionDataRenderer({ section, submissionData }) {
-  const hasFields = section.fields?.some(f => submissionData[f.id] !== undefined)
+  const hasFields = section.fields?.some(f => shouldShowField(f, submissionData))
   const hasChildData = section.children?.some(child => hasDataInChildren(child, submissionData))
   if (!hasFields && !hasChildData) return null
 
@@ -24,8 +30,8 @@ function SectionDataRenderer({ section, submissionData }) {
       {section.fields
         ?.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map(field => {
+          if (!shouldShowField(field, submissionData)) return null
           const value = submissionData[field.id]
-          if (value === undefined) return null
           const isFile = field.field_type === 'file'
           return (
             <div key={field.id} className="submission-detail-field">

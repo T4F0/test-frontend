@@ -22,30 +22,41 @@ function formatFieldValue(value) {
   return value == null || value === '' ? '—' : String(value)
 }
 
+function isFieldVisible(field, submissionData) {
+  const value = submissionData[field.id]
+  const hasValue = value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)
+  return hasValue || field.required || field.show_rdv
+}
+
 function hasDataInChildren(section, submissionData) {
-  if (section.fields?.some(f => submissionData[f.id] !== undefined)) return true
+  if (section.fields?.some(f => isFieldVisible(f, submissionData))) return true
   return section.children?.some(child => hasDataInChildren(child, submissionData)) || false
 }
 
 function SectionDataRenderer({ section, submissionData }) {
-  const hasFields = section.fields?.some(f => submissionData[f.id] !== undefined)
+  const visibleFields = section.fields?.filter(f => isFieldVisible(f, submissionData)) ?? []
   const hasChildData = section.children?.some(child => hasDataInChildren(child, submissionData))
-  if (!hasFields && !hasChildData) return null
+  if (visibleFields.length === 0 && !hasChildData) return null
 
   return (
     <div key={section.id} className={`submission-section ${section.parent ? 'nested' : ''}`}>
       <h3 className="submission-section-title">{section.name}</h3>
-      {section.fields
-        ?.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      {visibleFields
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map(field => {
           const value = submissionData[field.id]
-          if (value === undefined) return null
+          const isEmpty = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
           const isFile = field.field_type === 'file'
           return (
             <div key={field.id} className="submission-detail-field">
-              <span className="submission-detail-field-label">{field.name}</span>
-              <span className={`submission-detail-field-value ${isFile ? 'is-file' : ''}`}>
-                {isFile ? (
+              <span className="submission-detail-field-label">
+                {field.name}
+                {field.required && <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>}
+              </span>
+              <span className={`submission-detail-field-value ${isFile ? 'is-file' : ''} ${isEmpty ? 'is-empty' : ''}`}>
+                {isEmpty ? (
+                  <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>
+                ) : isFile ? (
                   <span className="file-field-preview">
                     <FileText size={14} style={{ marginRight: '6px' }} />
                     {formatFieldValue(value)}

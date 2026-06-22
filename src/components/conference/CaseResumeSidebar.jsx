@@ -40,7 +40,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeS
   }
 
   const formatValue = (value, fieldType) => {
-    if (value === null || value === undefined || value === '') return '—'
+    if (value === null || value === undefined || value === '' || value === '—') return '—'
     if (fieldType === 'checkbox') return value ? '✓ Oui' : '✗ Non'
     if (fieldType === 'date') {
       return formatDate(value)
@@ -155,7 +155,7 @@ export default function CaseResumeSidebar({ isOpen, onToggle, meetingId, activeS
                                 {fields.map((field, fIdx) => (
                                   <div key={fIdx} className="cr-field">
                                     <div className="cr-field-label">{field.field_name}</div>
-                                    <div className={`cr-field-value ${!field.value && field.value !== false ? 'empty' : ''}`}>
+                                    <div className={`cr-field-value ${(!field.value && field.value !== false) || field.value === '—' ? 'empty' : ''}`}>
                                       {formatValue(field.value, field.field_type)}
                                     </div>
                                   </div>
