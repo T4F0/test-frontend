@@ -85,12 +85,18 @@ export default function SectionBuilder({
           </div>
         ) : (
           <>
-            <h4>{name || 'Sans titre'}</h4>
+            <h4
+              onClick={() => setIsEditing(true)}
+              style={{ cursor: 'pointer' }}
+              title="Cliquer pour modifier"
+            >
+              {name || 'Sans titre'}
+            </h4>
             <div className="section-actions">
-              <button onClick={() => setIsEditing(true)} className="btn-small">Modifier</button>
-              <button onClick={handleDelete} className="btn-small btn-danger">Supprimer</button>
-              <button onClick={() => onAddField(section.id)} className="btn-small btn-secondary">+ Champ</button>
-              <button onClick={handleAddSubSection} className="btn-small btn-primary">+ Sous-section</button>
+              <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="btn-small">Modifier</button>
+              <button onClick={(e) => { e.stopPropagation(); handleDelete(); }} className="btn-small btn-danger">Supprimer</button>
+              <button onClick={(e) => { e.stopPropagation(); onAddField(section.id); }} className="btn-small btn-secondary">+ Champ</button>
+              <button onClick={(e) => { e.stopPropagation(); handleAddSubSection(); }} className="btn-small btn-primary">+ Sous-section</button>
             </div>
           </>
         )}

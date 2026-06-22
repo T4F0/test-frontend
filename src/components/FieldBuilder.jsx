@@ -130,7 +130,7 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
           </div>
         </div>
       ) : (
-        <div className="field-display">
+        <div className="field-display" onClick={() => setIsEditing(true)} style={{ cursor: 'pointer' }}>
           <div className="field-info">
             <span className="field-name">{data.name || 'Sans titre'}</span>
             <span className="field-type">{data.field_type}</span>
@@ -138,8 +138,8 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
             {data.show_rdv && <span className="badge badge-info">Afficher RDV</span>}
           </div>
           <div className="field-controls">
-            <button onClick={() => setIsEditing(true)} className="btn-small">Modifier</button>
-            <button onClick={handleDelete} className="btn-small btn-danger">Supprimer</button>
+            <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="btn-small">Modifier</button>
+            <button onClick={(e) => { e.stopPropagation(); handleDelete(); }} className="btn-small btn-danger">Supprimer</button>
           </div>
         </div>
       )}
