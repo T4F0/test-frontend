@@ -66,7 +66,10 @@ export default function MainStageFormDetails({ form, submission, attachments, on
       <div className="main-stage-form-header">
         <div>
           <h3 className="form-title">{form.name}</h3>
-          <p className="form-subtitle">Patient: {submission.patient_name ?? '—'}</p>
+          <p className="form-subtitle">
+            Patient: {submission.patient_name ?? '—'}
+            {submission.patient_age != null && ` (${submission.patient_age} ans)`}
+          </p>
         </div>
         <button className="btn-close-viewer" onClick={onClose} title="Fermer les détails">
           <X size={24} />

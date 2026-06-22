@@ -154,6 +154,7 @@ export default function FormSubmissionDetail() {
             <span className="submission-detail-meta-label">Patient</span>
             <span className="submission-detail-meta-value">
               {submission.patient_name ?? '—'}
+              {submission.patient_age != null && ` (${submission.patient_age} ans)`}
             </span>
           </div>
           <div className="submission-detail-meta-item">
