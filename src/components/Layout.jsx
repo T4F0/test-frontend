@@ -1,8 +1,8 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell, Send, UserCircle } from 'lucide-react'
-import { getNotifications, markNotificationRead } from '../api/authApi'
+import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell, Send, UserCircle, CheckSquare, Trash2 } from 'lucide-react'
+import { getNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications } from '../api/authApi'
 import { formatDate } from '../lib/dateUtils'
 
 export default function Layout() {
@@ -72,6 +72,25 @@ export default function Layout() {
     try {
       await markNotificationRead(id)
       setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsRead()
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await clearAllNotifications()
+      setNotifications([])
+      setShowNotifications(false)
     } catch (err) {
       console.error(err)
     }
@@ -210,6 +229,59 @@ export default function Layout() {
                               ))
                             )}
                           </div>
+                          {notifications.length > 0 && (
+                            <div style={{ padding: '0.5rem', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: unreadCount > 0 ? 'space-between' : 'center', alignItems: 'center' }}>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleClearAllNotifications(); }}
+                                style={{ 
+                                  background: 'transparent', 
+                                  border: 'none', 
+                                  color: '#64748b', 
+                                  fontSize: '0.75rem', 
+                                  fontWeight: '600',
+                                  cursor: 'pointer', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '6px',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  transition: 'all 0.2s ease',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                title="Effacer tout"
+                              >
+                                <Trash2 size={14} />
+                                Effacer tout
+                              </button>
+
+                              {unreadCount > 0 && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleMarkAllAsRead(); }}
+                                  style={{ 
+                                    background: 'transparent', 
+                                    border: 'none', 
+                                    color: '#64748b', 
+                                    fontSize: '0.75rem', 
+                                    fontWeight: '600',
+                                    cursor: 'pointer', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px',
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    transition: 'all 0.2s ease',
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                  title="Tout marquer comme lu"
+                                >
+                                  <CheckSquare size={14} />
+                                  Tout marquer comme lu
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

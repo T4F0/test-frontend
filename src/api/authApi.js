@@ -176,6 +176,16 @@ export const markNotificationRead = async (id) => {
   return data
 }
 
+export const markAllNotificationsRead = async () => {
+  const { data } = await authAxios.post(`${API_BASE}/notifications/read-all/`)
+  return data
+}
+
+export const clearAllNotifications = async () => {
+  const { data } = await authAxios.delete(`${API_BASE}/notifications/clear-all/`)
+  return data
+}
+
 export const getServices = async () => {
   const { data } = await authAxios.get(`${API_BASE}/services/`)
   return data.results || data
