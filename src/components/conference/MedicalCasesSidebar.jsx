@@ -125,7 +125,8 @@ export default function MedicalCasesSidebar({
         <button className="sidebar-close" onClick={onToggle}><X size={18} /></button>
       </div>
       
-      <div className="sidebar-content case-accordion-container">
+      <div className="sidebar-content">
+        <div className="case-accordion-container">
         {(!submissions || submissions.length === 0) && (
           <p className="no-files">Aucun dossier médical associé à cette réunion.</p>
         )}
@@ -262,6 +263,7 @@ export default function MedicalCasesSidebar({
             </div>
           )
         })}
+        </div>
       </div>
     </div>
   )

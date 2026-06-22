@@ -101,3 +101,29 @@ export const createMeetingRequestForPatient = async (patientId, note = '') => {
   const { data } = await authAxios.post(`${API_BASE}/meeting-requests/`, { patient_id: patientId, note })
   return data
 }
+
+// ---- Ask to Join ----
+
+export const askToJoinMeeting = async (meetingId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/meetings/${meetingId}/ask_to_join/`)
+  return data
+}
+
+export const listMeetingJoinRequests = async (meetingId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/meetings/${meetingId}/join_requests/`)
+  return data
+}
+
+export const acceptMeetingJoinRequest = async (meetingId, requestId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/meetings/${meetingId}/accept_join_request/`, { request_id: requestId })
+  return data
+}
+
+export const rejectMeetingJoinRequest = async (meetingId, requestId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/meetings/${meetingId}/reject_join_request/`, { request_id: requestId })
+  return data
+}

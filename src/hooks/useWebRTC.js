@@ -12,6 +12,10 @@ export default function useWebRTC(
   onChatMessage,
   onNotesUpdate,
   onConferenceEnded,
+  onLobbyWaiting,
+  onJoinAccepted,
+  onJoinRejected,
+  onJoinRequested,
 ) {
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
@@ -28,6 +32,7 @@ export default function useWebRTC(
   const localStreamRef = useRef(null);
   const currentVideoTrackRef = useRef(null);
   const handleSignalingMessageRef = useRef(null);
+  const isLobbyConnectionRef = useRef(false); // true when WS is in lobby mode (not yet accepted)
 
   const cleanupPeers = useCallback(() => {
     Object.values(peersRef.current).forEach((p) => {
@@ -176,62 +181,99 @@ export default function useWebRTC(
         case "conference_ended":
           if (onConferenceEnded) onConferenceEnded();
           break;
+        // ---- Ask-to-Join events ----
+        case "lobby_waiting":
+          // Server acknowledged lobby connection
+          if (onLobbyWaiting) onLobbyWaiting();
+          break;
+        case "join_accepted":
+          // Host accepted this user's join request
+          console.log("useWebRTC: join_accepted event received from WS!");
+          if (onJoinAccepted) onJoinAccepted();
+          break;
+        case "join_rejected":
+          // Host rejected this user's join request
+          if (onJoinRejected) onJoinRejected(data.reason);
+          break;
+        case "join_requested":
+          // A new user is requesting to join (sent to hosts)
+          if (onJoinRequested) onJoinRequested(data);
+          break;
         default:
           break;
       }
     },
-    [createPeer, onChatMessage, userId],
+    [createPeer, onChatMessage, onConferenceEnded, onJoinAccepted, onJoinRejected, onJoinRequested, onLobbyWaiting, onNotesUpdate, userId],
   );
+
 
   useEffect(() => {
     handleSignalingMessageRef.current = handleSignalingMessage;
   }, [handleSignalingMessage]);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async ({ lobbyMode = false } = {}) => {
     try {
-      try {
-        console.log("WebRTC: Requesting Camera/Mic access...");
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        console.log("WebRTC: Media access GRANTED", {
-          videoTracks: stream.getVideoTracks().length,
-          audioTracks: stream.getAudioTracks().length,
-        });
+      // Only request media for full participant connections (not lobby mode)
+      if (!lobbyMode) {
+        if (!localStreamRef.current) {
+          try {
+            console.log("WebRTC: Requesting Camera/Mic access...");
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: true,
+            });
+            console.log("WebRTC: Media access GRANTED", {
+              videoTracks: stream.getVideoTracks().length,
+              audioTracks: stream.getAudioTracks().length,
+            });
 
-        // Mute and Turn off camera by default
-        stream.getAudioTracks().forEach((t) => (t.enabled = false));
-        stream.getVideoTracks().forEach((t) => (t.enabled = false));
+            // Mute and Turn off camera by default
+            stream.getAudioTracks().forEach((t) => (t.enabled = false));
+            stream.getVideoTracks().forEach((t) => (t.enabled = false));
 
-        setLocalStream(stream);
-        localStreamRef.current = stream;
-        currentVideoTrackRef.current = stream.getVideoTracks()[0] || null;
+            setLocalStream(stream);
+            localStreamRef.current = stream;
+            currentVideoTrackRef.current = stream.getVideoTracks()[0] || null;
 
-        // Add stream to any existing peers that were created before media was ready
-        Object.values(peersRef.current).forEach((peer) => {
-          if (!peer.destroyed && stream) {
-            try {
-              peer.addStream(stream);
-            } catch (e) {}
+            // Add stream to any existing peers that were created before media was ready
+            Object.values(peersRef.current).forEach((peer) => {
+              if (!peer.destroyed && stream) {
+                try {
+                  peer.addStream(stream);
+                } catch (e) {}
+              }
+            });
+          } catch (e) {
+            console.error("WebRTC: Media access failed", e);
+            if (e.name === "NotReadableError" || e.message.includes("in use")) {
+              alert(
+                `Camera/Microphone is already in use by another application.\n\n1. Close other apps like Teams, Zoom, or Chrome.\n2. Ensure no other instances of this app are running.\n3. Restart the app.`,
+              );
+            } else if (e.name === "NotAllowedError") {
+              alert(
+                "Permission denied. please check your Windows Privacy settings.",
+              );
+            } else {
+              alert(
+                `Failed to access camera/microphone: ${e.message}\n\nPlease ensure hardware is connected.`,
+              );
+            }
           }
-        });
-      } catch (e) {
-        console.error("WebRTC: Media access failed", e);
-        if (e.name === "NotReadableError" || e.message.includes("in use")) {
-          alert(
-            `Camera/Microphone is already in use by another application.\n\n1. Close other apps like Teams, Zoom, or Chrome.\n2. Ensure no other instances of this app are running.\n3. Restart the app.`,
-          );
-        } else if (e.name === "NotAllowedError") {
-          alert(
-            "Permission denied. please check your Windows Privacy settings.",
-          );
-        } else {
-          alert(
-            `Failed to access camera/microphone: ${e.message}\n\nPlease ensure hardware is connected.`,
-          );
         }
       }
+
+      // Close any existing WS before opening a new one
+      if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+        wsRef.current.onclose = null; // Prevent triggering cleanupPeers on intentional close
+        wsRef.current.close();
+        wsRef.current = null;
+        if (!lobbyMode) {
+          // Only cleanup peers when reconnecting as full participant
+          cleanupPeers();
+        }
+      }
+
+      isLobbyConnectionRef.current = lobbyMode;
 
       const wsToken = getToken();
       if (!wsToken) {
@@ -243,10 +285,10 @@ export default function useWebRTC(
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log("WS: Connected to signaling server");
+        console.log(`WS: Connected to signaling server (lobby=${lobbyMode})`);
         setIsConnected(true);
-        // Report initial state (Muted/Camera Off) to other participants
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
+        // Only report media state for full participant connections
+        if (!isLobbyConnectionRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(
             JSON.stringify({
               type: "media_state_update",
@@ -264,12 +306,24 @@ export default function useWebRTC(
           `WS: Closed code=${e.code} reason=${e.reason} clean=${e.wasClean}`,
         );
         setIsConnected(false);
-        cleanupPeers();
+        if (!lobbyMode) {
+          cleanupPeers();
+        }
       };
     } catch (err) {
       console.error("WebRTC: Connection error", err);
     }
   }, [cleanupPeers, roomId]);
+
+  /**
+   * Transition from lobby WebSocket connection to full participant connection.
+   * Called after the host accepts a join request.
+   * Closes the lobby WS and opens a new connection as a full participant.
+   */
+  const reconnectAsParticipant = useCallback(async () => {
+    console.log("WebRTC: Reconnecting as full participant (was lobby user)");
+    await connect({ lobbyMode: false });
+  }, [connect]);
 
   const replaceOutgoingVideoTrack = useCallback((nextTrack) => {
     const prevTrack = currentVideoTrackRef.current;
@@ -395,8 +449,10 @@ export default function useWebRTC(
     isMuted,
     isCameraOff,
     isScreenSharing,
+    isHandRaised: false,
     screenSharer: screenSharer || (isScreenSharing ? userId : null),
     connect,
+    reconnectAsParticipant,
     disconnect: () => {
       cleanupPeers();
       wsRef.current?.close();
@@ -416,5 +472,7 @@ export default function useWebRTC(
     },
     raiseHand: () =>
       wsRef.current?.send(JSON.stringify({ type: "raise_hand" })),
+    muteRemoteParticipant: (targetUserId) =>
+      wsRef.current?.send(JSON.stringify({ type: "mute_participant", target_user_id: targetUserId })),
   };
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getMeetings, deleteMeeting, joinMeeting } from '../api/meetingsApi'
+import { getMeetings, deleteMeeting, joinMeeting, askToJoinMeeting } from '../api/meetingsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
-import { Video, Calendar, Clock, Users, ArrowRight } from 'lucide-react'
+import { Video, Calendar, Clock, Users, ArrowRight, Loader } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
@@ -18,6 +18,8 @@ export default function MeetingsList() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [joiningId, setJoiningId] = useState(null)
+  // Track ask-to-join request state per meeting: { [meetingId]: 'loading' | 'sent' | null }
+  const [askJoinState, setAskJoinState] = useState({})
 
   useEffect(() => {
     loadMeetings()
@@ -60,6 +62,34 @@ export default function MeetingsList() {
       loadMeetings()
     } catch (err) {
       setError('Échec de l\'inscription à la réunion')
+    }
+  }
+
+  const handleAskToJoin = async (meeting) => {
+    if (askJoinState[meeting.id] === 'loading' || askJoinState[meeting.id] === 'sent') return
+    try {
+      setAskJoinState(prev => ({ ...prev, [meeting.id]: 'loading' }))
+      const result = await askToJoinMeeting(meeting.id)
+
+      if (result.status === 'already_participant' || result.status === 'accepted') {
+        // They're already in — navigate to the conference
+        if (meeting.conference_room_id) {
+          navigate(`/conference/${meeting.conference_room_id}`)
+        } else {
+          // fallback: try createConference
+          const conference = await createConference(meeting.id)
+          navigate(`/conference/${conference.room_id}`)
+        }
+      } else {
+        // Request sent — show waiting state and navigate to the conference lobby
+        setAskJoinState(prev => ({ ...prev, [meeting.id]: 'sent' }))
+        if (meeting.conference_room_id) {
+          navigate(`/conference/${meeting.conference_room_id}`)
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Échec de la demande pour rejoindre')
+      setAskJoinState(prev => ({ ...prev, [meeting.id]: null }))
     }
   }
 
@@ -115,74 +145,99 @@ export default function MeetingsList() {
               </tr>
             </thead>
             <tbody>
-              {meetings.map((m) => (
-                <tr 
-                  key={m.id}
-                  onClick={(e) => {
-                    if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('select')) {
-                      navigate(`/meetings/${m.id}`);
-                    }
-                  }}
-                  style={{ cursor: 'pointer' }}
-                  className="hover-row-highlight"
-                >
-                  <td>
-                    <strong>{m.title || formatDate(m.scheduled_date)}</strong>
-                    <div className="text-muted" style={{fontSize: '0.8rem'}}>
-                      {formatDateTime(m.scheduled_date)}
-                    </div>
-                  </td>
-                  <td>
-                    <span className="badge badge-neutral">
-                      {m.submissions?.length || 0} dossier(s)
-                    </span>
-                  </td>
-                  <td><span className={`status-badge ${m.status.toLowerCase()}`}>{STATUS_LABELS[m.status] ?? m.status}</span></td>
-                  <td>
-                    {m.status !== 'FINISHED' && (() => {
-                      const isToday = new Date(m.scheduled_date).toDateString() === new Date().toDateString();
-                      const isCoordinatorOrAdmin = user?.id === (m.coordinator_details?.id || m.coordinator) || user?.role === 'ADMIN';
-                      const buttonText = isCoordinatorOrAdmin ? 'Démarrer' : 'Rejoindre';
+              {meetings.map((m) => {
+                const isParticipant = m.participants?.some(pId => (pId.id || pId) === user?.id)
+                const isCoordinatorOrAdmin = user?.id === (m.coordinator_details?.id || m.coordinator) || user?.role === 'ADMIN'
 
-                      let disableReason = "";
-                      if (!isToday) {
-                        disableReason = "La réunion n'est accessible que le jour prévu";
-                      } else if (!isCoordinatorOrAdmin && m.status !== 'LIVE') {
-                        disableReason = "La réunion n'a pas encore commencé";
+                return (
+                  <tr 
+                    key={m.id}
+                    onClick={(e) => {
+                      if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input') && !e.target.closest('select')) {
+                        navigate(`/meetings/${m.id}`);
                       }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="hover-row-highlight"
+                  >
+                    <td>
+                      <strong>{m.title || formatDate(m.scheduled_date)}</strong>
+                      <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                        {formatDateTime(m.scheduled_date)}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="badge badge-neutral">
+                        {m.submissions?.length || 0} dossier(s)
+                      </span>
+                    </td>
+                    <td><span className={`status-badge ${m.status.toLowerCase()}`}>{STATUS_LABELS[m.status] ?? m.status}</span></td>
+                    <td>
+                      {m.status !== 'FINISHED' && (() => {
+                        const isToday = new Date(m.scheduled_date).toDateString() === new Date().toDateString()
 
-                      const isDisabled = joiningId === m.id || disableReason !== "";
+                        // Non-participant viewing a LIVE meeting → "Ask to Join"
+                        if (m.status === 'LIVE' && !isParticipant && !isCoordinatorOrAdmin) {
+                          const state = askJoinState[m.id]
+                          const isLoading = state === 'loading'
+                          const isSent = state === 'sent'
+                          return (
+                            <button
+                              className="btn-small btn-primary btn-with-icon"
+                              onClick={() => handleAskToJoin(m)}
+                              disabled={isLoading || isSent}
+                              title={isSent ? 'Demande envoyée, en attente de l\'hôte' : 'Demander à rejoindre cette réunion'}
+                              style={{ padding: '0.4rem 0.8rem' }}
+                              id={`ask-join-${m.id}`}
+                            >
+                              <Video size={14} />
+                              {isLoading ? 'Envoi...' : isSent ? '⏳ En attente...' : 'Demander à rejoindre'}
+                            </button>
+                          )
+                        }
 
-                      return (
-                        <button 
-                          className="btn-small btn-primary btn-with-icon" 
-                          onClick={() => handleQuickJoin(m.id)}
-                          disabled={isDisabled}
-                          title={disableReason}
-                          style={{ padding: '0.4rem 0.8rem' }}
-                        >
-                          <Video size={14} />
-                          {joiningId === m.id ? 'Ouverture...' : buttonText}
-                        </button>
-                      );
-                    })()}
-                  </td>
-                  <td className="actions">
-                    <div className="action-group-horizontal">
-                      <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
-                      {!m.participants?.some(pId => (pId.id || pId) === user?.id) && (
-                        <button className="btn-small btn-info" onClick={() => handleJoin(m.id)}>S'inscrire</button>
-                      )}
-                      {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
-                        <>
-                          <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
-                          <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        // Standard join/start button
+                        const buttonText = isCoordinatorOrAdmin ? 'Démarrer' : 'Rejoindre'
+                        let disableReason = ""
+                        if (!isToday) {
+                          disableReason = "La réunion n'est accessible que le jour prévu"
+                        } else if (!isCoordinatorOrAdmin && m.status !== 'LIVE') {
+                          disableReason = "La réunion n'a pas encore commencé"
+                        }
+                        const isDisabled = joiningId === m.id || disableReason !== ""
+
+                        return (
+                          <button 
+                            className="btn-small btn-primary btn-with-icon" 
+                            onClick={() => handleQuickJoin(m.id)}
+                            disabled={isDisabled}
+                            title={disableReason}
+                            style={{ padding: '0.4rem 0.8rem' }}
+                            id={`join-${m.id}`}
+                          >
+                            <Video size={14} />
+                            {joiningId === m.id ? 'Ouverture...' : buttonText}
+                          </button>
+                        )
+                      })()}
+                    </td>
+                    <td className="actions">
+                      <div className="action-group-horizontal">
+                        <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
+                        {!isParticipant && m.status !== 'LIVE' && (
+                          <button className="btn-small btn-info" onClick={() => handleJoin(m.id)}>S'inscrire</button>
+                        )}
+                        {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
+                          <>
+                            <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
+                            <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -190,3 +245,4 @@ export default function MeetingsList() {
     </div>
   )
 }
+

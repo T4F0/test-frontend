@@ -642,11 +642,14 @@
 .sidebar {
   width: 320px;
   min-width: 320px;
+  height: 100%;
+  max-height: 100%;
   background: rgba(15, 23, 42, 0.98);
   border-left: 1px solid rgba(99, 102, 241, 0.15);
   display: flex;
   flex-direction: column;
   animation: slideIn 0.3s ease;
+  overflow: hidden;
 }
 
 @keyframes slideIn {
@@ -696,6 +699,26 @@
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
+}
+
+/* Custom Scrollbar for Sidebar Content */
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
 }
 
 .notes-content {
@@ -1633,6 +1656,28 @@
   flex-direction: column;
   gap: 1rem;
   background: rgba(15, 23, 42, 0.4);
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for Case Accordion Body */
+.case-accordion-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.case-accordion-body::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.2);
+  border-radius: 3px;
+}
+
+.case-accordion-body::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.case-accordion-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.45);
 }
 
 /* Adjust drop zone inside accordion */
