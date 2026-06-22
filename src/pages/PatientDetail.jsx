@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient /*, getShareableDoctors, sharePatient*/ } from '../api/patientsApi'
 import { getSubmissionsByPatient, updateSubmission, deleteSubmission } from '../api/submissionsApi'
 import { getNextPlannedMeeting, addPatientToMeeting, createMeetingRequestForPatient } from '../api/meetingsApi'
+import { getReportsByPatient } from '../api/reportsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
 import { CalendarPlus, UserPlus, CheckCircle2, Send } from 'lucide-react'
@@ -29,6 +30,7 @@ export default function PatientDetail() {
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [patientReports, setPatientReports] = useState([]) // all RCP reports for this patient
 
   // Meeting integration state
   const [nextMeeting, setNextMeeting] = useState(null)
@@ -51,6 +53,7 @@ export default function PatientDetail() {
     loadPatient()
     loadSubmissions()
     loadNextMeeting()
+    loadReports()
   }, [id])
 
   /*
@@ -73,6 +76,15 @@ export default function PatientDetail() {
       setSubmissions(Array.isArray(data) ? data : [])
     } catch (e) {
       console.error('Failed to load submissions:', e)
+    }
+  }
+
+  const loadReports = async () => {
+    try {
+      const data = await getReportsByPatient(id)
+      setPatientReports(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('Failed to load reports:', e)
     }
   }
 
@@ -534,103 +546,130 @@ export default function PatientDetail() {
               <p>Aucun dossier ou soumission de formulaire pour ce patient.</p>
             </div>
           ) : (
-            <div className="submissions-list-container">
-              <table className="forms-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Formulaire / Titre</th>
-                    <th>Médecin</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {submissions.map((sub) => (
-                    <tr key={sub.id}>
-                      <td className="date-cell" style={{ fontWeight: 'bold' }}>
-                        {formatDate(sub.created_at)}
-                      </td>
-                      <td>
-                        <div className="sub-title-main">
-                          {sub.form_name}
-                        </div>
-                      </td>
-                      <td>
-                        {sub.submitted_by_name ? (
-                          <span className="text-muted" style={{ fontWeight: '600' }}>{sub.submitted_by_name}</span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td>
-                        {user?.role === 'COORDINATEUR' ? (
-                          <span className="badge" style={{
-                            backgroundColor: STATUS_COLORS[sub.status] + '20',
+            <div className="submissions-cards-container">
+              {submissions.map((sub) => {
+                // All reports belonging to this submission
+                const subReports = patientReports.filter(r => r.submission === sub.id)
+
+                return (
+                  <div key={sub.id} className="submission-card">
+                    {/* ── Card Header ── */}
+                    <div className="submission-card-header">
+                      <div className="submission-card-meta">
+                        <span className="submission-card-date">{formatDate(sub.created_at)}</span>
+                        <span
+                          className="badge"
+                          style={{
+                            backgroundColor: STATUS_COLORS[sub.status] + '22',
                             color: STATUS_COLORS[sub.status],
-                            border: `1px solid ${STATUS_COLORS[sub.status]}40`
-                          }}>
-                            {STATUS_LABELS[sub.status]}
-                          </span>
-                        ) : (
-                          <select
-                            className="status-select-mini"
-                            value={sub.status}
-                            onChange={(e) => handleStatusChange(sub.id, e.target.value)}
-                            style={{
-                              backgroundColor: STATUS_COLORS[sub.status] + '20',
-                              color: STATUS_COLORS[sub.status],
-                              borderColor: STATUS_COLORS[sub.status] + '40'
-                            }}
-                          >
-                            {Object.entries(STATUS_LABELS).map(([val, label]) => (
-                              <option key={val} value={val}>{label}</option>
-                            ))}
-                          </select>
-                        )}
-                      </td>
-                      <td className="actions">
-                        {user?.role !== 'COORDINATEUR' ? (
-                          <div className="action-group-horizontal">
-                            <button
-                              className="btn-small btn-outline"
-                              onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}
-                              title="Voir les détails"
-                            >
-                              👁️ Voir
-                            </button>
-                            <button
-                              className="btn-small btn-outline"
-                              onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}/edit`)}
-                              title="Modifier la soumission"
-                            >
-                              ✏️ Modifier
-                            </button>
-                            <button
-                              className="btn-small btn-outline"
-                              onClick={() => navigate(`/attachments?submission=${sub.id}`)}
-                              title="Gérer les pièces jointes"
-                            >
-                              📎 Fichiers
-                            </button>
-                            {(user?.role === 'ADMIN' || user?.role === 'MEDECIN') && (
-                              <button
-                                className="btn-small btn-danger"
-                                onClick={() => handleDeleteSubmission(sub.id)}
-                                title="Supprimer le dossier"
-                              >
-                                🗑️ Supprimer
-                              </button>
+                            border: `1px solid ${STATUS_COLORS[sub.status]}50`,
+                            fontSize: '0.72rem',
+                            padding: '2px 10px',
+                            borderRadius: '999px',
+                          }}
+                        >
+                          {STATUS_LABELS[sub.status]}
+                        </span>
+                      </div>
+                      <div className="submission-card-title">{sub.form_name}</div>
+                      {sub.submitted_by_name && (
+                        <div className="submission-card-doctor">{sub.submitted_by_name}</div>
+                      )}
+                    </div>
+
+                    {/* ── RCP Decisions ── */}
+                    {subReports.length > 0 && (
+                      <div className="rcp-decisions-section">
+                        <div className="rcp-decisions-label">
+                          <span className="rcp-decisions-label-icon">⚖️</span>
+                          Décision{subReports.length > 1 ? 's' : ''} RCP
+                        </div>
+                        {subReports.map((report, idx) => (
+                          <div key={report.id}>
+                            {idx > 0 && (
+                              <div className="rcp-decision-separator">
+                                <div className="rcp-separator-line" />
+                                <span className="rcp-separator-label">Décision précédente</span>
+                                <div className="rcp-separator-line" />
+                              </div>
                             )}
+                            <div className="rcp-decision-card">
+                              <div className="rcp-decision-card-body">
+                                {report.content}
+                              </div>
+                              <div className="rcp-decision-card-footer">
+                                {report.written_by_name && (
+                                  <span className="rcp-decision-author">
+                                    🩺 {report.written_by_name}
+                                  </span>
+                                )}
+                                <span className="rcp-decision-date">
+                                  {new Date(report.created_at).toLocaleDateString('fr-FR', {
+                                    day: '2-digit', month: 'long', year: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-muted">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── Actions ── */}
+                    <div className="submission-card-actions">
+                      {user?.role !== 'COORDINATEUR' ? (
+                        <div className="action-group-horizontal">
+                          <button
+                            className="btn-small btn-outline"
+                            onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}
+                            title="Voir les détails"
+                          >
+                            👁️ Voir
+                          </button>
+                          <button
+                            className="btn-small btn-outline"
+                            onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}/edit`)}
+                            title="Modifier la soumission"
+                          >
+                            ✏️ Modifier
+                          </button>
+                          <button
+                            className="btn-small btn-outline"
+                            onClick={() => navigate(`/attachments?submission=${sub.id}`)}
+                            title="Gérer les pièces jointes"
+                          >
+                            📎 Fichiers
+                          </button>
+                          {(user?.role === 'ADMIN' || user?.role === 'MEDECIN') && (
+                            <button
+                              className="btn-small btn-danger"
+                              onClick={() => handleDeleteSubmission(sub.id)}
+                              title="Supprimer le dossier"
+                            >
+                              🗑️ Supprimer
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                          {subReports.length === 0 ? 'Aucune décision enregistrée' : ''}
+                        </span>
+                      )}
+
+                      {user?.role !== 'COORDINATEUR' && (
+                        <button
+                          className="btn-small btn-outline"
+                          onClick={() => navigate(`/reports?submission=${sub.id}`)}
+                          title="Voir le rapport RCP"
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          📑 Rapport RCP
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

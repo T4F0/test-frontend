@@ -942,6 +942,7 @@ export default function VideoConferenceRoom() {
           }}
           onShowFormDetails={handleShowFormDetails}
           activeFormDetailId={activeFormDetail ? activeFormDetail.id : null}
+          isCoordinator={user?.role === 'COORDINATEUR' || user?.role === 'ADMIN'}
         />
 
         {/* Host Admissions Sidebar */}

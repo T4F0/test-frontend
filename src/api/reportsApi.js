@@ -16,6 +16,31 @@ export const getReport = async (id) => {
   return data
 }
 
+export const getReportsBySubmission = async (submissionId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/reports/?submission=${submissionId}`)
+  return data.results ?? data
+}
+
+export const getReportsByPatient = async (patientId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/reports/?patient=${patientId}`)
+  return data.results ?? data
+}
+
+/**
+ * Create or update the RCP decision/report for a given submission.
+ * Only coordinators are allowed by the backend.
+ */
+export const upsertReport = async (submissionId, content) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.post(`${API_BASE}/reports/upsert/`, {
+    submission: submissionId,
+    content,
+  })
+  return data
+}
+
 export const downloadReportPdf = async (id) => {
   const authAxios = getAuthAxios()
   const { data } = await authAxios.get(`${API_BASE}/reports/${id}/download_report/`, {

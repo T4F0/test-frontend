@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from 'react'
-import { ClipboardList, Upload, FileText, Image, Download, Eye, X, Save, Video, ChevronDown, ChevronUp } from 'lucide-react'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { ClipboardList, Upload, FileText, Image, Download, Eye, X, Save, Video, ChevronDown, ChevronUp, Gavel, CheckCircle, Loader } from 'lucide-react'
 import { downloadAttachment, getAttachmentBlobUrl } from '../../api/attachmentsApi'
 import { resolveApiUrl } from '../../api/config'
+import { getReportsBySubmission, upsertReport } from '../../api/reportsApi'
 
 export default function MedicalCasesSidebar({
   submissions,
@@ -17,12 +18,14 @@ export default function MedicalCasesSidebar({
   setActiveSubmissionId,
   onPreviewFile,
   onShowFormDetails,
-  activeFormDetailId
+  activeFormDetailId,
+  isCoordinator,
 }) {
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
 
-
+  // Per-submission report state: { [submissionId]: { text, saved, saving, error } }
+  const [reportState, setReportState] = useState({})
 
   const normalizeAttachment = (attachment, source) => {
     let fileUrl = attachment.file || ''
@@ -45,6 +48,54 @@ export default function MedicalCasesSidebar({
 
   const conferenceFiles = (attachments || []).map((attachment) => normalizeAttachment(attachment, 'meeting'))
   const subFiles = (submissionAttachments || []).map((attachment) => normalizeAttachment(attachment, 'submission'))
+
+  // Load existing report when a submission is expanded
+  const loadReport = useCallback(async (submissionId) => {
+    if (!submissionId) return
+    if (reportState[submissionId]) return // already loaded
+
+    setReportState(prev => ({
+      ...prev,
+      [submissionId]: { text: '', saved: false, saving: false, error: null, loaded: false }
+    }))
+
+    try {
+      const reports = await getReportsBySubmission(submissionId)
+      const report = Array.isArray(reports) && reports.length > 0 ? reports[0] : null
+      setReportState(prev => ({
+        ...prev,
+        [submissionId]: {
+          text: report?.content || '',
+          reportId: report?.id || null,
+          saved: !!report,
+          saving: false,
+          error: null,
+          loaded: true,
+        }
+      }))
+    } catch (e) {
+      setReportState(prev => ({
+        ...prev,
+        [submissionId]: { text: '', saved: false, saving: false, error: 'Échec du chargement', loaded: true }
+      }))
+    }
+  }, [reportState])
+
+  const handleSaveReport = async (submissionId) => {
+    const state = reportState[submissionId]
+    if (!state) return
+
+    setReportState(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], saving: true, error: null } }))
+    try {
+      await upsertReport(submissionId, state.text)
+      setReportState(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], saving: false, saved: true } }))
+    } catch (e) {
+      setReportState(prev => ({
+        ...prev,
+        [submissionId]: { ...prev[submissionId], saving: false, error: 'Échec de la sauvegarde' }
+      }))
+    }
+  }
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -105,11 +156,20 @@ export default function MedicalCasesSidebar({
     return 'pdf'
   }
 
+  useEffect(() => {
+    if (isOpen && activeSubmissionId && isCoordinator) {
+      loadReport(activeSubmissionId)
+    }
+  }, [isOpen, activeSubmissionId, isCoordinator, loadReport])
+
   const handleAccordionClick = (submissionId) => {
     if (activeSubmissionId === submissionId) {
       setActiveSubmissionId(null)
     } else {
       setActiveSubmissionId(submissionId)
+      if (isCoordinator) {
+        loadReport(submissionId)
+      }
     }
   }
 
@@ -136,11 +196,8 @@ export default function MedicalCasesSidebar({
           
           // Filter files for this specific submission
           const caseSubFiles = subFiles.filter(f => f.submissionId === submission.id)
-          // We show meeting files inside the active case, assuming they are uploaded to that case
-          // Wait, attachments on the conference model don't have a submission_id natively in the front, 
-          // but the backend attachment model has submission_id if provided.
-          // Let's filter conferenceFiles that belong to this submission.
           const caseConfFiles = conferenceFiles.filter(f => f.submissionId === submission.id)
+          const rs = reportState[submission.id]
 
           return (
             <div key={submission.id} className={`case-accordion ${isActive ? 'expanded' : ''}`}>
@@ -176,6 +233,54 @@ export default function MedicalCasesSidebar({
                     <ClipboardList size={14} />
                     {activeFormDetailId === submission.id ? 'Masquer les détails' : 'Détails du formulaire'}
                   </button>
+
+                  {/* ── RCP Decision Panel (coordinators only) ── */}
+                  {isCoordinator && (
+                    <div className="rcp-decision-panel">
+                      <div className="rcp-decision-header">
+                        <Gavel size={15} />
+                        <span>Décision RCP</span>
+                        {rs?.saved && !rs?.saving && (
+                          <span className="rcp-decision-saved-badge">
+                            <CheckCircle size={12} /> Enregistrée
+                          </span>
+                        )}
+                      </div>
+
+                      {!rs?.loaded ? (
+                        <div className="rcp-decision-loading">
+                          <Loader size={14} className="rcp-spin" /> Chargement...
+                        </div>
+                      ) : (
+                        <>
+                          <textarea
+                            className="rcp-decision-textarea"
+                            placeholder="Saisissez ici la décision prise lors de la réunion RCP pour ce dossier..."
+                            value={rs?.text || ''}
+                            onChange={(e) => setReportState(prev => ({
+                              ...prev,
+                              [submission.id]: { ...prev[submission.id], text: e.target.value, saved: false }
+                            }))}
+                            rows={5}
+                          />
+                          {rs?.error && (
+                            <div className="rcp-decision-error">{rs.error}</div>
+                          )}
+                          <button
+                            className="btn-small btn-primary rcp-decision-save-btn"
+                            onClick={(e) => { e.stopPropagation(); handleSaveReport(submission.id) }}
+                            disabled={rs?.saving || !rs?.text?.trim()}
+                          >
+                            {rs?.saving ? (
+                              <><Loader size={13} className="rcp-spin" /> Sauvegarde...</>
+                            ) : (
+                              <><Save size={13} /> Enregistrer la décision</>
+                            )}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   <div
                     className={`drop-zone ${dragActive ? 'drag-active' : ''}`}
