@@ -399,10 +399,10 @@ export default function PatientDetail() {
 
         <div className="detail-section submissions-section">
           <div className="section-header-row">
-            <h2>📑 Dossiers RCP & Soumissions</h2>
+            <h2>📑 Dossiers RCP</h2>
             {user?.role !== 'COORDINATEUR' && (
               <button className="btn-primary" onClick={() => navigate('/forms', { state: { preselectPatientId: id } })}>
-                + Nouveau Dossier / Soumission
+                + Nouveau Dossier
               </button>
             )}
           </div>
