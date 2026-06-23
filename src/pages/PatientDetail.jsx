@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient /*, getShareableDoctors, sharePatient*/ } from '../api/patientsApi'
 import { getSubmissionsByPatient, updateSubmission, deleteSubmission } from '../api/submissionsApi'
-import { getNextPlannedMeeting, addPatientToMeeting, createMeetingRequestForPatient } from '../api/meetingsApi'
 import { getReportsByPatient } from '../api/reportsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
-import { CalendarPlus, UserPlus, CheckCircle2, Send } from 'lucide-react'
 
 const STATUS_LABELS = {
   SUBMITTED: 'Soumis',
@@ -31,14 +29,15 @@ export default function PatientDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [patientReports, setPatientReports] = useState([]) // all RCP reports for this patient
+  const [expandedDecisions, setExpandedDecisions] = useState({})
 
-  // Meeting integration state
-  const [nextMeeting, setNextMeeting] = useState(null)
-  const [patientInNextMeeting, setPatientInNextMeeting] = useState(false)
-  const [addingToMeeting, setAddingToMeeting] = useState(false)
-  const [requestingMeeting, setRequestingMeeting] = useState(false)
-  const [meetingActionSuccess, setMeetingActionSuccess] = useState(null)
-  
+  const toggleDecisions = (submissionId) => {
+    setExpandedDecisions(prev => ({
+      ...prev,
+      [submissionId]: !prev[submissionId]
+    }))
+  }
+
   /* Partage du dossier commented out
   const [shareOpen, setShareOpen] = useState(false)
   const [shareableDoctors, setShareableDoctors] = useState([])
@@ -52,7 +51,6 @@ export default function PatientDetail() {
   useEffect(() => {
     loadPatient()
     loadSubmissions()
-    loadNextMeeting()
     loadReports()
   }, [id])
 
@@ -88,51 +86,7 @@ export default function PatientDetail() {
     }
   }
 
-  const loadNextMeeting = async () => {
-    try {
-      const meeting = await getNextPlannedMeeting()
-      setNextMeeting(meeting)
-      if (meeting) {
-        // Check if this patient is already in the meeting (via patients M2M or submissions)
-        const patientIds = (meeting.patients || []).map(p => String(p))
-        const submissionPatientIds = (meeting.submission_details || []).map(s => String(s.patient_id))
-        const allPatientIds = new Set([...patientIds, ...submissionPatientIds])
-        setPatientInNextMeeting(allPatientIds.has(String(id)))
-      }
-    } catch (e) {
-      console.error('Failed to load next meeting:', e)
-    }
-  }
 
-  const handleAddToNextMeeting = async () => {
-    if (!nextMeeting) return
-    try {
-      setAddingToMeeting(true)
-      await addPatientToMeeting(nextMeeting.id, id)
-      setPatientInNextMeeting(true)
-      setMeetingActionSuccess('Patient ajouté à la prochaine réunion avec succès !')
-      setTimeout(() => setMeetingActionSuccess(null), 4000)
-    } catch (err) {
-      console.error('Failed to add patient to meeting:', err)
-      setError('Échec de l\'ajout du patient à la réunion.')
-    } finally {
-      setAddingToMeeting(false)
-    }
-  }
-
-  const handleRequestMeeting = async () => {
-    try {
-      setRequestingMeeting(true)
-      await createMeetingRequestForPatient(id, 'Demande de réunion RCP pour ce patient')
-      setMeetingActionSuccess('Demande de réunion envoyée au coordinateur avec succès !')
-      setTimeout(() => setMeetingActionSuccess(null), 4000)
-    } catch (err) {
-      console.error('Failed to request meeting:', err)
-      setError('Échec de l\'envoi de la demande de réunion.')
-    } finally {
-      setRequestingMeeting(false)
-    }
-  }
 
   const loadPatient = async () => {
     try {
@@ -323,95 +277,7 @@ export default function PatientDetail() {
           </div>
         </div>
 
-        {/* ── Meeting Actions ────────────────────────────────────── */}
-        <div className="detail-section meeting-actions-section">
-          <h2>📅 Réunions RCP</h2>
 
-          {/* Success toast */}
-          {meetingActionSuccess && (
-            <div className="meeting-action-toast">
-              <CheckCircle2 size={18} />
-              {meetingActionSuccess}
-            </div>
-          )}
-
-          {patientInNextMeeting ? (
-            /* Patient is already in the next meeting — show indicator */
-            <div className="meeting-already-included">
-              <div className="meeting-already-included-icon">
-                <CheckCircle2 size={24} />
-              </div>
-              <div className="meeting-already-included-info">
-                <div className="meeting-already-included-title">
-                  Patient inclus dans la prochaine réunion
-                </div>
-                <div className="meeting-already-included-detail">
-                  {nextMeeting?.title || `Réunion du ${formatDate(nextMeeting?.scheduled_date)}`}
-                </div>
-              </div>
-              <button
-                className="btn-small btn-outline"
-                onClick={() => navigate(`/meetings/${nextMeeting.id}`)}
-              >
-                Voir la réunion
-              </button>
-            </div>
-          ) : (
-            /* Show the action buttons */
-            <div className="meeting-actions-row">
-              {['COORDINATEUR', 'ADMIN'].includes(user?.role) ? (
-                <>
-                  {nextMeeting && (
-                    <button
-                      className="btn-meeting-add"
-                      onClick={handleAddToNextMeeting}
-                      disabled={addingToMeeting}
-                    >
-                      <UserPlus size={18} />
-                      <div className="btn-meeting-text">
-                        <span className="btn-meeting-label">
-                          {addingToMeeting ? 'Ajout en cours…' : 'Ajouter à la prochaine réunion'}
-                        </span>
-                        <span className="btn-meeting-sub">
-                          {nextMeeting.title || formatDate(nextMeeting.scheduled_date)}
-                        </span>
-                      </div>
-                    </button>
-                  )}
-                  <button
-                    className="btn-meeting-plan"
-                    onClick={() => navigate('/meetings/new', {
-                      state: {
-                        preselectPatientId: id,
-                        preselectPatientName: `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
-                      }
-                    })}
-                  >
-                    <CalendarPlus size={16} />
-                    Planifier une nouvelle réunion
-                  </button>
-                </>
-              ) : (
-                <button
-                  className="btn-meeting-add"
-                  style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
-                  onClick={handleRequestMeeting}
-                  disabled={requestingMeeting}
-                >
-                  <Send size={18} />
-                  <div className="btn-meeting-text">
-                    <span className="btn-meeting-label">
-                      {requestingMeeting ? 'Envoi en cours…' : 'Demander une réunion RCP'}
-                    </span>
-                    <span className="btn-meeting-sub">
-                      Notifier le coordinateur pour ce patient
-                    </span>
-                  </div>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Partage du dossier section commented out
         <div className="detail-section share-section">
@@ -578,7 +444,7 @@ export default function PatientDetail() {
                     </div>
 
                     {/* ── RCP Decisions ── */}
-                    {subReports.length > 0 && (
+                    {subReports.length > 0 && expandedDecisions[sub.id] && (
                       <div className="rcp-decisions-section">
                         <div className="rcp-decisions-label">
                           <span className="rcp-decisions-label-icon">⚖️</span>
@@ -656,16 +522,27 @@ export default function PatientDetail() {
                         </span>
                       )}
 
-                      {user?.role !== 'COORDINATEUR' && (
-                        <button
-                          className="btn-small btn-outline"
-                          onClick={() => navigate(`/reports?submission=${sub.id}`)}
-                          title="Voir le rapport RCP"
-                          style={{ marginLeft: 'auto' }}
-                        >
-                          📑 Rapport RCP
-                        </button>
-                      )}
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                        {subReports.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn-small btn-outline"
+                            onClick={() => toggleDecisions(sub.id)}
+                            title={expandedDecisions[sub.id] ? "Masquer les décisions" : "Voir les décisions"}
+                          >
+                            ⚖️ {expandedDecisions[sub.id] ? 'Masquer déc.' : 'Voir déc.'}
+                          </button>
+                        )}
+                        {user?.role !== 'COORDINATEUR' && (
+                          <button
+                            className="btn-small btn-outline"
+                            onClick={() => navigate(`/reports?submission=${sub.id}`)}
+                            title="Voir le rapport RCP"
+                          >
+                            📑 Rapport RCP
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
