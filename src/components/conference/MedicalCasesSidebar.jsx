@@ -282,6 +282,65 @@ export default function MedicalCasesSidebar({
                     </div>
                   )}
 
+                  <div className="file-section">
+                    <div className="file-section-title">Pièces jointes initiales</div>
+                    <div className="file-list">
+                      {caseSubFiles.length === 0 && <p className="no-files">Aucune pièce jointe</p>}
+                      {caseSubFiles.map((file) => (
+                        <div 
+                          key={file.id} 
+                          className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
+                          onClick={() => isPreviewable(file) && onPreviewFile(file)}
+                        >
+                          <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                          <div className="file-info">
+                            <span className="file-name" title={file.name}>{file.name}</span>
+                            <span className="file-meta">{file.uploadedByName}</span>
+                          </div>
+                          <div className="file-actions-inline">
+                            {isPreviewable(file) && (
+                              <button className="file-action-btn" onClick={(e) => { e.stopPropagation(); onPreviewFile(file); }} title="Aperçu"><Eye size={16} /></button>
+                            )}
+                            <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadAttachment(file.url, file.name) }} className="file-download file-action-btn" title="Télécharger">
+                              <Download size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="file-section">
+                    <div className="file-section-title">Fichiers partagés en réunion</div>
+                    <div className="file-list">
+                      {caseConfFiles.length === 0 && <p className="no-files">Aucun fichier partagé</p>}
+                      {caseConfFiles.map((file) => (
+                        <div 
+                          key={file.id} 
+                          className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
+                          onClick={() => isPreviewable(file) && onPreviewFile(file)}
+                        >
+                          <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                          <div className="file-info">
+                            <span className="file-name" title={file.name}>{file.name}</span>
+                            <span className="file-meta">{formatFileSize(file.size)}</span>
+                          </div>
+                          <div className="file-actions-inline">
+                            {isPreviewable(file) && (
+                              <button className="file-action-btn" onClick={(e) => { e.stopPropagation(); onPreviewFile(file); }} title="Aperçu"><Eye size={16} /></button>
+                            )}
+                            <button className="file-action-btn" onClick={(e) => { e.stopPropagation(); onPromote(file.originalId); }} title="Ajouter au dossier permanent">
+                              <Save size={16} />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadAttachment(file.url, file.name) }} className="file-download file-action-btn" title="Télécharger">
+                              <Download size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div
                     className={`drop-zone ${dragActive ? 'drag-active' : ''}`}
                     onDragEnter={handleDrag}
@@ -290,7 +349,7 @@ export default function MedicalCasesSidebar({
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Upload size={20} />
+                    <Upload size={16} />
                     <p>{isUploading ? 'Téléchargement...' : 'Glisser ou cliquer pour ajouter au dossier'}</p>
                     {isUploading && (
                       <button 
@@ -311,57 +370,6 @@ export default function MedicalCasesSidebar({
                       onChange={handleFileSelect}
                       style={{ display: 'none' }}
                     />
-                  </div>
-
-                  <div className="file-section">
-                    <div className="file-section-title">Pièces jointes initiales</div>
-                    <div className="file-list">
-                      {caseSubFiles.length === 0 && <p className="no-files">Aucune pièce jointe</p>}
-                      {caseSubFiles.map((file) => (
-                        <div key={file.id} className="file-item">
-                          <div className="file-icon">{getFileIcon(file.fileType)}</div>
-                          <div className="file-info">
-                            <span className="file-name" title={file.name}>{file.name}</span>
-                            <span className="file-meta">{file.uploadedByName}</span>
-                          </div>
-                          <div className="file-actions-inline">
-                            {isPreviewable(file) && (
-                              <button className="file-action-btn" onClick={() => onPreviewFile(file)} title="Aperçu"><Eye size={16} /></button>
-                            )}
-                            <button onClick={(e) => { e.preventDefault(); downloadAttachment(file.url, file.name) }} className="file-download file-action-btn" title="Télécharger">
-                              <Download size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="file-section">
-                    <div className="file-section-title">Fichiers partagés en réunion</div>
-                    <div className="file-list">
-                      {caseConfFiles.length === 0 && <p className="no-files">Aucun fichier partagé</p>}
-                      {caseConfFiles.map((file) => (
-                        <div key={file.id} className="file-item">
-                          <div className="file-icon">{getFileIcon(file.fileType)}</div>
-                          <div className="file-info">
-                            <span className="file-name" title={file.name}>{file.name}</span>
-                            <span className="file-meta">{formatFileSize(file.size)}</span>
-                          </div>
-                          <div className="file-actions-inline">
-                            {isPreviewable(file) && (
-                              <button className="file-action-btn" onClick={() => onPreviewFile(file)} title="Aperçu"><Eye size={16} /></button>
-                            )}
-                            <button className="file-action-btn" onClick={() => onPromote(file.originalId)} title="Ajouter au dossier permanent">
-                              <Save size={16} />
-                            </button>
-                            <button onClick={(e) => { e.preventDefault(); downloadAttachment(file.url, file.name) }} className="file-download file-action-btn" title="Télécharger">
-                              <Download size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
               )}

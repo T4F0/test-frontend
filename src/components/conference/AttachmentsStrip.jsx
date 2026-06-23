@@ -35,15 +35,19 @@ export default function AttachmentsStrip({ attachments, onPreview }) {
         {attachments.map((file) => (
           <div
             key={file.id || file.originalId || getLabel(file)}
-            className="attachments-strip-item"
+            className={`attachments-strip-item ${isPreviewable(file) && onPreview ? 'clickable' : ''}`}
             title={getLabel(file)}
+            onClick={() => isPreviewable(file) && onPreview && onPreview(file)}
           >
             <span className="strip-file-icon">{getFileIcon(file)}</span>
             <span className="strip-file-name">{getLabel(file)}</span>
             <div className="strip-actions">
               {isPreviewable(file) && onPreview && (
                 <button
-                  onClick={() => onPreview(file)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPreview(file);
+                  }}
                   title="Aperçu"
                   className="strip-action-btn"
                 >

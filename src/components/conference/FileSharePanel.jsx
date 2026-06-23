@@ -189,7 +189,11 @@ export default function FileSharePanel({
           <div className="file-list">
             {submissionFiles.length === 0 && <p className="no-files">Aucune pièce jointe disponible pour ce dossier</p>}
             {submissionFiles.map((file) => (
-              <div key={file.id} className="file-item">
+              <div 
+                key={file.id} 
+                className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
+                onClick={() => isPreviewable(file) && setPreviewItem(file)}
+              >
                 <div className="file-icon">{getFileIcon(file.fileType)}</div>
                 <div className="file-info">
                   <span className="file-name" title={file.name}>{file.name}</span>
@@ -197,12 +201,13 @@ export default function FileSharePanel({
                 </div>
                 <div className="file-actions-inline">
                   {isPreviewable(file) && (
-                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Aperçu">
+                    <button className="file-action-btn" onClick={(e) => { e.stopPropagation(); setPreviewItem(file); }} title="Aperçu">
                       <Eye size={16} />
                     </button>
                   )}
                   <button 
                     onClick={(e) => {
+                      e.stopPropagation()
                       e.preventDefault()
                       downloadAttachment(file.url, file.name)
                     }}
@@ -223,7 +228,11 @@ export default function FileSharePanel({
           <div className="file-list">
             {conferenceFiles.length === 0 && <p className="no-files">Aucun fichier partagé pour le moment</p>}
             {conferenceFiles.map((file) => (
-              <div key={file.id} className="file-item">
+              <div 
+                key={file.id} 
+                className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
+                onClick={() => isPreviewable(file) && setPreviewItem(file)}
+              >
                 <div className="file-icon">{getFileIcon(file.fileType)}</div>
                 <div className="file-info">
                   <span className="file-name" title={file.name}>{file.name}</span>
@@ -231,19 +240,20 @@ export default function FileSharePanel({
                 </div>
                 <div className="file-actions-inline">
                   {isPreviewable(file) && (
-                    <button className="file-action-btn" onClick={() => setPreviewItem(file)} title="Aperçu">
+                    <button className="file-action-btn" onClick={(e) => { e.stopPropagation(); setPreviewItem(file); }} title="Aperçu">
                       <Eye size={16} />
                     </button>
                   )}
                   <button 
                     className="file-action-btn" 
-                    onClick={() => onPromote(file.originalId)} 
+                    onClick={(e) => { e.stopPropagation(); onPromote(file.originalId); }} 
                     title="Ajouter au dossier permanent"
                   >
                     <Save size={16} />
                   </button>
                   <button 
                     onClick={(e) => {
+                      e.stopPropagation()
                       e.preventDefault()
                       downloadAttachment(file.url, file.name)
                     }}
