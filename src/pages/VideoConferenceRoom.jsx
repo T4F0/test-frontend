@@ -25,6 +25,7 @@ import ChatSidebar from '../components/conference/ChatSidebar'
 import MedicalCasesSidebar from '../components/conference/MedicalCasesSidebar'
 import MainStageFileViewer from '../components/conference/MainStageFileViewer'
 import MainStageFormDetails from '../components/conference/MainStageFormDetails'
+import AttachmentsStrip from '../components/conference/AttachmentsStrip'
 import { getSubmission } from '../api/submissionsApi'
 import { getForm } from '../api/formsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
@@ -80,72 +81,6 @@ export default function VideoConferenceRoom() {
   const hostPollIntervalRef = useRef(null)
 
 
-  // Draggable PIP states
-  const [pipPosition, setPipPosition] = useState({ x: 0, y: 0 })
-  const [isDraggingPip, setIsDraggingPip] = useState(false)
-  const dragStartRef = useRef({ x: 0, y: 0 })
-
-  // Reset PIP position when closed
-  useEffect(() => {
-    if (!activePreviewItem && !activeFormDetail) {
-      setPipPosition({ x: 0, y: 0 })
-    }
-  }, [activePreviewItem, activeFormDetail])
-
-  const handlePipMouseDown = (e) => {
-    // Only drag with left click and when in PIP mode
-    if (e.button !== 0) return
-    setIsDraggingPip(true)
-    dragStartRef.current = {
-      x: e.clientX - pipPosition.x,
-      y: e.clientY - pipPosition.y
-    }
-    e.preventDefault()
-  }
-
-  const handlePipMouseMove = useCallback((e) => {
-    if (!isDraggingPip) return
-    const newX = e.clientX - dragStartRef.current.x
-    const newY = e.clientY - dragStartRef.current.y
-    
-    // Keep PIP within the bounds of the video area viewport (with 10px margin at edges)
-    const videoArea = document.querySelector('.video-area')
-    if (videoArea) {
-      const bounds = videoArea.getBoundingClientRect()
-      
-      // Initial pos is right: 20px (defaultLeft = bounds.width - 320 - 20)
-      const minX = 10 - (bounds.width - 320 - 20)
-      const maxX = 10
-      
-      // Initial pos is bottom: 20px (defaultTop = bounds.height - 240 - 20)
-      const minY = 10 - (bounds.height - 240 - 20)
-      const maxY = 10
-      
-      const constrainedX = Math.max(minX, Math.min(maxX, newX))
-      const constrainedY = Math.max(minY, Math.min(maxY, newY))
-      setPipPosition({ x: constrainedX, y: constrainedY })
-    } else {
-      setPipPosition({ x: newX, y: newY })
-    }
-  }, [isDraggingPip, pipPosition])
-
-  const handlePipMouseUp = useCallback(() => {
-    setIsDraggingPip(false)
-  }, [])
-
-  useEffect(() => {
-    if (isDraggingPip) {
-      window.addEventListener('mousemove', handlePipMouseMove)
-      window.addEventListener('mouseup', handlePipMouseUp)
-    } else {
-      window.removeEventListener('mousemove', handlePipMouseMove)
-      window.removeEventListener('mouseup', handlePipMouseUp)
-    }
-    return () => {
-      window.removeEventListener('mousemove', handlePipMouseMove)
-      window.removeEventListener('mouseup', handlePipMouseUp)
-    }
-  }, [isDraggingPip, handlePipMouseMove, handlePipMouseUp])
 
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -848,12 +783,6 @@ export default function VideoConferenceRoom() {
 
       <div className="conference-body">
         <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''} ${(activePreviewItem || activeFormDetail) ? 'has-preview' : ''}`}>
-          {activePreviewItem && (
-            <MainStageFileViewer 
-              file={activePreviewItem} 
-              onClose={() => setActivePreviewItem(null)} 
-            />
-          )}
           {activeFormDetail && (
             <div className="main-stage-form-wrapper" style={{ flex: 1, height: '100%', overflowY: 'auto', background: '#0f172a', borderRadius: '12px', display: 'flex', flexDirection: 'column', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
               {formDetailLoading && (
@@ -883,26 +812,27 @@ export default function VideoConferenceRoom() {
               )}
             </div>
           )}
-          <div 
-            className={(activePreviewItem || activeFormDetail) ? 'pip-video-container' : 'full-video-container'}
-            style={(activePreviewItem || activeFormDetail) ? {
-              transform: `translate(${pipPosition.x}px, ${pipPosition.y}px)`,
-              cursor: isDraggingPip ? 'grabbing' : 'grab',
-              transition: isDraggingPip ? 'none' : 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-            } : {}}
-            onMouseDown={(activePreviewItem || activeFormDetail) ? handlePipMouseDown : undefined}
-          >
-            <VideoGrid
-              localStream={localStream}
-              screenStream={screenStream}
-              remoteStreams={remoteStreams}
-              participants={participants}
-              currentUserId={user?.id}
-              isCameraOff={isCameraOff}
-              isMuted={isMuted}
-              screenSharer={screenSharer}
+          {activePreviewItem && (
+            <MainStageFileViewer 
+              file={activePreviewItem} 
+              onClose={() => setActivePreviewItem(null)} 
             />
-          </div>
+          )}
+          {/* Video grid — hidden when a dossier or file viewer is active */}
+          {!activePreviewItem && !activeFormDetail && (
+            <div className="full-video-container">
+              <VideoGrid
+                localStream={localStream}
+                screenStream={screenStream}
+                remoteStreams={remoteStreams}
+                participants={participants}
+                currentUserId={user?.id}
+                isCameraOff={isCameraOff}
+                isMuted={isMuted}
+                screenSharer={screenSharer}
+              />
+            </div>
+          )}
         </div>
 
         <ParticipantList
@@ -1076,6 +1006,16 @@ export default function VideoConferenceRoom() {
         )}
 
       </div>
+
+      {/* Permanent attachments strip — visible only when a patient dossier is open */}
+      {activeFormDetail && (
+        <AttachmentsStrip
+          attachments={formDetailData.attachments}
+          onPreview={(file) => {
+            setActivePreviewItem(file)
+          }}
+        />
+      )}
 
       <ConferenceControls
         isMuted={isMuted}
