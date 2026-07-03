@@ -97,9 +97,27 @@ export default function FormField({ field, value, onChange }) {
             id={`field-${field.id}`}
             name={`field-${field.id}`}
             type="file"
-            accept={field.accepted_file_types || "*"}
+            accept={field.accepted_file_types && field.accepted_file_types !== '*' ? field.accepted_file_types : ".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp,.tiff,.bmp,.mp4,.avi,.mov,.webm,.mpeg,.dcm,.dicom,.ima"}
             required={field.required}
-            onChange={(e) => onChange(e.target.files[0])}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) {
+                const allowedExtensions = [
+                  '.pdf', '.docx', '.doc', '.txt',
+                  '.jpg', '.jpeg', '.png', '.webp', '.tiff', '.bmp',
+                  '.mp4', '.avi', '.mov', '.webm', '.mpeg',
+                  '.dcm', '.dicom', '.ima'
+                ]
+                const ext = '.' + file.name.split('.').pop().toLowerCase()
+                if (!allowedExtensions.includes(ext)) {
+                  alert(`Le format de fichier "${ext}" n'est pas autorisé. Formats acceptés : PDF, Word, Texte, Images, Vidéos et DICOM.`)
+                  e.target.value = ''
+                  onChange(null)
+                  return
+                }
+              }
+              onChange(file || null)
+            }}
             style={{ flex: 1 }}
           />
           {value && (

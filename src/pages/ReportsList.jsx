@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getReports, downloadReportPdf } from '../api/reportsApi'
+import { getReports, downloadReportPdf, fetchReportPdfBlob } from '../api/reportsApi'
+import { Search } from 'lucide-react'
 
 export default function ReportsList() {
   const [reports, setReports] = useState([])
@@ -9,6 +10,14 @@ export default function ReportsList() {
   const [downloading, setDownloading] = useState(null)
   const [searchParams] = useSearchParams()
   const filterSubmission = searchParams.get('submission') || ''
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortOrder, setSortOrder] = useState('desc') // 'desc' = newest first, 'asc' = oldest first
+
+  const [previewPdfUrl, setPreviewPdfUrl] = useState(null)
+  const [previewReportId, setPreviewReportId] = useState(null)
+  const [previewLoading, setPreviewLoading] = useState(null)
+  const [previewError, setPreviewError] = useState(null)
 
   useEffect(() => {
     loadReports()
@@ -40,6 +49,42 @@ export default function ReportsList() {
     }
   }
 
+  const handlePreview = async (id) => {
+    try {
+      setPreviewLoading(id)
+      setPreviewError(null)
+      const url = await fetchReportPdfBlob(id)
+      setPreviewPdfUrl(url)
+      setPreviewReportId(id)
+    } catch (err) {
+      setPreviewError('Échec du chargement de l\'aperçu')
+      console.error(err)
+    } finally {
+      setPreviewLoading(null)
+    }
+  }
+
+  const closePreview = () => {
+    if (previewPdfUrl) window.URL.revokeObjectURL(previewPdfUrl)
+    setPreviewPdfUrl(null)
+    setPreviewReportId(null)
+    setPreviewError(null)
+  }
+
+  const processedReports = reports
+    .filter((r) => {
+      const term = searchTerm.toLowerCase().trim()
+      if (!term) return true
+      const patientName = (r.submission_patient_name || '').toLowerCase()
+      const docName = (r.written_by_name || '').toLowerCase()
+      return patientName.includes(term) || docName.includes(term)
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at)
+      const dateB = new Date(b.created_at)
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
+    })
+
   if (loading && reports.length === 0) return <div className="loading">Chargement des rapports...</div>
   if (error && reports.length === 0) return <div className="error">{error}</div>
 
@@ -54,36 +99,164 @@ export default function ReportsList() {
           <p>Aucun rapport généré pour le moment.</p>
         </div>
       ) : (
-        <div className="table-responsive-wrapper">
-          <table className="forms-table">
-            <thead>
-              <tr>
-                <th>Dossier / Soumission</th>
-                <th>Date de création</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <strong>{r.submission_name || 'Sans titre'}</strong>
-                    <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name}</div>
-                  </td>
-                  <td>{new Date(r.created_at).toLocaleString()}</td>
-                  <td>
-                    <button
-                      className="btn-small btn-primary"
-                      disabled={downloading === r.id}
-                      onClick={() => handleDownload(r.id)}
+        <>
+          <div style={{ position: 'relative', maxWidth: '500px', marginBottom: '1.5rem' }}>
+            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+            <input
+              type="text"
+              placeholder="Rechercher par patient ou médecin..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="modern-search-input"
+              style={{ width: '100%', padding: '0.85rem 2.5rem 0.85rem 2.75rem' }}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--gray-400)',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {processedReports.length === 0 ? (
+            <div className="empty-inline-card">
+              <p>Aucun rapport ne correspond à votre recherche "{searchTerm}"</p>
+            </div>
+          ) : (
+            <div className="table-responsive-wrapper">
+              <table className="forms-table">
+                <thead>
+                  <tr>
+                    <th>Dossier / Soumission</th>
+                    <th>Rédigé par</th>
+                    <th 
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} 
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                      title="Cliquez pour trier par date"
                     >
-                      {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      Date de création <span style={{ marginLeft: '4px', fontSize: '0.82rem', color: 'var(--primary)' }}>{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                    </th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {processedReports.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <strong>{r.submission_name || r.submission_patient_name || 'Sans titre'}</strong>
+                        <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name || r.submission_form_name}</div>
+                      </td>
+                      <td>{r.written_by_name || '—'}</td>
+                      <td>{new Date(r.created_at).toLocaleString()}</td>
+                      <td>
+                        <button
+                          className="btn-small btn-outline"
+                          disabled={previewLoading === r.id || downloading === r.id}
+                          onClick={() => handlePreview(r.id)}
+                          style={{ marginRight: 6 }}
+                        >
+                          {previewLoading === r.id ? 'Chargement...' : 'Aperçu'}
+                        </button>
+                        <button
+                          className="btn-small btn-primary"
+                          disabled={downloading === r.id}
+                          onClick={() => handleDownload(r.id)}
+                        >
+                          {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {previewPdfUrl && (
+        <div
+          className="modal-overlay"
+          onClick={closePreview}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 8, width: '90vw', height: '90vh',
+              display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '12px 16px', borderBottom: '1px solid #e0e0e0',
+            }}>
+              <h3 style={{ margin: 0 }}>Aperçu du rapport</h3>
+              <div>
+                <button
+                  className="btn-small btn-primary"
+                  onClick={() => { handleDownload(previewReportId) }}
+                  style={{ marginRight: 8 }}
+                >
+                  Télécharger
+                </button>
+                <button className="btn-small" onClick={closePreview}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={previewPdfUrl}
+              title="Aperçu PDF"
+              style={{ flex: 1, border: 'none', width: '100%' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {previewError && (
+        <div
+          className="modal-overlay"
+          onClick={() => setPreviewError(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 8, padding: 24, maxWidth: 400,
+            }}
+          >
+            <p className="error">{previewError}</p>
+            <button className="btn-small" onClick={() => setPreviewError(null)}>
+              Fermer
+            </button>
+          </div>
         </div>
       )}
     </div>

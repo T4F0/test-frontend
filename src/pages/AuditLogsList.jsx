@@ -142,14 +142,38 @@ export default function AuditLogsList() {
 
         <div style={{ flex: 2, minWidth: '250px' }}>
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>Recherche rapide</label>
-          <input 
-            type="text" 
-            placeholder="Rechercher un médecin, un email ou une référence..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="filter-input"
-            style={{ width: '100%', margin: 0, padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-          />
+          <div style={{ position: 'relative' }}>
+            <input 
+              type="text" 
+              placeholder="Rechercher un médecin, un email ou une référence..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="filter-input"
+              style={{ width: '100%', margin: 0, padding: '0.6rem 2rem 0.6rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '0.6rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--gray-400)',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'flex-end' }}>

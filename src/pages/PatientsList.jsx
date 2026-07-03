@@ -79,13 +79,38 @@ export default function PatientsList() {
       {error && <div className="error">{error}</div>}
 
       <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Rechercher par nom, identifiant patient ou médecin..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-input"
-        />
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="text"
+            placeholder="Rechercher par nom, identifiant patient ou médecin..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="search-input"
+            style={{ width: '100%', paddingRight: '2.5rem' }}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--gray-400)',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (

@@ -41,6 +41,18 @@ export default function SearchableSelect({
     setSearchText('')
   }
 
+  const handleClear = (e) => {
+    e.stopPropagation()
+    if (isOpen) {
+      setSearchText('')
+      onSearch('')
+    } else {
+      onChange('')
+      setSearchText('')
+      onSearch('')
+    }
+  }
+
   return (
     <div className="searchable-select-container" ref={containerRef}>
       <label className="searchable-select-label">
@@ -50,6 +62,7 @@ export default function SearchableSelect({
       <div 
         className={`searchable-select-input-wrapper ${isOpen ? 'open' : ''} ${error ? 'error' : ''}`} 
         onClick={() => setIsOpen(true)}
+        style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
       >
         <input
           type="text"
@@ -59,7 +72,29 @@ export default function SearchableSelect({
           onChange={handleSearchChange}
           onFocus={() => setIsOpen(true)}
           autoComplete="off"
+          style={{ paddingRight: '2.5rem' }}
         />
+        {(isOpen ? searchText : value) && (
+          <button
+            type="button"
+            onClick={handleClear}
+            style={{
+              position: 'absolute',
+              right: '2rem',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--gray-400)',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10
+            }}
+          >
+            ✕
+          </button>
+        )}
         <span className="searchable-select-arrow">{isOpen ? '▲' : '▼'}</span>
       </div>
 

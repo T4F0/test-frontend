@@ -23,6 +23,7 @@ body {
 .header img {
     width: 100%;
     display: block;
+    margin-bottom: 20px;
 }
 
 /* LAYOUT */

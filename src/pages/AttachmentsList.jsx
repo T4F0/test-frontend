@@ -72,6 +72,19 @@ export default function AttachmentsList() {
       return
     }
 
+    const allowedExtensions = [
+      '.pdf', '.docx', '.doc', '.txt',
+      '.jpg', '.jpeg', '.png', '.webp', '.tiff', '.bmp',
+      '.mp4', '.avi', '.mov', '.webm', '.mpeg',
+      '.dcm', '.dicom', '.ima'
+    ]
+    const ext = '.' + file.name.split('.').pop().toLowerCase()
+    if (!allowedExtensions.includes(ext)) {
+      setError(`Le format de fichier "${ext}" n'est pas autorisé. Formats acceptés : PDF, Word, Texte, Images, Vidéos et DICOM.`)
+      e.target.value = ''
+      return
+    }
+
     try {
       setUploading(true)
       setError(null)
@@ -148,6 +161,7 @@ export default function AttachmentsList() {
                 {uploading ? 'Téléchargement…' : '+ Télécharger un fichier'}
                 <input
                   type="file"
+                  accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp,.tiff,.bmp,.mp4,.avi,.mov,.webm,.mpeg,.dcm,.dicom,.ima"
                   style={{ display: 'none' }}
                   disabled={uploading}
                   onChange={handleFileSelect}

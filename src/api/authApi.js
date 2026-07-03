@@ -206,6 +206,21 @@ export const updateService = async (id, serviceData) => {
   return data
 }
 
+export const updateServiceHeader = async (id, formData) => {
+  const { data } = await authAxios.patch(`${API_BASE}/services/${id}/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export const updateServiceParticipants = async (id, { participants_config, include_participants_in_report }) => {
+  const { data } = await authAxios.patch(`${API_BASE}/services/${id}/`, {
+    participants_config,
+    include_participants_in_report,
+  })
+  return data
+}
+
 export const deleteService = async (id) => {
   await authAxios.delete(`${API_BASE}/services/${id}/`)
 }

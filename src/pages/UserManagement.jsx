@@ -276,7 +276,30 @@ export default function UserManagement() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="modern-search-input"
+                style={{ paddingRight: '2.5rem' }}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: '1rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--gray-400)',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  ✕
+                </button>
+              )}
             </div>
             {(roleFilter || serviceFilter || hospitalFilter) && (
               <button 
@@ -478,6 +501,7 @@ export default function UserManagement() {
                 <th>Nom</th>
                 <th>Email</th>
                 <th>Hôpital</th>
+                {currentUser?.is_global_admin && <th>Service</th>}
                 <th>Soumis le</th>
                 <th>Actions</th>
               </tr>
@@ -488,6 +512,13 @@ export default function UserManagement() {
                   <td>{user.first_name} {user.last_name}</td>
                   <td>{user.email}</td>
                   <td>{user.hospital || '-'}</td>
+                  {currentUser?.is_global_admin && (
+                    <td>
+                      <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                        {user.service_name || '-'}
+                      </span>
+                    </td>
+                  )}
                   <td>{formatDate(user.created_at)}</td>
                   <td className="actions" style={{ display: 'flex', gap: '0.5rem' }}>
                     <button 

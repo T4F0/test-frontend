@@ -80,8 +80,30 @@ export default function FormsList() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="modern-search-input"
-            style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem' }}
+            style={{ width: '100%', padding: '0.85rem 2.5rem 0.85rem 2.75rem' }}
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--gray-400)',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ✕
+            </button>
+          )}
         </div>
       )}
       

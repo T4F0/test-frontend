@@ -320,13 +320,38 @@ export default function PatientDetail() {
                   <div className="share-toolbar">
                     <div className="share-search">
                       <label htmlFor="doctor-search">Rechercher un médecin</label>
-                      <input
-                        id="doctor-search"
-                        type="text"
-                        value={shareSearch}
-                        onChange={(event) => setShareSearch(event.target.value)}
-                        placeholder="Nom, email, hôpital..."
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          id="doctor-search"
+                          type="text"
+                          value={shareSearch}
+                          onChange={(event) => setShareSearch(event.target.value)}
+                          placeholder="Nom, email, hôpital..."
+                          style={{ paddingRight: '2rem' }}
+                        />
+                        {shareSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setShareSearch('')}
+                            style={{
+                              position: 'absolute',
+                              right: '0.6rem',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--gray-400)',
+                              padding: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="share-selection">
                       <div className="share-selection-header">

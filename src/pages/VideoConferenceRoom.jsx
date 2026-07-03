@@ -500,6 +500,19 @@ export default function VideoConferenceRoom() {
   }
 
   const handleUpload = async (file) => {
+    if (!file) return
+    const allowedExtensions = [
+      '.pdf', '.docx', '.doc', '.txt',
+      '.jpg', '.jpeg', '.png', '.webp', '.tiff', '.bmp',
+      '.mp4', '.avi', '.mov', '.webm', '.mpeg',
+      '.dcm', '.dicom', '.ima'
+    ]
+    const ext = '.' + file.name.split('.').pop().toLowerCase()
+    if (!allowedExtensions.includes(ext)) {
+      alert(`Le format de fichier "${ext}" n'est pas autorisé. Formats acceptés : PDF, Word, Texte, Images, Vidéos et DICOM.`)
+      return
+    }
+
     try {
       setIsUploading(true)
       abortControllerRef.current = new AbortController()

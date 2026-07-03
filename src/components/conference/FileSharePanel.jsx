@@ -178,6 +178,7 @@ export default function FileSharePanel({
           <input
             ref={fileInputRef}
             type="file"
+            accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp,.tiff,.bmp,.mp4,.avi,.mov,.webm,.mpeg,.dcm,.dicom,.ima"
             multiple
             onChange={handleFileSelect}
             style={{ display: 'none' }}

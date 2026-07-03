@@ -28,6 +28,7 @@ import AttachmentsList from './pages/AttachmentsList'
 import AuditLogsList from './pages/AuditLogsList'
 import ReportsList from './pages/ReportsList'
 import VideoConferenceRoom from './pages/VideoConferenceRoom'
+import ServiceSettings from './pages/ServiceSettings'
 
 
 function HomeRedirect() {
@@ -95,6 +96,7 @@ function AppRoutes() {
             <Route path="/attachments" element={<AttachmentsList />} />
 
             <Route path="/reports" element={<ReportsList />} />
+            <Route path="/settings/services" element={<ServiceSettings />} />
             <Route path="/audit-logs" element={<AuditLogsList />} />
             <Route path="/conference/:roomId" element={<VideoConferenceRoom />} />
           </>

@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, LogOut, Bell, Send, UserCircle, CheckSquare, Trash2 } from 'lucide-react'
+import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, Settings, LogOut, Bell, Send, UserCircle, CheckSquare, Trash2 } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications } from '../api/authApi'
 import { formatDate } from '../lib/dateUtils'
 
@@ -110,6 +110,7 @@ export default function Layout() {
     // Show patients for ADMIN, MEDECIN, and COORDINATEUR
     ...(['ADMIN', 'MEDECIN', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
     { to: '/meetings', label: 'Réunions', icon: Calendar },
+    { to: '/reports', label: 'Rapports', icon: FileText },
     // Coordinators and Admin can see the requests list
     ...(['ADMIN', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/meetings/requests', label: 'Demandes', icon: Send }] : []),
     // MEDECIN can request an RCP meeting
@@ -155,9 +156,15 @@ export default function Layout() {
                       Audit
                     </Link>
                   )}
+                  {user?.is_global_admin && (
+                    <Link to="/settings/services" className={location.pathname === '/settings/services' ? 'active' : ''}>
+                      <Settings size={18} />
+                      Paramètres
+                    </Link>
+                  )}
                 </div>
                 
-                <div className="navbar-controls" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <div className="navbar-controls">
                   {['ADMIN', 'COORDINATEUR', 'MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
                     <div className="notifications-wrapper" ref={notifRef} style={{ position: 'relative' }}>
                       <button 

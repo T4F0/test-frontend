@@ -631,7 +631,7 @@ export default function MeetingForm() {
           </div>
 
           {/* Search box */}
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          <div className="form-group" style={{ marginBottom: '1.5rem', position: 'relative' }}>
             <input
               type="text"
               placeholder="Rechercher par nom, email ou rôle..."
@@ -639,11 +639,33 @@ export default function MeetingForm() {
               onChange={(e) => setParticipantSearch(e.target.value)}
               style={{
                 width: '100%',
-                padding: '0.75rem 1rem',
+                padding: '0.75rem 2.5rem 0.75rem 1rem',
                 borderRadius: '8px',
                 border: '1px solid #e2e8f0',
               }}
             />
+            {participantSearch && (
+              <button
+                type="button"
+                onClick={() => setParticipantSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--gray-400)',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {/* Selected participants chips */}

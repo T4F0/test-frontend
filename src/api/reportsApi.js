@@ -41,6 +41,14 @@ export const upsertReport = async (submissionId, content) => {
   return data
 }
 
+export const fetchReportPdfBlob = async (id) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/reports/${id}/download_report/`, {
+    responseType: 'blob',
+  })
+  return window.URL.createObjectURL(data)
+}
+
 export const downloadReportPdf = async (id) => {
   const authAxios = getAuthAxios()
   const { data } = await authAxios.get(`${API_BASE}/reports/${id}/download_report/`, {

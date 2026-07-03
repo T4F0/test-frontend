@@ -154,17 +154,17 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label>Hôpital / Wilaya</label>
+            <label>Service</label>
             <select
-              name="hospital"
-              value={formData.hospital}
+              name="service"
+              value={formData.service}
               onChange={handleChange}
               required
             >
-              <option value="">Sélectionnez une wilaya</option>
-              {ALGERIA_WILAYAS.map((wilaya, index) => (
-                <option key={index} value={wilaya}>
-                  {wilaya}
+              <option value="" disabled hidden>Sélectionnez un service</option>
+              {services.map(srv => (
+                <option key={srv.id} value={srv.id}>
+                  {srv.name}
                 </option>
               ))}
             </select>
@@ -179,23 +179,6 @@ export default function Register() {
               onChange={handlePhoneChange}
               placeholder="+213612345678"
             />
-          </div>
-
-          <div className="form-group">
-            <label>Service</label>
-            <select
-              name="service"
-              value={formData.service}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Sélectionnez un service</option>
-              {services.map(srv => (
-                <option key={srv.id} value={srv.id}>
-                  {srv.name}
-                </option>
-              ))}
-            </select>
           </div>
 
           <button 
