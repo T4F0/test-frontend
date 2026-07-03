@@ -63,6 +63,7 @@ export default function FormSubmissionsList() {
             <thead>
               <tr>
                 <th>Patient</th>
+                <th>Code de réf.</th>
                 <th>Titre de la soumission</th>
                 <th>Statut</th>
                 <th>Soumis le</th>
@@ -73,6 +74,7 @@ export default function FormSubmissionsList() {
               {submissions.map((sub) => (
                 <tr key={sub.id}>
                   <td>{sub.patient_name ?? '—'}</td>
+                  <td>{sub.reference_code ? <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '0.85rem' }}>{sub.reference_code}</code> : <span style={{ color: '#94a3b8' }}>—</span>}</td>
                   <td>{sub.form_name}</td>
                   <td><span className="badge">{sub.status}</span></td>
                   <td>{new Date(sub.created_at).toLocaleString()}</td>

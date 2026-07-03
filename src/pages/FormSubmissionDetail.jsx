@@ -161,6 +161,16 @@ export default function FormSubmissionDetail() {
             <span className="submission-detail-meta-label">Statut</span>
             <span className={`badge`}>{submission.status}</span>
           </div>
+          {submission.reference_code && (
+            <div className="submission-detail-meta-item">
+              <span className="submission-detail-meta-label">Code de référence</span>
+              <span className="submission-detail-meta-value">
+                <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.03em' }}>
+                  {submission.reference_code}
+                </code>
+              </span>
+            </div>
+          )}
         </section>
 
         <section className="submission-detail-data">

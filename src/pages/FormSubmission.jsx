@@ -49,9 +49,11 @@ export default function FormSubmission() {
   const navigate = useNavigate()
   const location = useLocation()
   const preselectPatientId = location.state?.preselectPatientId
+  const incomingReferenceCode = location.state?.referenceCode || ''
   const { user } = useAuth()
   const [form, setForm] = useState(null)
   const [formData, setFormData] = useState({})
+  const [referenceCode, setReferenceCode] = useState(incomingReferenceCode)
   const [patients, setPatients] = useState([])
   const [selectedPatient, setSelectedPatient] = useState(preselectPatientId || '')
   const [loading, setLoading] = useState(true)
@@ -201,7 +203,7 @@ export default function FormSubmission() {
           patient: selectedPatient
         })
       } else {
-        submission = await submitForm(id, jsonFormData, selectedPatient)
+        submission = await submitForm(id, jsonFormData, selectedPatient, '', referenceCode)
       }
       
       const currentSubmissionId = submission.id

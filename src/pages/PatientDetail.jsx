@@ -426,7 +426,7 @@ export default function PatientDetail() {
           <div className="section-header-row">
             <h2>📑 Dossiers RCP</h2>
             {user?.role !== 'COORDINATEUR' && (
-              <button className="btn-primary" onClick={() => navigate('/forms', { state: { preselectPatientId: id } })}>
+              <button className="btn-primary" onClick={() => navigate('/cases/new', { state: { preselectPatientId: id } })}>
                 + Nouveau Dossier
               </button>
             )}
@@ -461,6 +461,11 @@ export default function PatientDetail() {
                         >
                           {STATUS_LABELS[sub.status]}
                         </span>
+                        {sub.reference_code && (
+                          <code style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
+                            {sub.reference_code}
+                          </code>
+                        )}
                       </div>
                       <div className="submission-card-title">{sub.form_name}</div>
                       {sub.submitted_by_name && (

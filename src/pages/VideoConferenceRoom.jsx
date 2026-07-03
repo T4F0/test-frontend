@@ -69,7 +69,43 @@ export default function VideoConferenceRoom() {
   const [showAdmissions, setShowAdmissions] = useState(false)
   // Host notification toast for new join requests
   const [joinToast, setJoinToast] = useState(null) // { message, requestId }
+  const [isToastLeaving, setIsToastLeaving] = useState(false)
   const joinToastTimerRef = useRef(null)
+  const joinToastRef = useRef(null)
+  const toastCloseTimeoutRef = useRef(null)
+
+  const dismissToast = useCallback(() => {
+    setIsToastLeaving(true)
+    if (joinToastTimerRef.current) clearTimeout(joinToastTimerRef.current)
+    if (toastCloseTimeoutRef.current) clearTimeout(toastCloseTimeoutRef.current)
+    toastCloseTimeoutRef.current = setTimeout(() => {
+      setJoinToast(null)
+      joinToastRef.current = null
+      setIsToastLeaving(false)
+    }, 300) // matches 300ms transition in CSS
+  }, [])
+
+  const triggerToast = useCallback((message, requestId) => {
+    if (joinToastTimerRef.current) clearTimeout(joinToastTimerRef.current)
+    if (toastCloseTimeoutRef.current) clearTimeout(toastCloseTimeoutRef.current)
+    
+    setIsToastLeaving(false)
+    const nextToast = { message, requestId }
+    joinToastRef.current = nextToast
+    setJoinToast(nextToast)
+    
+    joinToastTimerRef.current = setTimeout(() => {
+      dismissToast()
+    }, 5000)
+  }, [dismissToast])
+
+  useEffect(() => {
+    return () => {
+      if (joinToastTimerRef.current) clearTimeout(joinToastTimerRef.current)
+      if (toastCloseTimeoutRef.current) clearTimeout(toastCloseTimeoutRef.current)
+    }
+  }, [])
+
   // Ref to break circular dependency: handleJoinAccepted (defined before useWebRTC)
   // needs access to reconnectAsParticipant (returned by useWebRTC)
   const reconnectAsParticipantRef = useRef(null)
@@ -175,15 +211,13 @@ export default function VideoConferenceRoom() {
       return [...prev, { id: request_id, user_id, user_name, user_role }]
     })
     // Show toast notification
-    setJoinToast({ message: `${user_name} demande à rejoindre`, requestId: request_id })
-    if (joinToastTimerRef.current) clearTimeout(joinToastTimerRef.current)
-    joinToastTimerRef.current = setTimeout(() => setJoinToast(null), 5000)
+    triggerToast(`${user_name} demande à rejoindre`, request_id)
     // Auto-open admissions panel
     setShowAdmissions(true)
     setShowParticipants(false)
     setShowChat(false)
     setShowCases(false)
-  }, [])
+  }, [triggerToast])
 
   const {
     localStream,
@@ -415,9 +449,7 @@ export default function VideoConferenceRoom() {
             if (newOnes.length === 0) return prev
             // Show toast for first new request
             const first = newOnes[0]
-            setJoinToast({ message: `${first.user_name} demande à rejoindre`, requestId: first.id })
-            if (joinToastTimerRef.current) clearTimeout(joinToastTimerRef.current)
-            joinToastTimerRef.current = setTimeout(() => setJoinToast(null), 5000)
+            triggerToast(`${first.user_name} demande à rejoindre`, first.id)
             setShowAdmissions(true)
             return [...prev, ...newOnes]
           })
@@ -435,7 +467,7 @@ export default function VideoConferenceRoom() {
         hostPollIntervalRef.current = null
       }
     }
-  }, [isHost, joined, conference])
+  }, [isHost, joined, conference, triggerToast])
 
   // Host: accept a join request
   const handleAcceptJoinRequest = async (requestId) => {
@@ -444,6 +476,9 @@ export default function VideoConferenceRoom() {
     try {
       await acceptMeetingJoinRequest(meetingId, requestId)
       setJoinRequests(prev => prev.filter(r => r.id !== requestId))
+      if (joinToastRef.current?.requestId === requestId) {
+        dismissToast()
+      }
     } catch (err) {
       console.error('Accept failed:', err)
       alert(err.response?.data?.detail || 'Échec de l\'acceptation')
@@ -457,6 +492,9 @@ export default function VideoConferenceRoom() {
     try {
       await rejectMeetingJoinRequest(meetingId, requestId)
       setJoinRequests(prev => prev.filter(r => r.id !== requestId))
+      if (joinToastRef.current?.requestId === requestId) {
+        dismissToast()
+      }
     } catch (err) {
       console.error('Reject failed:', err)
       alert(err.response?.data?.detail || 'Échec du refus')
@@ -709,22 +747,7 @@ export default function VideoConferenceRoom() {
       {/* Join Request Toast for Hosts */}
       {joinToast && (
         <div
-          style={{
-            position: 'fixed',
-            top: '1.5rem',
-            right: '1.5rem',
-            zIndex: 9999,
-            background: 'linear-gradient(135deg, #1e3a5f, #1e40af)',
-            border: '1px solid rgba(59,130,246,0.5)',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-            minWidth: 280,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            animation: 'slideInRight 0.3s ease',
-          }}
+          className={`join-request-toast ${isToastLeaving ? 'leaving' : ''}`}
           id="join-request-toast"
         >
           <div style={{ fontSize: '1.5rem' }}>🔔</div>
@@ -733,7 +756,7 @@ export default function VideoConferenceRoom() {
             <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{joinToast.message}</div>
           </div>
           <button
-            onClick={() => setJoinToast(null)}
+            onClick={dismissToast}
             style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem' }}
           >
             <X size={16} />

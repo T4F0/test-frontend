@@ -387,9 +387,7 @@ export default function MeetingDetail() {
                     key={index} 
                     className="participant-item clickable"
                     onClick={() => navigate(`/users/${p.id}`)}
-                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-50)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                    style={{ cursor: 'pointer' }}
                   >
                     <User size={14} className="participant-icon" />
                     <span>{formatUserName(p)}</span>

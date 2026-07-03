@@ -24,15 +24,22 @@ export const getSubmission = async (id) => {
   return data
 }
 
-export const submitForm = async (formId, submissionData, patientId = null, name = "") => {
+export const submitForm = async (formId, submissionData, patientId = null, name = "", referenceCode = "") => {
   const authAxios = getAuthAxios()
   const payload = {
     form: formId,
     patient: patientId,
     data: submissionData,
-    name: name
+    name: name,
+    ...(referenceCode ? { reference_code: referenceCode } : {})
   }
   const { data } = await authAxios.post(`${API_BASE}/submissions/`, payload)
+  return data
+}
+
+export const checkReferenceCode = async (code) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/submissions/check-reference/?code=${encodeURIComponent(code)}`)
   return data
 }
 

@@ -29,6 +29,7 @@ import AuditLogsList from './pages/AuditLogsList'
 import ReportsList from './pages/ReportsList'
 import VideoConferenceRoom from './pages/VideoConferenceRoom'
 import ServiceSettings from './pages/ServiceSettings'
+import NewCaseGateway from './pages/NewCaseGateway'
 
 
 function HomeRedirect() {
@@ -71,6 +72,7 @@ function AppRoutes() {
         {authenticated ? (
           <>
             <Route path="/" element={<HomeRedirect />} />
+            <Route path="/cases/new" element={<NewCaseGateway />} />
             <Route path="/forms" element={<FormsList />} />
             <Route path="/forms/new" element={<FormBuilder />} />
             <Route path="/forms/:id/edit" element={<FormBuilder />} />
