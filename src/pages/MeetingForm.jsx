@@ -1,13 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { getMeeting, createMeeting, updateMeeting } from '../api/meetingsApi'
-import { getSubmissionsByPatient } from '../api/submissionsApi'
+import { getSubmissionsByPatientForMeeting } from '../api/submissionsApi'
 import { getPatients } from '../api/patientsApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import SearchableSelect from '../components/SearchableSelect'
 import { formatDate } from '../lib/dateUtils'
 import { Users } from 'lucide-react'
+
+// Status display config for the 3 new statuses
+const SUBMISSION_STATUS_LABELS = {
+  NOUVEAU:      'Nouveau',
+  A_REDISCUTER: 'À rediscuter',
+  CLOTURE:      'Clôturé',
+}
+const SUBMISSION_STATUS_COLORS = {
+  NOUVEAU:      '#3b82f6',
+  A_REDISCUTER: '#f97316',
+  CLOTURE:      '#6b7280',
+}
 
 export default function MeetingForm() {
   const { id } = useParams()
@@ -57,6 +69,7 @@ export default function MeetingForm() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [infoMessage, setInfoMessage] = useState(null)
 
   // ─── Load on mount ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -170,7 +183,7 @@ export default function MeetingForm() {
   const loadPatients = async (query = '') => {
     try {
       setPatientsLoading(true)
-      const data = await getPatients(1, query)
+      const data = await getPatients(1, query, '', true)
       const patientsData = Array.isArray(data) ? data : []
       setPatients(
         [...patientsData].sort((a, b) =>
@@ -250,7 +263,7 @@ export default function MeetingForm() {
     try {
       setAddingPatient(true)
       const patientId = preselectData.preselectPatientId
-      const subs = await getSubmissionsByPatient(patientId)
+      const subs = await getSubmissionsByPatientForMeeting(patientId)
       const newSubs = Array.isArray(subs) ? subs : []
 
       // Merge into allSubmissions cache
@@ -297,7 +310,7 @@ export default function MeetingForm() {
 
     try {
       setAddingPatient(true)
-      const subs = await getSubmissionsByPatient(patientId)
+      const subs = await getSubmissionsByPatientForMeeting(patientId)
       const newSubs = Array.isArray(subs) ? subs : []
 
       // Merge into allSubmissions cache
@@ -315,6 +328,15 @@ export default function MeetingForm() {
 
       // Add patient to the chip list
       setSelectedPatients((prev) => [...prev, patient])
+
+      // Warn if no eligible dossiers found
+      if (newSubs.length === 0) {
+        setInfoMessage(
+          `ℹ️ Ce patient n'a aucun dossier "Nouveau" ou "À rediscuter". Tous ses dossiers sont déjà clôturés.`
+        )
+      } else {
+        setInfoMessage(null)
+      }
     } catch (e) {
       console.error(e)
       setError('Impossible de charger les dossiers du patient.')
@@ -387,6 +409,19 @@ export default function MeetingForm() {
     <div className="form-details">
       <h2>{isEdit ? 'Modifier la réunion' : 'Nouvelle réunion'}</h2>
       {error && <div className="error">{error}</div>}
+      {infoMessage && (
+        <div style={{
+          background: '#fffbeb',
+          border: '1px solid #fcd34d',
+          borderRadius: '8px',
+          padding: '0.75rem 1rem',
+          marginBottom: '1rem',
+          fontSize: '0.875rem',
+          color: '#92400e',
+        }}>
+          {infoMessage}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="submission-form">
 

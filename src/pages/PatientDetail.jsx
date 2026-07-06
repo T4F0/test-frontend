@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPatient /*, getShareableDoctors, sharePatient*/ } from '../api/patientsApi'
-import { getSubmissionsByPatient, updateSubmission, deleteSubmission } from '../api/submissionsApi'
+import { getSubmissionsByPatient, markSubmissionStatus, deleteSubmission } from '../api/submissionsApi'
 import { getReportsByPatient } from '../api/reportsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
 
 const STATUS_LABELS = {
-  SUBMITTED: 'Soumis',
-  VALIDATED: 'Validé',
-  DISCUSSED: 'Discuté',
-  CLOSED: 'Clôturé'
+  NOUVEAU:      'Nouveau',
+  A_REDISCUTER: 'À rediscuter',
+  CLOTURE:      'Clôturé',
 }
 
 const STATUS_COLORS = {
-  SUBMITTED: '#3b82f6', // blue
-  VALIDATED: '#10b981', // green
-  DISCUSSED: '#f59e0b', // amber
-  CLOSED: '#6b7280'    // gray
+  NOUVEAU:      '#3b82f6', // bleu
+  A_REDISCUTER: '#f97316', // orange
+  CLOTURE:      '#6b7280', // gris
 }
+
+const ALL_STATUSES = [
+  { value: 'NOUVEAU',      label: 'Nouveau' },
+  { value: 'A_REDISCUTER', label: 'À rediscuter' },
+  { value: 'CLOTURE',      label: 'Clôturé' },
+]
 
 export default function PatientDetail() {
   const { id } = useParams()
@@ -155,7 +159,7 @@ export default function PatientDetail() {
 
   const handleStatusChange = async (submissionId, newStatus) => {
     try {
-      await updateSubmission(submissionId, { status: newStatus })
+      await markSubmissionStatus(submissionId, newStatus)
       loadSubmissions()
     } catch (err) {
       alert('Échec de la mise à jour du statut')
@@ -459,7 +463,7 @@ export default function PatientDetail() {
                             borderRadius: '999px',
                           }}
                         >
-                          {STATUS_LABELS[sub.status]}
+                          {STATUS_LABELS[sub.status] ?? sub.status}
                         </span>
                         {sub.reference_code && (
                           <code style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
@@ -511,7 +515,6 @@ export default function PatientDetail() {
                       </div>
                     )}
 
-                    {/* ── Actions ── */}
                     <div className="submission-card-actions">
                       {user?.role !== 'COORDINATEUR' ? (
                         <div className="action-group-horizontal">
@@ -536,6 +539,29 @@ export default function PatientDetail() {
                           >
                             📎 Fichiers
                           </button>
+                          <select
+                            value={sub.status}
+                            onChange={(e) => handleStatusChange(sub.id, e.target.value)}
+                            title="Changer le statut du dossier"
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '6px',
+                              border: `1.5px solid ${STATUS_COLORS[sub.status]}`,
+                              color: STATUS_COLORS[sub.status],
+                              fontWeight: '600',
+                              fontSize: '0.78rem',
+                              background: STATUS_COLORS[sub.status] + '12',
+                              cursor: 'pointer',
+                              outline: 'none',
+                              minWidth: '130px',
+                            }}
+                          >
+                            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
                           {(user?.role === 'ADMIN' || user?.role === 'MEDECIN') && (
                             <button
                               className="btn-small btn-danger"

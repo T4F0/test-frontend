@@ -18,6 +18,38 @@ export const getSubmissionsByPatient = async (patientId) => {
   return data.results ?? data
 }
 
+/**
+ * Fetch only dossiers eligible for a new meeting (status = NOUVEAU or A_REDISCUTER).
+ * Used in MeetingForm to avoid showing already-closed cases.
+ */
+export const getSubmissionsByPatientForMeeting = async (patientId) => {
+  const authAxios = getAuthAxios()
+  const params = new URLSearchParams({ patient: patientId })
+  params.append('status', 'NOUVEAU')
+  params.append('status', 'A_REDISCUTER')
+  const { data } = await authAxios.get(`${API_BASE}/submissions/?${params.toString()}`)
+  return data.results ?? data
+}
+
+/**
+ * Manually change the status of a submission.
+ * Allowed values: 'NOUVEAU', 'A_REDISCUTER', 'CLOTURE'
+ */
+export const markSubmissionStatus = async (submissionId, newStatus) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.patch(`${API_BASE}/submissions/${submissionId}/`, { status: newStatus })
+  return data
+}
+
+/**
+ * Fetch status change history for a submission.
+ */
+export const getSubmissionHistory = async (submissionId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/submissions/${submissionId}/history/`)
+  return data
+}
+
 export const getSubmission = async (id) => {
   const authAxios = getAuthAxios()
   const { data } = await authAxios.get(`${API_BASE}/submissions/${id}/`)

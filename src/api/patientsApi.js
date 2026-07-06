@@ -2,11 +2,12 @@ import { getAuthAxios } from "./authApi";
 
 import { API_BASE } from "./config";
 
-export const getPatients = async (page = 1, search = "", doctorId = "") => {
+export const getPatients = async (page = 1, search = "", doctorId = "", hasOpenSubmissions = false) => {
   const params = new URLSearchParams();
   if (search) params.append("search", search);
   if (page) params.append("page", page);
   if (doctorId) params.append("created_by", doctorId);
+  if (hasOpenSubmissions) params.append("has_open_submissions", "true");
 
   const authAxios = getAuthAxios();
   const { data } = await authAxios.get(`${API_BASE}/patients/?${params}`);
