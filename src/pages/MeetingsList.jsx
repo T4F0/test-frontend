@@ -224,9 +224,6 @@ export default function MeetingsList() {
                     <td className="actions">
                       <div className="action-group-horizontal">
                         <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
-                        {!isParticipant && m.status !== 'LIVE' && (
-                          <button className="btn-small btn-info" onClick={() => handleJoin(m.id)}>S'inscrire</button>
-                        )}
                         {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
                           <>
                             <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
