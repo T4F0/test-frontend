@@ -2104,8 +2104,8 @@ body.theme-medecin_expert .navbar {
 
 .detail-actions {
   display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .detail-grid-layout {

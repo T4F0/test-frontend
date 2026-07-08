@@ -323,41 +323,45 @@ export default function MeetingDetail() {
       <div className="detail-header">
         <h1>📅 {meeting.title || 'Détails de la réunion RCP'}</h1>
         <div className="detail-actions">
-          {meeting.status !== 'FINISHED' && (
-            <button 
-              className="btn-primary btn-with-icon" 
-              onClick={handleJoinConference} 
-              disabled={isDisabled}
-              title={disableReason}
-            >
-              <Video size={18} />
-              {creatingConference ? 'Ouverture...' : buttonText}
-            </button>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
+              <>
+                <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Modifier</button>
+                <button className="btn-danger" onClick={handleDelete}>Supprimer</button>
+              </>
+            )}
+            <button className="btn-secondary" onClick={() => navigate('/meetings')}>Retour</button>
+          </div>
+          {(meeting.status !== 'FINISHED') && (
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {isCoordinatorOrAdmin && (
+                <button 
+                  className="btn-secondary" 
+                  onClick={async () => {
+                    if (window.confirm('Voulez-vous clôturer cette réunion ?')) {
+                      try {
+                        await updateMeeting(id, { status: 'FINISHED' });
+                        loadMeeting();
+                      } catch (err) {
+                        setError("Échec de la clôture de la réunion");
+                      }
+                    }
+                  }}
+                >
+                  Terminer/Clôturer la réunion
+                </button>
+              )}
+              <button 
+                className="btn-primary btn-with-icon" 
+                onClick={handleJoinConference} 
+                disabled={isDisabled}
+                title={disableReason}
+              >
+                <Video size={18} />
+                {creatingConference ? 'Ouverture...' : buttonText}
+              </button>
+            </div>
           )}
-          {meeting.status !== 'FINISHED' && isCoordinatorOrAdmin && (
-             <button 
-               className="btn-secondary" 
-               onClick={async () => {
-                 if (window.confirm('Voulez-vous clôturer cette réunion ?')) {
-                   try {
-                     await updateMeeting(id, { status: 'FINISHED' });
-                     loadMeeting();
-                   } catch (err) {
-                     setError("Échec de la clôture de la réunion");
-                   }
-                 }
-               }}
-             >
-               Terminer/Clôturer la réunion
-             </button>
-          )}
-          {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
-            <>
-              <button className="btn-secondary" onClick={() => navigate(`/meetings/${id}/edit`)}>Modifier</button>
-              <button className="btn-danger" onClick={handleDelete}>Supprimer</button>
-            </>
-          )}
-          <button className="btn-secondary" onClick={() => navigate('/meetings')}>Retour</button>
         </div>
       </div>
 
