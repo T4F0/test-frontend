@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   getUsers, 
@@ -32,6 +32,7 @@ export default function UserManagement() {
   const [meetingStats, setMeetingStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
   const [searchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'active')
@@ -40,6 +41,45 @@ export default function UserManagement() {
   const [serviceFilter, setServiceFilter] = useState('')
   const [hospitalFilter, setHospitalFilter] = useState('')
   const [activeDropdown, setActiveDropdown] = useState(null)
+
+  const activeTableContainerRef = useRef(null)
+  const activeTopScrollRef = useRef(null)
+  const [activeScrollWidth, setActiveScrollWidth] = useState(0)
+  const [showTopScroll, setShowTopScroll] = useState(false)
+
+  // Sync scroll from top scrollbar to table container
+  const handleActiveTopScroll = () => {
+    if (activeTopScrollRef.current && activeTableContainerRef.current) {
+      activeTableContainerRef.current.scrollLeft = activeTopScrollRef.current.scrollLeft
+    }
+  }
+
+  // Sync scroll from table container to top scrollbar
+  const handleActiveTableScroll = () => {
+    if (activeTopScrollRef.current && activeTableContainerRef.current) {
+      activeTopScrollRef.current.scrollLeft = activeTableContainerRef.current.scrollLeft
+    }
+  }
+
+  // Update scrollbar width on mount, when users load, or window resizes
+  useEffect(() => {
+    const updateWidth = () => {
+      if (activeTableContainerRef.current) {
+        setActiveScrollWidth(activeTableContainerRef.current.scrollWidth)
+        setShowTopScroll(activeTableContainerRef.current.scrollWidth > activeTableContainerRef.current.clientWidth)
+      }
+    }
+    
+    updateWidth()
+    // Run after a short delay to ensure table rendering is complete
+    const timer = setTimeout(updateWidth, 100)
+    
+    window.addEventListener('resize', updateWidth)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', updateWidth)
+    }
+  }, [users, loading, activeTab])
 
   useEffect(() => {
     if (tabFromUrl) {
@@ -320,8 +360,34 @@ export default function UserManagement() {
           ) : filteredUsers.length === 0 ? (
             <div className="empty" style={{ padding: '2rem' }}>Aucun résultat pour "{search}"</div>
           ) : (
-            <div className="table-responsive-wrapper">
-              <table className="users-table">
+            <div style={{ position: 'relative', marginTop: '1.25rem' }}>
+              {/* Top Dummy Scrollbar */}
+              {showTopScroll && (
+                <div
+                  ref={activeTopScrollRef}
+                  onScroll={handleActiveTopScroll}
+                  style={{
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    height: '14px',
+                    width: '100%',
+                    position: 'sticky',
+                    top: '0',
+                    zIndex: 12,
+                    background: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                  }}
+                >
+                  <div style={{ width: `${activeScrollWidth}px`, height: '1px' }}></div>
+                </div>
+              )}
+
+              <div 
+                className="table-responsive-wrapper"
+                ref={activeTableContainerRef}
+                onScroll={handleActiveTableScroll}
+              >
+                <table className="users-table">
               {/* ... table content remains the same ... */}
               <thead>
                 <tr>
@@ -485,6 +551,7 @@ export default function UserManagement() {
                 ))}
               </tbody>
             </table>
+              </div>
             </div>
           )}
         </div>

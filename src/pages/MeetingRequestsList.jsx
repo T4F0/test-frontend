@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMeetingRequests, getMeetingRequestSubmissionResume, getNextPlannedMeeting, addPatientToMeeting } from '../api/meetingsApi'
+import { getMeetingRequests, getMeetingRequestSubmissionResume, getNextPlannedMeeting, addPatientToMeeting, rejectMeetingRequest } from '../api/meetingsApi'
 import { fetchFileAsBlob } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
@@ -148,6 +148,17 @@ export default function MeetingRequestsList() {
     }
   }
 
+  const handleRejectRequest = async (requestId) => {
+    if (!window.confirm('Voulez-vous classer cette demande sans suite ? (Elle ne sera plus affichée dans la liste)')) return
+    try {
+      await rejectMeetingRequest(requestId)
+      loadRequests()
+    } catch (err) {
+      console.error('Failed to reject meeting request:', err)
+      alert('Échec du classement de la demande.')
+    }
+  }
+
   const handleViewSubmission = async (requestId, submissionId) => {
     try {
       setResumeLoading(true)
@@ -257,6 +268,29 @@ export default function MeetingRequestsList() {
                       {addingToMeeting === req.id ? 'Ajout...' : 'Ajouter à la prochaine réunion'}
                     </button>
                   )}
+                  {!isIncluded && (
+                    <button
+                      className="btn-small btn-danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectRequest(req.id);
+                      }}
+                      style={{ 
+                        padding: '0.4rem 0.75rem', 
+                        fontSize: '0.8rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem',
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Classer
+                    </button>
+                  )}
                   <div style={{ color: '#94a3b8' }}>
                     {expandedRequestId === req.id ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                   </div>
@@ -341,12 +375,33 @@ export default function MeetingRequestsList() {
                                   border: 'none',
                                   borderRadius: '8px',
                                   fontWeight: '600',
-                                  cursor: addingToMeeting === req.id ? 'not-allowed' : 'pointer'
+                                  cursor: addingToMeeting === req.id ? 'not-allowed' : 'pointer',
+                                  marginBottom: '0.5rem'
                                 }}
                               >
                                 {addingToMeeting === req.id ? 'Ajout en cours...' : `Ajouter à la réunion du ${formatDate(nextMeeting.scheduled_date)}`}
                               </button>
                             )}
+
+                            <button 
+                              onClick={() => handleRejectRequest(req.id)}
+                              style={{ 
+                                width: '100%', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '0.5rem', 
+                                padding: '1rem', 
+                                background: '#fecaca',
+                                color: '#b91c1c',
+                                border: '1px solid #fca5a5',
+                                borderRadius: '8px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Classer sans suite / Rejeter la demande
+                            </button>
                           </>
                         )}
                       </div>

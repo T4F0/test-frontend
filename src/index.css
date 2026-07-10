@@ -2599,11 +2599,20 @@ body.theme-medecin_expert .navbar {
 .table-responsive-wrapper {
   width: 100%;
   max-width: 100%;
+  max-height: calc(100vh - 280px);
   display: block;
   overflow-x: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   margin-bottom: 1.5rem;
   border-radius: 16px;
+  border: 1px solid var(--gray-200);
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.table-responsive-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 
