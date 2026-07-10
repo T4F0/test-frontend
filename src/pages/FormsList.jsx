@@ -113,7 +113,13 @@ export default function FormsList() {
         <p className="empty">Aucun formulaire ne correspond à votre recherche "{search}"</p>
       ) : (
         <div className="table-responsive-wrapper">
-          <table className="forms-table">
+          <table className="forms-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+            <colgroup>
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '35%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '30%' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th>Nom</th>
@@ -125,8 +131,8 @@ export default function FormsList() {
             <tbody>
               {filteredForms.map(form => (
                 <tr key={form.id}>
-                  <td>{form.name}</td>
-                  <td>{form.description}</td>
+                  <td style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>{form.name}</td>
+                  <td style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>{form.description}</td>
                   <td>{formatDate(form.created_at)}</td>
                   <td className="actions">
                     {user?.role !== 'COORDINATEUR' && (

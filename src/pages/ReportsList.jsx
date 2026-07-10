@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getReports, downloadReportPdf, fetchReportPdfBlob } from '../api/reportsApi'
-import { Search } from 'lucide-react'
+import { getMeetings } from '../api/meetingsApi'
+import { Search, Filter } from 'lucide-react'
 
 export default function ReportsList() {
   const [reports, setReports] = useState([])
@@ -19,14 +20,37 @@ export default function ReportsList() {
   const [previewLoading, setPreviewLoading] = useState(null)
   const [previewError, setPreviewError] = useState(null)
 
+  // Meeting filter state
+  const [meetings, setMeetings] = useState([])
+  const [selectedMeeting, setSelectedMeeting] = useState('')
+  const [meetingsLoading, setMeetingsLoading] = useState(true)
+
+  useEffect(() => {
+    loadMeetings()
+  }, [])
+
   useEffect(() => {
     loadReports()
-  }, [filterSubmission])
+  }, [filterSubmission, selectedMeeting])
+
+  const loadMeetings = async () => {
+    try {
+      setMeetingsLoading(true)
+      const data = await getMeetings()
+      setMeetings(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('Failed to load meetings:', err)
+    } finally {
+      setMeetingsLoading(false)
+    }
+  }
 
   const loadReports = async () => {
     try {
       setLoading(true)
-      const params = filterSubmission ? { submission: filterSubmission } : {}
+      const params = {}
+      if (filterSubmission) params.submission = filterSubmission
+      if (selectedMeeting) params.meeting = selectedMeeting
       const data = await getReports(params)
       setReports(Array.isArray(data) ? data : [])
       setError(null)
@@ -94,56 +118,115 @@ export default function ReportsList() {
         <h1>📑 Rapports RCP</h1>
       </div>
       {error && <div className="error">{error}</div>}
+
+      {/* Filter controls - always visible */}
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.5rem' }}>
+        {/* Search input */}
+        <div style={{ position: 'relative', flex: '0 1 400px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+          <input
+            type="text"
+            placeholder="Rechercher par patient ou médecin..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="modern-search-input"
+            style={{ width: '100%', padding: '0.85rem 2.5rem 0.85rem 2.75rem' }}
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--gray-400)',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Meeting filter dropdown - pushed to the right */}
+        <div style={{ position: 'relative', minWidth: '280px', flex: '0 1 320px', marginLeft: 'auto' }}>
+          <Filter size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
+          <select
+            value={selectedMeeting}
+            onChange={(e) => setSelectedMeeting(e.target.value)}
+            className="modern-search-input"
+            style={{
+              width: '100%',
+              padding: '0.85rem 2.5rem 0.85rem 2.5rem',
+              appearance: 'none',
+              cursor: 'pointer',
+              color: selectedMeeting ? 'var(--text-primary, #1a1a2e)' : 'var(--gray-400)',
+            }}
+          >
+            <option value="">Toutes les réunions</option>
+            {meetings.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name || `Réunion du ${new Date(m.scheduled_date).toLocaleDateString('fr-FR')}`}
+                {m.status === 'LIVE' ? ' 🔴' : m.status === 'PLANNED' ? ' 📅' : ' ✅'}
+              </option>
+            ))}
+          </select>
+          {selectedMeeting && (
+            <button
+              type="button"
+              onClick={() => setSelectedMeeting('')}
+              style={{
+                position: 'absolute',
+                right: '0.75rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--gray-400)',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.85rem',
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
       {reports.length === 0 ? (
         <div className="empty-inline-card">
-          <p>Aucun rapport généré pour le moment.</p>
+          <p>{selectedMeeting ? 'Aucun rapport généré pour cette réunion.' : 'Aucun rapport généré pour le moment.'}</p>
         </div>
-      ) : (
-        <>
-          <div style={{ position: 'relative', maxWidth: '500px', marginBottom: '1.5rem' }}>
-            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
-            <input
-              type="text"
-              placeholder="Rechercher par patient ou médecin..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="modern-search-input"
-              style={{ width: '100%', padding: '0.85rem 2.5rem 0.85rem 2.75rem' }}
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                style={{
-                  position: 'absolute',
-                  right: '1rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--gray-400)',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {processedReports.length === 0 ? (
+      ) : processedReports.length === 0 ? (
             <div className="empty-inline-card">
               <p>Aucun rapport ne correspond à votre recherche "{searchTerm}"</p>
             </div>
           ) : (
             <div className="table-responsive-wrapper">
-              <table className="forms-table">
+              <table className="forms-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: '25%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '25%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Dossier / Soumission</th>
+                    <th>Réunion</th>
                     <th>Rédigé par</th>
                     <th 
                       onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} 
@@ -161,6 +244,12 @@ export default function ReportsList() {
                       <td>
                         <strong>{r.submission_name || r.submission_patient_name || 'Sans titre'}</strong>
                         <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name || r.submission_form_name}</div>
+                      </td>
+                      <td style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                        {r.meeting_names && r.meeting_names.length > 0
+                          ? r.meeting_names.map((m) => m.name).join(', ')
+                          : <span className="text-muted">—</span>
+                        }
                       </td>
                       <td>{r.written_by_name || '—'}</td>
                       <td>{new Date(r.created_at).toLocaleString()}</td>
@@ -187,8 +276,7 @@ export default function ReportsList() {
               </table>
             </div>
           )}
-        </>
-      )}
+
 
       {previewPdfUrl && (
         <div

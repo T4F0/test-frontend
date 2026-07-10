@@ -28,6 +28,12 @@ export const getReportsByPatient = async (patientId) => {
   return data.results ?? data
 }
 
+export const getReportsByMeeting = async (meetingId) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/reports/?meeting=${meetingId}`)
+  return data.results ?? data
+}
+
 /**
  * Create or update the RCP decision/report for a given submission.
  * Only coordinators are allowed by the backend.
