@@ -198,7 +198,7 @@ export default function MeetingRequestsList() {
           <p style={{ color: '#64748b' }}>Toutes les demandes ont été traitées ou aucune n'a été soumise récemment.</p>
         </div>
       ) : (
-        <div className="requests-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="meeting-requests-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {requests.map(req => {
             const reqPIds = new Set()
             if (req.patient_details) req.patient_details.forEach(p => reqPIds.add(String(p.id)))
@@ -206,99 +206,106 @@ export default function MeetingRequestsList() {
             const isIncluded = reqPIds.size > 0 && Array.from(reqPIds).every(id => nextMeetingPatientIds.has(id))
 
             return (
-            <div key={req.id} className="request-card" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div key={req.id} className="meeting-request-card" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div 
-                className="request-summary" 
+                className="meeting-request-summary" 
                 onClick={() => toggleExpand(req.id)}
-                style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 1fr auto auto', alignItems: 'center', cursor: 'pointer', gap: '1rem' }}
+                style={{ padding: '1rem', cursor: 'pointer' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <UserAvatar user={req.doctor_details} size={40} style={{ background: '#eff6ff', color: '#3b82f6' }} />
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#0f172a' }}>Dr. {req.doctor_details?.first_name} {req.doctor_details?.last_name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.doctor_details?.email}</div>
+                <div className="meeting-request-summary-top">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <UserAvatar user={req.doctor_details} size={40} style={{ background: '#eff6ff', color: '#3b82f6', flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '0.95rem' }}>Dr. {req.doctor_details?.first_name} {req.doctor_details?.last_name}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.doctor_details?.email}</div>
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, color: '#94a3b8', marginLeft: '0.5rem' }}>
+                    {expandedRequestId === req.id ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569' }}>
-                  <FileText size={18} style={{ color: '#94a3b8' }} />
-                  {req.patient_details?.length > 0 || req.submission_details?.length > 0 ? (
-                    <span style={{ fontWeight: '500' }}>
-                      Patient: {req.patient_details?.[0] ? `${req.patient_details[0].first_name} ${req.patient_details[0].last_name}` : req.submission_details?.[0]?.patient_name}
-                      <span style={{ color: '#94a3b8', fontSize: '0.85rem', marginLeft: '0.5rem' }}>({req.submissions.length} dossier(s))</span>
+                <div className="meeting-request-summary-info">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#475569', fontSize: '0.9rem' }}>
+                    <FileText size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                    <span>
+                      {req.patient_details?.length > 0 || req.submission_details?.length > 0 ? (
+                        <>Patient: {req.patient_details?.[0] ? `${req.patient_details[0].first_name} ${req.patient_details[0].last_name}` : req.submission_details?.[0]?.patient_name}</>
+                      ) : (
+                        <>{req.submissions.length} dossier(s)</>
+                      )}
                     </span>
-                  ) : (
-                    <span style={{ fontWeight: '500' }}>{req.submissions.length} dossier(s) joint(s)</span>
-                  )}
+                    <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>({req.submissions.length} dossier{req.submissions.length > 1 ? 's' : ''})</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.85rem' }}>
+                    <Calendar size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                    <span>Soumis le {formatDate(req.created_at)}</span>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569' }}>
-                  <Calendar size={18} style={{ color: '#94a3b8' }} />
-                  <span>Soumis le {formatDate(req.created_at)}</span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div className="meeting-request-summary-actions">
                   {isIncluded ? (
-                    <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.4rem 0' }}>
                       ✓ Inclus dans la réunion
                     </div>
-                  ) : nextMeeting && (req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id) && (
-                    <button
-                      className="btn-small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const pId = req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id;
-                        handleAddToNextMeeting(req.id, pId);
-                      }}
-                      disabled={addingToMeeting === req.id}
-                      style={{ 
-                        padding: '0.4rem 0.75rem', 
-                        fontSize: '0.8rem', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.25rem',
-                        background: addingToMeeting === req.id ? '#6ee7b7' : '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: addingToMeeting === req.id ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {addingToMeeting === req.id ? 'Ajout...' : 'Ajouter à la prochaine réunion'}
-                    </button>
+                  ) : (
+                    <>
+                      {nextMeeting && (req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id) && (
+                        <button
+                          className="btn-small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const pId = req.patient_details?.[0]?.id || req.submission_details?.[0]?.patient_id;
+                            handleAddToNextMeeting(req.id, pId);
+                          }}
+                          disabled={addingToMeeting === req.id}
+                          style={{ 
+                            padding: '0.4rem 0.75rem', 
+                            fontSize: '0.82rem', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.25rem',
+                            background: addingToMeeting === req.id ? '#6ee7b7' : '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: addingToMeeting === req.id ? 'not-allowed' : 'pointer',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {addingToMeeting === req.id ? 'Ajout...' : 'Ajouter à la prochaine réunion'}
+                        </button>
+                      )}
+                      <button
+                        className="btn-small btn-danger hide-mobile"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRejectRequest(req.id);
+                        }}
+                        style={{ 
+                          padding: '0.4rem 0.75rem', 
+                          fontSize: '0.82rem', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.25rem',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Classer
+                      </button>
+                    </>
                   )}
-                  {!isIncluded && (
-                    <button
-                      className="btn-small btn-danger"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRejectRequest(req.id);
-                      }}
-                      style={{ 
-                        padding: '0.4rem 0.75rem', 
-                        fontSize: '0.8rem', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.25rem',
-                        background: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Classer
-                    </button>
-                  )}
-                  <div style={{ color: '#94a3b8' }}>
-                    {expandedRequestId === req.id ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                  </div>
                 </div>
               </div>
 
               {expandedRequestId === req.id && (
-                <div className="request-details" style={{ padding: '1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem' }}>
+                <div className="meeting-request-details" style={{ padding: '1rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                  <div className="meeting-request-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
                     <div>
                       <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#475569', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Note du médecin</h4>
                       <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '80px', color: '#1e293b', fontSize: '0.95rem', lineHeight: '1.5' }}>

@@ -23,7 +23,7 @@
 }
 
 .search-bar {
-  padding: 1.25rem 2rem 0;
+  padding: 0rem 2rem 0;
   display: flex;
   gap: 1rem;
 }
@@ -160,7 +160,7 @@
 .table-container {
   display: block;
   max-width: 100%;
-  max-height: calc(100vh - 240px);
+  max-height: calc(100vh - 340px);
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

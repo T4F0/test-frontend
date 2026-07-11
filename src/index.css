@@ -1955,12 +1955,35 @@ button:disabled {
     padding-right: 4.5rem !important;
   }
 
-  /* Attachment header: clean stacked layout on small tablets */
-  .attachments-upload-btn {
-    font-size: 0.85rem;
-    padding: 0.45rem 0.85rem;
-    white-space: nowrap;
+  .meeting-request-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
   }
+
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+.meeting-request-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.meeting-request-summary-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.meeting-request-summary-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 /* ── Mobile attachment header redesign ── */
