@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { getCurrentUser, logout as logoutApi, isAuthenticated } from '../api/authApi'
+import { getCurrentUser, logout as clearTokens, serverLogout, isAuthenticated } from '../api/authApi'
 
 const AuthContext = createContext()
 
@@ -35,8 +35,9 @@ export function AuthProvider({ children }) {
     setAuthenticated(!!userData)
   }
 
-  const logout = () => {
-    logoutApi()
+  const logout = async () => {
+    await serverLogout()
+    clearTokens()
     setUser(null)
     setAuthenticated(false)
     setLoading(false)

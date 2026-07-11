@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import {
   X, User, Globe, Monitor, Smartphone, Tablet, MapPin,
   Cpu, Activity, PlusCircle, Edit, Trash2, Eye,
-  Calendar, FileText, FileType, Stethoscope, File
+  Calendar, FileText, FileType, Stethoscope, File,
+  LogIn, LogOut, AlertTriangle
 } from 'lucide-react'
 import { formatDateTime } from '../lib/dateUtils'
 
@@ -11,6 +12,9 @@ const ACTION_LABELS = {
   UPDATE: 'Modification',
   DELETE: 'Suppression',
   VIEW: 'Consultation',
+  LOGIN: 'Connexion',
+  LOGOUT: 'Déconnexion',
+  LOGIN_FAILED: 'Échec de connexion',
 }
 
 const ACTION_ICONS = {
@@ -18,6 +22,9 @@ const ACTION_ICONS = {
   UPDATE: <Edit size={18} />,
   DELETE: <Trash2 size={18} />,
   VIEW: <Eye size={18} />,
+  LOGIN: <LogIn size={18} />,
+  LOGOUT: <LogOut size={18} />,
+  LOGIN_FAILED: <AlertTriangle size={18} />,
 }
 
 const ACTION_COLORS = {
@@ -25,6 +32,9 @@ const ACTION_COLORS = {
   UPDATE: '#f59e0b',
   DELETE: '#ef4444',
   VIEW: '#3b82f6',
+  LOGIN: '#10b981',
+  LOGOUT: '#64748b',
+  LOGIN_FAILED: '#ef4444',
 }
 
 const OBJECT_TYPE_LABELS = {
@@ -35,6 +45,7 @@ const OBJECT_TYPE_LABELS = {
   MedicalDocument: 'Document Médical',
   Form: 'Modèle de Formulaire',
   FormSubmission: 'Soumission de Dossier',
+  Session: 'Session',
 }
 
 const OBJECT_TYPE_ICONS = {
@@ -45,6 +56,7 @@ const OBJECT_TYPE_ICONS = {
   MedicalDocument: <File size={14} />,
   Form: <FileType size={14} />,
   FormSubmission: <FileText size={14} />,
+  Session: <LogIn size={14} />,
 }
 
 const DEVICE_TYPE_ICONS = {
@@ -291,6 +303,16 @@ export default function AuditLogDrawer({ log, onClose }) {
               <DetailRow label="ID" value={log.object_id} mono />
             )}
           </Section>
+
+          {/* Données d'événement (login/logout) */}
+          {log.action === 'LOGIN_FAILED' && log.new_value && (
+            <Section icon={<AlertTriangle size={16} />} title="Détails de l'échec">
+              <DetailRow
+                label="Utilisateur tenté"
+                value={log.new_value.attempted_username || '/'}
+              />
+            </Section>
+          )}
 
           {/* Données modifiées */}
           {log.action === 'UPDATE' && log.old_value && log.new_value && (

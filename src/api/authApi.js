@@ -78,6 +78,14 @@ export const logout = () => {
   localStorage.removeItem('refresh_token')
 }
 
+export const serverLogout = async () => {
+  try {
+    await authAxios.post(`${API_BASE}/auth/logout/`)
+  } catch {
+    // Ignore errors — token may already be invalid
+  }
+}
+
 export const getCurrentUser = async () => {
   const { data } = await authAxios.get(`${API_BASE}/users/me/`)
   return data

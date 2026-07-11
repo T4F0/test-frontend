@@ -5,27 +5,34 @@ import { formatDateTime } from '../lib/dateUtils'
 import AuditLogDrawer from '../components/AuditLogDrawer'
 import { 
   Activity, PlusCircle, Edit, Trash2, Eye, Info,
-  User, Calendar, FileText, FileType, Stethoscope, File, Shield
+  User, Calendar, FileText, FileType, Stethoscope, File, Shield,
+  LogIn, LogOut, AlertTriangle
 } from 'lucide-react'
 
-const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'VIEW']
+const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'VIEW', 'LOGIN', 'LOGOUT', 'LOGIN_FAILED']
 const OBJECT_TYPES = [
   'User', 'Patient', 'RCPMeeting', 'RCPReport', 'MedicalDocument',
-  'Form', 'FormSubmission'
+  'Form', 'FormSubmission', 'Session'
 ]
 
 const ACTION_LABELS = {
   'CREATE': 'Création',
   'UPDATE': 'Modification',
   'DELETE': 'Suppression',
-  'VIEW': 'Consultation'
+  'VIEW': 'Consultation',
+  'LOGIN': 'Connexion',
+  'LOGOUT': 'Déconnexion',
+  'LOGIN_FAILED': 'Échec de connexion'
 }
 
 const ACTION_ICONS = {
   'CREATE': <PlusCircle size={16} style={{ color: '#10b981' }} />,
   'UPDATE': <Edit size={16} style={{ color: '#f59e0b' }} />,
   'DELETE': <Trash2 size={16} style={{ color: '#ef4444' }} />,
-  'VIEW': <Eye size={16} style={{ color: '#3b82f6' }} />
+  'VIEW': <Eye size={16} style={{ color: '#3b82f6' }} />,
+  'LOGIN': <LogIn size={16} style={{ color: '#10b981' }} />,
+  'LOGOUT': <LogOut size={16} style={{ color: '#64748b' }} />,
+  'LOGIN_FAILED': <AlertTriangle size={16} style={{ color: '#ef4444' }} />
 }
 
 const OBJECT_TYPE_LABELS = {
@@ -35,7 +42,8 @@ const OBJECT_TYPE_LABELS = {
   'RCPReport': 'Compte-rendu RCP',
   'MedicalDocument': 'Document Médical',
   'Form': 'Modèle de Formulaire',
-  'FormSubmission': 'Soumission de Dossier'
+  'FormSubmission': 'Soumission de Dossier',
+  'Session': 'Session'
 }
 
 const OBJECT_TYPE_ICONS = {
@@ -45,7 +53,8 @@ const OBJECT_TYPE_ICONS = {
   'RCPReport': <FileText size={14} />,
   'MedicalDocument': <File size={14} />,
   'Form': <FileType size={14} />,
-  'FormSubmission': <FileText size={14} />
+  'FormSubmission': <FileText size={14} />,
+  'Session': <LogIn size={14} />
 }
 
 export default function AuditLogsList() {
