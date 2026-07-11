@@ -108,7 +108,7 @@ export default function Layout() {
   const navLinks = [
     { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN', 'COORDINATEUR'] },
     // Show patients for ADMIN, MEDECIN, and COORDINATEUR
-    ...(['ADMIN', 'MEDECIN', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
+    ...(['ADMIN', 'MEDECIN', 'MEDECIN_EXPERT', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
     { to: '/meetings', label: 'Réunions', icon: Calendar },
     { to: '/reports', label: 'Rapports', icon: FileText },
     // Coordinators and Admin can see the requests list

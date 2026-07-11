@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
-import ProtectedRoute from './components/ProtectedRoute'
+import RouteGuard from './components/RouteGuard'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
@@ -70,7 +70,7 @@ function AppRoutes() {
       
       <Route element={<Layout />}>
         {authenticated ? (
-          <>
+          <Route element={<RouteGuard />}>
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/cases/new" element={<NewCaseGateway />} />
             <Route path="/forms" element={<FormsList />} />
@@ -101,7 +101,7 @@ function AppRoutes() {
             <Route path="/settings/services" element={<ServiceSettings />} />
             <Route path="/audit-logs" element={<AuditLogsList />} />
             <Route path="/conference/:roomId" element={<VideoConferenceRoom />} />
-          </>
+          </Route>
         ) : (
           <Route path="*" element={<Navigate to="/login" replace />} />
         )}
