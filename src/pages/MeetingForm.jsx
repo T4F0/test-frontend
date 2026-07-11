@@ -6,6 +6,7 @@ import { getPatients } from '../api/patientsApi'
 import { getUsers } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import SearchableSelect from '../components/SearchableSelect'
+import UserAvatar from '../components/UserAvatar'
 import { formatDate } from '../lib/dateUtils'
 import { Users } from 'lucide-react'
 
@@ -115,19 +116,6 @@ export default function MeetingForm() {
 
   const formatUserMeta = (candidate) =>
     [candidate.email, candidate.role].filter(Boolean).join(' • ')
-
-  const getInitials = (candidate) => {
-    const source = `${candidate?.first_name || ''} ${candidate?.last_name || ''}`.trim()
-    if (!source) {
-      return (candidate?.username || candidate?.email || '?').slice(0, 2).toUpperCase()
-    }
-    return source
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('')
-  }
 
   // Count how many submissions in the form belong to a given patient
   const countSubmissionsForPatient = (patientId) =>
@@ -796,23 +784,8 @@ export default function MeetingForm() {
             )}
             {filteredUsers.map((u) => (
               <div key={u.id} className="participant-row">
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    background: '#f1f5f9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    color: '#3b82f6',
-                    marginRight: '1rem',
-                    fontSize: '0.85rem',
-                    flexShrink: 0,
-                  }}
-                >
-                  {getInitials(u)}
+                <div style={{ marginRight: '1rem' }}>
+                  <UserAvatar user={u} size={40} style={{ background: '#f1f5f9', color: '#3b82f6', fontSize: '0.85rem' }} />
                 </div>
                 <div className="participant-info">
                   <div

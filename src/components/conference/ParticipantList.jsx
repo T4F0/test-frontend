@@ -1,4 +1,5 @@
 import { Users, Crown, MicOff, UserMinus, Hand } from 'lucide-react'
+import { resolveApiUrl } from '../../api/config'
 
 /**
  * Collapsible participant list sidebar.
@@ -29,8 +30,16 @@ export default function ParticipantList({
         <ul className="participant-list">
           {participants.map((p) => (
             <li key={p.user_id} className={`participant-item ${p.is_active === false ? 'offline' : ''}`}>
-              <div className="participant-avatar">
-                {(p.first_name || p.username || '?')[0].toUpperCase()}
+              <div className="participant-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {p.profile_picture ? (
+                  <img
+                    src={resolveApiUrl(p.profile_picture)}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  (p.first_name || p.username || '?')[0].toUpperCase()
+                )}
               </div>
               <div className="participant-info">
                 <span className="participant-name">

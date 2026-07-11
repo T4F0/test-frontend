@@ -2241,3 +2241,41 @@
   animation: slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* --- Override global button styles inside Conference Room to prevent layout distortion --- */
+.conference-room button {
+  height: auto !important;
+  box-shadow: none !important;
+  padding: 0; /* Reset global padding */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conference-room .control-btn {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.25rem !important;
+  padding: 0.6rem 1rem !important;
+}
+
+.conference-room .toolbar-btn {
+  padding: 0.45rem 0.75rem !important;
+  height: 34px !important;
+  gap: 0.3rem !important;
+}
+
+.conference-room .sidebar-close {
+  padding: 0.2rem !important;
+  height: auto !important;
+}
+
+.conference-room .chat-input button {
+  height: 40px !important;
+  width: 40px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+}
+
+

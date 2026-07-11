@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import UserAvatar from './UserAvatar'
 import { Activity, ClipboardList, Users, Calendar, FileText, Shield, Settings, LogOut, Bell, Send, CheckSquare, Trash2, Menu, X } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications } from '../api/authApi'
 import { formatDate } from '../lib/dateUtils'
@@ -312,14 +313,7 @@ export default function Layout() {
                       title="Mon profil"
                       style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
-                      <div style={{
-                        width: 36, height: 36, borderRadius: '50%',
-                        background: 'var(--primary)', color: 'white',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.9rem', fontWeight: 700, flexShrink: 0
-                      }}>
-                        {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
-                      </div>
+                      <UserAvatar user={user} size={36} />
                       <div className="user-name" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', color: '#0f172a' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
                           {user?.first_name || user?.last_name ? (
@@ -361,14 +355,7 @@ export default function Layout() {
                     className="mobile-drawer-user"
                     onClick={() => { closeMobileMenu(); navigate(user?.id ? `/users/${user.id}` : '#'); }}
                   >
-                    <div style={{
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: 'var(--primary)', color: 'white',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.95rem', fontWeight: 700, flexShrink: 0
-                    }}>
-                      {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
-                    </div>
+                    <UserAvatar user={user} size={40} />
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#0f172a' }}>
                         {user?.first_name || user?.last_name ? (
@@ -429,7 +416,7 @@ export default function Layout() {
         </div>
       </header>
       
-      <main className="container">
+      <main className="container" style={{ paddingTop: '1.5rem' }}>
         <Outlet />
       </main>
     </div>

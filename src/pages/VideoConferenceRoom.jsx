@@ -866,6 +866,7 @@ export default function VideoConferenceRoom() {
                 isCameraOff={isCameraOff}
                 isMuted={isMuted}
                 screenSharer={screenSharer}
+                localProfilePicture={user?.profile_picture}
               />
             </div>
           )}

@@ -111,6 +111,18 @@ export const updateUser = async (id, userData) => {
   return data
 }
 
+export const updateProfilePicture = async (id, formData) => {
+  const { data } = await authAxios.patch(`${API_BASE}/users/${id}/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export const removeProfilePicture = async (id) => {
+  const { data } = await authAxios.patch(`${API_BASE}/users/${id}/`, { profile_picture: null })
+  return data
+}
+
 export const deleteUser = async (id) => {
   await authAxios.delete(`${API_BASE}/users/${id}/`)
 }

@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getCurrentUser, getUser, getServices, updateUser, changePassword } from '../api/authApi'
+import { getCurrentUser, getUser, getServices, updateUser, updateProfilePicture, removeProfilePicture, changePassword } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
+import UserAvatar from '../components/UserAvatar'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 import { validatePhoneNumber } from '../lib/validators'
 import {
   User, Mail, Phone, MapPin, Activity, Lock, Edit3, Save, X,
-  CheckCircle2, AlertCircle, Shield, ChevronRight, Building2, BadgeCheck
+  CheckCircle2, AlertCircle, Shield, ChevronRight, Building2, BadgeCheck, Camera, Trash2,
+  ZoomIn, ZoomOut, RotateCcw, Check
 } from 'lucide-react'
 
 const ROLE_LABELS = {
@@ -28,6 +30,235 @@ const TABS = [
   { id: 'password', label: 'Mot de passe',     icon: Lock },
 ]
 
+/* ── Shared style objects (must be declared before components that use them) ── */
+const zoomBtnStyle = {
+  width: 34, height: 34, borderRadius: 8,
+  background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+  color: 'white', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  flexShrink: 0, padding: 0, lineHeight: 1,
+}
+
+/* ── Image Crop Modal ──────────────────────────────────────── */
+function ImageCropModal({ imageSrc, onConfirm, onCancel }) {
+  const canvasRef        = useRef(null)
+  const containerRef     = useRef(null)
+  const [scale, setScale]       = useState(1)
+  const [offset, setOffset]     = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const imgRef = useRef(null)
+
+  // Load image
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => {
+      imgRef.current = img
+      setScale(1)
+      setOffset({ x: 0, y: 0 })
+    }
+    img.src = imageSrc
+  }, [imageSrc])
+
+  // Draw canvas
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const img    = imgRef.current
+    if (!canvas || !img) return
+
+    const SIZE = 320
+    canvas.width  = SIZE
+    canvas.height = SIZE
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, SIZE, SIZE)
+
+    // Clip to circle
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2)
+    ctx.clip()
+
+    // Draw scaled + offset image centred in canvas
+    const scaledW = img.naturalWidth  * scale
+    const scaledH = img.naturalHeight * scale
+    const drawX   = (SIZE - scaledW) / 2 + offset.x
+    const drawY   = (SIZE - scaledH) / 2 + offset.y
+    ctx.drawImage(img, drawX, drawY, scaledW, scaledH)
+    ctx.restore()
+
+    // Overlay ring to show crop boundary
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+    ctx.lineWidth   = 2
+    ctx.beginPath()
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 1, 0, Math.PI * 2)
+    ctx.stroke()
+  }, [scale, offset, imageSrc])
+
+  const handleMouseDown = (e) => {
+    setDragging(true)
+    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y })
+  }
+  const handleMouseMove = useCallback((e) => {
+    if (!dragging) return
+    setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y })
+  }, [dragging, dragStart])
+  const handleMouseUp = () => setDragging(false)
+
+  const handleTouchStart = (e) => {
+    const t = e.touches[0]
+    setDragging(true)
+    setDragStart({ x: t.clientX - offset.x, y: t.clientY - offset.y })
+  }
+  const handleTouchMove = useCallback((e) => {
+    if (!dragging) return
+    const t = e.touches[0]
+    setOffset({ x: t.clientX - dragStart.x, y: t.clientY - dragStart.y })
+  }, [dragging, dragStart])
+
+  const handleConfirm = () => {
+    const canvas  = canvasRef.current
+    const img     = imgRef.current
+    if (!canvas || !img) return
+
+    // Render at high-res (512×512)
+    const OUT = 512
+    const out  = document.createElement('canvas')
+    out.width  = OUT
+    out.height = OUT
+    const ctx  = out.getContext('2d')
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2)
+    ctx.clip()
+
+    const ratio   = OUT / 320
+    const scaledW = img.naturalWidth  * scale * ratio
+    const scaledH = img.naturalHeight * scale * ratio
+    const drawX   = (OUT - scaledW) / 2 + offset.x * ratio
+    const drawY   = (OUT - scaledH) / 2 + offset.y * ratio
+    ctx.drawImage(img, drawX, drawY, scaledW, scaledH)
+    ctx.restore()
+
+    out.toBlob((blob) => {
+      if (blob) onConfirm(blob)
+    }, 'image/jpeg', 0.92)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1rem'
+    }}>
+      <div style={{
+        background: '#1a1a2e', borderRadius: 20, padding: '2rem',
+        maxWidth: 420, width: '100%',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }}>
+        <h3 style={{ color: 'white', margin: '0 0 0.4rem', fontWeight: 700, fontSize: '1.2rem' }}>
+          Recadrer la photo
+        </h3>
+        <p style={{ color: 'rgba(255,255,255,0.5)', margin: '0 0 1.5rem', fontSize: '0.85rem' }}>
+          Glissez pour repositionner · Format 1×1
+        </p>
+
+        {/* Canvas */}
+        <div ref={containerRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+          <canvas
+            ref={canvasRef}
+            width={320}
+            height={320}
+            style={{
+              borderRadius: '50%',
+              cursor: dragging ? 'grabbing' : 'grab',
+              border: '3px solid rgba(255,255,255,0.2)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              touchAction: 'none',
+              display: 'block'
+            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
+          />
+        </div>
+
+        {/* Zoom controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
+            style={zoomBtnStyle}
+            title="Dézoomer"
+          >
+            <ZoomOut size={16} color="white" />
+          </button>
+          <input
+            type="range"
+            min="0.5"
+            max="3"
+            step="0.05"
+            value={scale}
+            onChange={e => setScale(parseFloat(e.target.value))}
+            style={{ flex: 1, accentColor: '#0066cc' }}
+          />
+          <button
+            type="button"
+            onClick={() => setScale(s => Math.min(3, s + 0.1))}
+            style={zoomBtnStyle}
+            title="Zoomer"
+          >
+            <ZoomIn size={16} color="white" />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setScale(1); setOffset({ x: 0, y: 0 }) }}
+            style={zoomBtnStyle}
+            title="Réinitialiser"
+          >
+            <RotateCcw size={14} color="white" />
+          </button>
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: '0.75rem', border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: 12, background: 'rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.8)', fontWeight: 600, fontSize: '0.9rem',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+            }}
+          >
+            <X size={16} color="rgba(255,255,255,0.8)" /> Annuler
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            style={{
+              flex: 1, padding: '0.75rem', border: 'none',
+              borderRadius: 12, background: 'linear-gradient(135deg, #0066cc, #0052a3)',
+              color: 'white', fontWeight: 700, fontSize: '0.9rem',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+              boxShadow: '0 4px 16px rgba(0,102,204,0.4)'
+            }}
+          >
+            <Check size={16} color="white" /> Confirmer
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Main Component ──────────────────────────────────────── */
 export default function UserProfile() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -61,6 +292,11 @@ export default function UserProfile() {
   const [showOld, setShowOld]                     = useState(false)
   const [showNew, setShowNew]                     = useState(false)
   const [showConfirm, setShowConfirm]             = useState(false)
+
+  /* ── Profile picture state ────────────────────────────── */
+  const [pictureLoading, setPictureLoading] = useState(false)
+  const [cropSrc, setCropSrc]               = useState(null)   // data-URL for crop modal
+  const pictureInputRef = useRef(null)
 
   /* ── Fetch ────────────────────────────────────────────── */
   useEffect(() => {
@@ -185,6 +421,68 @@ export default function UserProfile() {
     }
   }
 
+  /* ── Profile picture handlers ─────────────────────────── */
+
+  // Step 1: user picks a file → open crop modal
+  const handleFileSelected = (e) => {
+    const file = e.target.files?.[0]
+    // Reset input so the same file can be re-selected after cancelling
+    e.target.value = ''
+    if (!file) return
+
+    const accepted = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!accepted.includes(file.type)) {
+      setSaveError('Format d\'image non supporté. Utilisez JPEG, PNG, WebP ou GIF.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError('L\'image ne doit pas dépasser 5 Mo.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (ev) => setCropSrc(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  // Step 2: user confirms crop → upload the blob
+  const handleCropConfirm = async (blob) => {
+    setCropSrc(null)
+    try {
+      setPictureLoading(true)
+      setSaveError(null)
+      const fd = new FormData()
+      fd.append('profile_picture', blob, 'profile.jpg')
+      const updated = await updateProfilePicture(id, fd)
+      setUser(prev => ({ ...prev, ...updated }))
+      if (isOwnProfile) setAuthUser({ ...currentUser, ...updated })
+      setSaveSuccess('Photo de profil mise à jour.')
+    } catch (err) {
+      setSaveError('Échec du téléchargement de la photo.')
+    } finally {
+      setPictureLoading(false)
+    }
+  }
+
+  const handleCropCancel = () => {
+    setCropSrc(null)
+  }
+
+  const handleRemovePicture = async () => {
+    try {
+      setPictureLoading(true)
+      setSaveError(null)
+      const updated = await removeProfilePicture(id)
+      setUser(prev => ({ ...prev, ...updated }))
+      if (isOwnProfile) setAuthUser({ ...currentUser, ...updated })
+      setSaveSuccess('Photo de profil supprimée.')
+    } catch (err) {
+      setSaveError('Échec de la suppression de la photo.')
+    } finally {
+      setPictureLoading(false)
+    }
+  }
+
   /* ── Render guards ────────────────────────────────────── */
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -198,13 +496,21 @@ export default function UserProfile() {
   if (!user)  return <div className="error">Utilisateur introuvable</div>
 
   const fullName   = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username
-  const initials   = (user.first_name?.[0] || '') + (user.last_name?.[0] || '') || user.username?.[0] || 'U'
   const roleStyle  = ROLE_COLORS[user.role] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' }
   const canEdit    = isOwnProfile || canAdminEdit
 
   /* ─────────────────────────────────────────────────────── */
   return (
     <div className="profile-container" style={{ maxWidth: 900, margin: '0 auto', padding: '2rem' }}>
+
+      {/* ── Crop Modal ──────────────────────────────────── */}
+      {cropSrc && (
+        <ImageCropModal
+          imageSrc={cropSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
 
       {/* ── Hero Header ────────────────────────────────── */}
       <div className="profile-hero" style={{
@@ -214,16 +520,79 @@ export default function UserProfile() {
         boxShadow: '0 8px 32px rgba(0,102,204,0.25)'
       }}>
         {/* Avatar */}
-        <div className="profile-avatar" style={{
-          width: 96, height: 96, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.2)',
-          border: '3px solid rgba(255,255,255,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '2.2rem', fontWeight: 800, color: 'white',
-          flexShrink: 0, letterSpacing: '-1px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          {initials.toUpperCase()}
+        <div style={{ position: 'relative' }}>
+          {pictureLoading ? (
+            <div style={{
+              width: 96, height: 96, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.2)',
+              border: '3px solid rgba(255,255,255,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <div style={{ width: 28, height: 28, border: '2px solid rgba(255,255,255,0.6)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            </div>
+          ) : (
+            <UserAvatar
+              user={user}
+              size={96}
+              style={{
+                border: '3px solid rgba(255,255,255,0.4)',
+                background: 'rgba(255,255,255,0.2)',
+                color: 'white',
+                fontSize: '2.2rem',
+                letterSpacing: '-1px',
+                backdropFilter: 'blur(10px)',
+              }}
+            />
+          )}
+          <input
+            ref={pictureInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            style={{ display: 'none' }}
+            onChange={handleFileSelected}
+          />
+          {canEdit && (
+            <button
+              onClick={() => pictureInputRef.current?.click()}
+              title="Changer la photo"
+              disabled={pictureLoading}
+              style={{
+                position: 'absolute', bottom: 0, right: -4,
+                width: 32, height: 32, borderRadius: '50%',
+                background: '#ffffff',
+                border: '2.5px solid var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: pictureLoading ? 'not-allowed' : 'pointer',
+                color: 'var(--primary)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              <Camera size={14} strokeWidth={2.5} />
+            </button>
+          )}
+          {canEdit && user?.profile_picture && (
+            <button
+              onClick={handleRemovePicture}
+              title="Supprimer la photo"
+              disabled={pictureLoading}
+              style={{
+                position: 'absolute', bottom: 0, left: -4,
+                width: 32, height: 32, borderRadius: '50%',
+                background: '#ffffff',
+                border: '2.5px solid #dc2626',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: pictureLoading ? 'not-allowed' : 'pointer',
+                color: '#dc2626',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              <Trash2 size={14} strokeWidth={2.5} />
+            </button>
+          )}
         </div>
 
         {/* Name + meta */}

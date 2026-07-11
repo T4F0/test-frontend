@@ -6,6 +6,7 @@ import { getForm } from '../api/formsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
+import UserAvatar from '../components/UserAvatar'
 import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2, X, Download, Image as ImageIcon, Video as VideoIcon } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
 import MeetingSummary from '../components/MeetingSummary'
@@ -391,9 +392,9 @@ export default function MeetingDetail() {
                     key={index} 
                     className="participant-item clickable"
                     onClick={() => navigate(`/users/${p.id}`)}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                   >
-                    <User size={14} className="participant-icon" />
+                    <UserAvatar user={p} size={24} />
                     <span>{formatUserName(p)}</span>
                   </li>
                 ))}

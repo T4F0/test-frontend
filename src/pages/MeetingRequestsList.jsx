@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getMeetingRequests, getMeetingRequestSubmissionResume, getNextPlannedMeeting, addPatientToMeeting, rejectMeetingRequest } from '../api/meetingsApi'
 import { fetchFileAsBlob } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
+import UserAvatar from '../components/UserAvatar'
 import { formatDate } from '../lib/dateUtils'
 import { Send, FileText, User, Calendar, ArrowRight, Eye, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 
@@ -212,9 +213,7 @@ export default function MeetingRequestsList() {
                 style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 1fr auto auto', alignItems: 'center', cursor: 'pointer', gap: '1rem' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <User size={20} />
-                  </div>
+                  <UserAvatar user={req.doctor_details} size={40} style={{ background: '#eff6ff', color: '#3b82f6' }} />
                   <div>
                     <div style={{ fontWeight: '600', color: '#0f172a' }}>Dr. {req.doctor_details?.first_name} {req.doctor_details?.last_name}</div>
                     <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.doctor_details?.email}</div>

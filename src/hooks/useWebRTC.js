@@ -109,14 +109,14 @@ export default function useWebRTC(
         case "participants_list":
           setParticipants(data.participants || []);
           (data.participants || []).forEach((p) => {
-            if (p.user_id !== userId && !peersRef.current[p.user_id])
+            if (String(p.user_id) !== String(userId) && !peersRef.current[p.user_id])
               createPeer(p.user_id, true);
           });
           break;
         case "participant_joined":
-          if (data.user_id !== userId) {
+          if (String(data.user_id) !== String(userId)) {
             setParticipants((prev) => {
-              if (prev.find((p) => p.user_id === data.user_id)) return prev;
+              if (prev.find((p) => String(p.user_id) === String(data.user_id))) return prev;
               return [
                 ...prev,
                 { ...data.user_info, is_muted: true, is_camera_off: true },
@@ -126,7 +126,7 @@ export default function useWebRTC(
           break;
         case "participant_left":
           setParticipants((prev) =>
-            prev.filter((p) => p.user_id !== data.user_id),
+            prev.filter((p) => String(p.user_id) !== String(data.user_id)),
           );
           if (peersRef.current[data.user_id]) {
             peersRef.current[data.user_id].destroy();
@@ -149,7 +149,7 @@ export default function useWebRTC(
         case "media_state_update":
           setParticipants((prev) =>
             prev.map((p) =>
-              p.user_id === data.user_id
+              String(p.user_id) === String(data.user_id)
                 ? {
                     ...p,
                     is_muted: data.is_muted,
@@ -165,7 +165,7 @@ export default function useWebRTC(
         case "hand_raise_update":
           setParticipants((prev) =>
             prev.map((p) =>
-              p.user_id === data.user_id
+              String(p.user_id) === String(data.user_id)
                 ? { ...p, hand_raised: data.hand_raised }
                 : p,
             ),
@@ -175,7 +175,7 @@ export default function useWebRTC(
           if (onChatMessage) onChatMessage(data);
           break;
         case "notes_update":
-          if (onNotesUpdate && data.user_id !== userId)
+          if (onNotesUpdate && String(data.user_id) !== String(userId))
             onNotesUpdate(data.notes);
           break;
         case "conference_ended":

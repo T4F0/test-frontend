@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { resolveApiUrl } from '../../api/config'
 
 /**
  * Dynamic video grid layout for conference participants.
@@ -13,10 +14,11 @@ export default function VideoGrid({
   isCameraOff,
   isMuted,
   screenSharer,
+  localProfilePicture,
 }) {
-  const currentParticipant = participants.find((p) => p.user_id === currentUserId)
-  const activeParticipants = participants.filter((p) => p.user_id !== currentUserId)
-  const localDisplayStream = screenSharer === currentUserId && screenStream ? screenStream : localStream
+  const currentParticipant = participants.find((p) => String(p.user_id) === String(currentUserId))
+  const activeParticipants = participants.filter((p) => String(p.user_id) !== String(currentUserId))
+  const localDisplayStream = screenSharer && String(screenSharer) === String(currentUserId) && screenStream ? screenStream : localStream
 
   const tiles = [
     {
@@ -24,18 +26,19 @@ export default function VideoGrid({
       label: 'Vous',
       stream: localDisplayStream,
       isMuted,
-      isCameraOff: screenSharer === currentUserId ? false : isCameraOff,
+      isCameraOff: screenSharer && String(screenSharer) === String(currentUserId) ? false : isCameraOff,
       isLocal: true,
       handRaised: currentParticipant?.hand_raised,
-      isScreenSharer: screenSharer === currentUserId,
+      isScreenSharer: screenSharer && String(screenSharer) === String(currentUserId),
       role: currentParticipant?.role,
+      profilePicture: localProfilePicture || currentParticipant?.profile_picture,
     },
     ...activeParticipants.map((p) => {
       const stream = remoteStreams[p.user_id]
       const streamCameraOff = !stream || (stream.getVideoTracks().length > 0 && !stream.getVideoTracks()[0].enabled) || stream.getVideoTracks().length === 0
       
       // Prioritize the explicit media state signal from WebSockets if available
-      const finalCameraOff = screenSharer === p.user_id ? false : (p.is_camera_off ?? streamCameraOff)
+      const finalCameraOff = screenSharer && String(screenSharer) === String(p.user_id) ? false : (p.is_camera_off ?? streamCameraOff)
 
       return {
         id: p.user_id,
@@ -45,15 +48,19 @@ export default function VideoGrid({
         userRole: p.user_role,
         isMuted: p.is_muted,
         handRaised: p.hand_raised,
-        isScreenSharer: screenSharer === p.user_id,
+        isScreenSharer: screenSharer && String(screenSharer) === String(p.user_id),
         isCameraOff: finalCameraOff,
         isLocal: false,
+        profilePicture: p.profile_picture,
       }
     }),
   ]
 
   const orderedTiles = screenSharer
-    ? [...tiles.filter((t) => t.id === screenSharer), ...tiles.filter((t) => t.id !== screenSharer)]
+    ? [
+        ...tiles.filter((t) => String(t.id) === String(screenSharer)),
+        ...tiles.filter((t) => String(t.id) !== String(screenSharer))
+      ]
     : tiles
 
   const totalVideos = orderedTiles.length
@@ -81,13 +88,14 @@ export default function VideoGrid({
           isLocal={tile.isLocal}
           handRaised={tile.handRaised}
           isScreenSharer={tile.isScreenSharer}
+          profilePicture={tile.profilePicture}
         />
       ))}
     </div>
   )
 }
 
-function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRaised, isScreenSharer }) {
+function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRaised, isScreenSharer, profilePicture }) {
   const videoRef = useRef(null)
 
   useEffect(() => {
@@ -126,7 +134,22 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
       />
       {(isCameraOff || !stream) && (
         <div className="video-placeholder">
-          <div className="avatar-circle">{(label || '?')[0].toUpperCase()}</div>
+          {profilePicture ? (
+            <img 
+              src={resolveApiUrl(profilePicture)} 
+              alt={label} 
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '3px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              }}
+            />
+          ) : (
+            <div className="avatar-circle">{(label || '?')[0].toUpperCase()}</div>
+          )}
         </div>
       )}
       <div className="video-overlay">
