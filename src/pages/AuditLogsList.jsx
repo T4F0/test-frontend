@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAuditLogs } from '../api/auditLogsApi'
 import { formatDateTime } from '../lib/dateUtils'
+import AuditLogDrawer from '../components/AuditLogDrawer'
 import { 
-  Activity, PlusCircle, Edit, Trash2, Eye, 
+  Activity, PlusCircle, Edit, Trash2, Eye, Info,
   User, Calendar, FileText, FileType, Stethoscope, File, Shield
 } from 'lucide-react'
 
@@ -60,6 +61,8 @@ export default function AuditLogsList() {
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
   const [hasPrev, setHasPrev] = useState(false)
+
+  const [selectedLog, setSelectedLog] = useState(null)
 
   // Reset to first page when filtering
   useEffect(() => {
@@ -243,20 +246,31 @@ export default function AuditLogsList() {
                     </div>
                   </td>
                   <td style={{ padding: '1rem', verticalAlign: 'middle' }} onClick={(e) => e.stopPropagation()}>
-                    {log.action === 'DELETE' ? (
-                      <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Élément supprimé</span>
-                    ) : objectLink ? (
-                      <button 
-                        className="btn-small btn-outline" 
-                        onClick={(e) => { e.stopPropagation(); navigate(objectLink); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem' }}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {log.action === 'DELETE' ? (
+                        <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Élément supprimé</span>
+                      ) : objectLink ? (
+                        <button 
+                          className="btn-small btn-outline" 
+                          onClick={(e) => { e.stopPropagation(); navigate(objectLink); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem' }}
+                        >
+                          <Eye size={14} />
+                          Consulter
+                        </button>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Non consultable directement</span>
+                      )}
+                      <button
+                        className="btn-small btn-outline"
+                        onClick={(e) => { e.stopPropagation(); setSelectedLog(log); }}
+                        title="Voir les détails"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.65rem', color: '#6366f1', borderColor: '#c7d2fe' }}
                       >
-                        <Eye size={14} />
-                        Consulter
+                        <Info size={14} />
+                        Détails
                       </button>
-                    ) : (
-                      <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Non consultable directement</span>
-                    )}
+                    </div>
                   </td>
                 </tr>
                 )
@@ -286,6 +300,10 @@ export default function AuditLogsList() {
             Page Suivante →
           </button>
         </div>
+      )}
+
+      {selectedLog && (
+        <AuditLogDrawer log={selectedLog} onClose={() => setSelectedLog(null)} />
       )}
     </div>
   )

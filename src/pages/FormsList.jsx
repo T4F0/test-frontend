@@ -115,10 +115,10 @@ export default function FormsList() {
         <div className="table-responsive-wrapper">
           <table className="forms-table" style={{ tableLayout: 'fixed', width: '100%' }}>
             <colgroup>
-              <col style={{ width: '22%' }} />
+              <col style={{ width: '21%' }} />
+              <col style={{ width: '32%' }} />
+              <col style={{ width: '12%' }} />
               <col style={{ width: '35%' }} />
-              <col style={{ width: '13%' }} />
-              <col style={{ width: '30%' }} />
             </colgroup>
             <thead>
               <tr>
