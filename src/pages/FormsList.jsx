@@ -143,11 +143,11 @@ export default function FormsList() {
                   <td style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>{form.description}</td>
                   <td>{formatDate(form.created_at)}</td>
                   <td className="actions">
+                    {user?.role === 'MEDECIN' && (
+                      <button onClick={() => navigate(`/forms/${form.id}/submit`, { state: { preselectPatientId } })}>Remplir</button>
+                    )}
                     {user?.role !== 'COORDINATEUR' && (
-                      <>
-                        <button onClick={() => navigate(`/forms/${form.id}/submit`, { state: { preselectPatientId } })}>Remplir</button>
-                        <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>
-                      </>
+                      <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>
                     )}
                     <button onClick={() => navigate(`/forms/${form.id}/edit`)}>Modifier</button>
                     {isAdmin && (

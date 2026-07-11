@@ -34,7 +34,7 @@ export default function Login() {
 
   return (
     <div className="login-container">
-      <div className="login-card">
+      <div className="login-card" data-nosnippet="">
         <h1>🏥 e-RCP Algerie</h1>
         <p className="login-subtitle">Portail de coordination des RCP</p>
 

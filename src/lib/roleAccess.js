@@ -8,16 +8,16 @@ const ALL_STAFF = [COORDINATEUR, ADMIN]
 const ALL = [MEDECIN, MEDECIN_EXPERT, COORDINATEUR, ADMIN]
 
 const ROUTE_ACCESS = [
-  { pattern: "/cases/new", roles: ALL_MEDECINS },
-  { pattern: "/forms/new", roles: [...ALL_MEDECINS, ADMIN] },
-  { pattern: "/forms/:id/edit", roles: [...ALL_MEDECINS, ADMIN] },
-  { pattern: "/forms/:id/submit", roles: ALL_MEDECINS },
-  { pattern: "/forms/:id/submissions/:submissionId/edit", roles: [...ALL_MEDECINS, ADMIN] },
+  { pattern: "/cases/new", roles: [MEDECIN] },
+  { pattern: "/forms/new", roles: [MEDECIN, ADMIN] },
+  { pattern: "/forms/:id/edit", roles: [MEDECIN, MEDECIN_EXPERT, ADMIN] },
+  { pattern: "/forms/:id/submit", roles: [MEDECIN] },
+  { pattern: "/forms/:id/submissions/:submissionId/edit", roles: [MEDECIN, ADMIN] },
   { pattern: "/forms/:formId/submissions/:submissionId", roles: [...ALL_MEDECINS, ADMIN] },
   { pattern: "/forms/:id/submissions", roles: [...ALL_MEDECINS, ADMIN] },
   { pattern: "/forms", roles: ALL },
-  { pattern: "/patients/new", roles: [...ALL_MEDECINS, ADMIN] },
-  { pattern: "/patients/:id/edit", roles: [...ALL_MEDECINS, ADMIN] },
+  { pattern: "/patients/new", roles: [MEDECIN, ADMIN] },
+  { pattern: "/patients/:id/edit", roles: [MEDECIN, ADMIN] },
   { pattern: "/patients/:id", roles: ALL },
   { pattern: "/patients", roles: ALL },
   { pattern: "/meetings/new", roles: ALL_STAFF },

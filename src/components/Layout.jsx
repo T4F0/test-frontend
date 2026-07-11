@@ -106,7 +106,7 @@ export default function Layout() {
   const homePath = !authenticated ? '/login' : '/'
 
   const navLinks = [
-    { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN', 'COORDINATEUR'] },
+    { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN', 'COORDINATEUR', 'MEDECIN_EXPERT'] },
     // Show patients for ADMIN, MEDECIN, and COORDINATEUR
     ...(['ADMIN', 'MEDECIN', 'MEDECIN_EXPERT', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
     { to: '/meetings', label: 'Réunions', icon: Calendar },

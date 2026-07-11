@@ -90,7 +90,7 @@ export default function Register() {
 
   return (
     <div className="login-container">
-      <div className="login-card" style={{ maxWidth: '500px' }}>
+      <div className="login-card" style={{ maxWidth: '500px' }} data-nosnippet="">
         <h1>🏥 Inscription Médecin</h1>
         <p className="login-subtitle">Rejoindre la plateforme de formulaires médicaux</p>
 

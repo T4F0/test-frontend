@@ -1,0 +1,17 @@
+{
+  "name": "e-RCP Algérie",
+  "short_name": "e-RCP",
+  "description": "Plateforme de gestion des Réunions de Concertation Pluridisciplinaire en oncologie",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
