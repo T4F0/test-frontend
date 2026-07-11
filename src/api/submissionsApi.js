@@ -86,3 +86,19 @@ export const deleteSubmission = async (id) => {
   const { data } = await authAxios.delete(`${API_BASE}/submissions/${id}/`)
   return data
 }
+
+export const exportFormSubmissions = async (formId, formName) => {
+  const authAxios = getAuthAxios()
+  const response = await authAxios.get(`${API_BASE}/forms/${formId}/export/`, {
+    responseType: "blob",
+  })
+  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const link = document.createElement("a")
+  link.href = url
+  const safeName = (formName || "export").replace(/\s+/g, "_").replace(/\//g, "-")
+  link.setAttribute("download", `${safeName}_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}

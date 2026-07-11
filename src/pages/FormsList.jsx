@@ -3,7 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { getForms, deleteForm } from '../api/formsApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
-import { Search } from 'lucide-react'
+import ExportFormsModal from '../components/ExportFormsModal'
+import { Search, Download } from 'lucide-react'
 
 export default function FormsList() {
   const [forms, setForms] = useState([])
@@ -15,6 +16,7 @@ export default function FormsList() {
   const preselectPatientId = location.state?.preselectPatientId
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
+  const [showExportModal, setShowExportModal] = useState(false)
 
   useEffect(() => {
     loadForms()
@@ -64,7 +66,13 @@ export default function FormsList() {
     <div className="forms-list">
       <div className="list-header">
         <h1>Formulaires</h1>
-        <div className="list-header-actions">
+        <div className="list-header-actions" style={{ display: "flex", gap: "0.75rem" }}>
+          {isAdmin && (
+            <button className="btn-secondary btn-with-icon" onClick={() => setShowExportModal(true)}>
+              <Download size={16} />
+              Exporter
+            </button>
+          )}
           <button className="btn-create-form" onClick={() => navigate('/forms/new')}>
             <span className="btn-icon">+</span> Créer un formulaire
           </button>
@@ -152,6 +160,7 @@ export default function FormsList() {
           </table>
         </div>
       )}
+      {showExportModal && <ExportFormsModal onClose={() => setShowExportModal(false)} />}
     </div>
   )
 }

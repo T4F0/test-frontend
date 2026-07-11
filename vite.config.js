@@ -9,7 +9,7 @@ export default defineConfig(({ mode, command }) => {
   // Load env file based on `mode` from the Frontend folder (where this config lives).
   // Set the third parameter to '' to load all envs regardless of the `VITE_` prefix.
   const env = loadEnv(mode, rootDir, "");
-  const apiTarget = env.VITE_API_URL || "http://app.alpha.openscaler.net:9077";
+  const apiTarget = env.VITE_API_URL || "http://localhost:9077";
   // const apiTarget = env.VITE_API_URL || 'http://localhost:8000'
 
   // For Electron builds (file:// protocol), use relative base path
