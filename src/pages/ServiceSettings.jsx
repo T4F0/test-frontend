@@ -441,11 +441,19 @@ export default function ServiceSettings() {
   const selectedService = services.find(s => s.id === selectedId) || null
 
   return (
-    <div style={{
-      display: 'flex', minHeight: 'calc(100vh - 64px)',
-      margin: '0 -24px', /* cancel container padding */
-      gap: 0, background: '#fff',
-    }}>
+    <>
+      <div className="desktop-only-banner">
+        <span className="desktop-only-icon">🖥️</span>
+        <div>
+          <strong>Paramètres</strong>
+          <p>La gestion des paramètres nécessite un ordinateur. Veuillez utiliser un appareil de bureau.</p>
+        </div>
+      </div>
+
+      <div style={{
+        display: 'flex', minHeight: 'calc(100vh - 64px)',
+        margin: '0 -24px', gap: 0, background: '#fff',
+      }}>
 
       {/* ── Side navbar ── */}
       <div style={{
@@ -519,5 +527,6 @@ export default function ServiceSettings() {
         )}
       </div>
     </div>
+    </>
   )
 }

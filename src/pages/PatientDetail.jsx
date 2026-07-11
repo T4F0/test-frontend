@@ -517,88 +517,85 @@ export default function PatientDetail() {
 
                     <div className="submission-card-actions">
                       {user?.role !== 'COORDINATEUR' ? (
-                        <div className="action-group-horizontal">
-                          <button
-                            className="btn-small btn-outline"
-                            onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}
-                            title="Voir les détails"
-                          >
-                            👁️ Voir
-                          </button>
-                          <button
-                            className="btn-small btn-outline"
-                            onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}/edit`)}
-                            title="Modifier la soumission"
-                          >
-                            ✏️ Modifier
-                          </button>
-                          <button
-                            className="btn-small btn-outline"
-                            onClick={() => navigate(`/attachments?submission=${sub.id}`)}
-                            title="Gérer les pièces jointes"
-                          >
-                            📎 Fichiers
-                          </button>
-                          <select
-                            value={sub.status}
-                            onChange={(e) => handleStatusChange(sub.id, e.target.value)}
-                            title="Changer le statut du dossier"
-                            style={{
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '6px',
-                              border: `1.5px solid ${STATUS_COLORS[sub.status]}`,
-                              color: STATUS_COLORS[sub.status],
-                              fontWeight: '600',
-                              fontSize: '0.78rem',
-                              background: STATUS_COLORS[sub.status] + '12',
-                              cursor: 'pointer',
-                              outline: 'none',
-                              minWidth: '130px',
-                            }}
-                          >
-                            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                          {(user?.role === 'ADMIN' || user?.role === 'MEDECIN') && (
+                        <>
+                          <div className="submission-card-actions-left">
                             <button
-                              className="btn-small btn-danger"
-                              onClick={() => handleDeleteSubmission(sub.id)}
-                              title="Supprimer le dossier"
+                              className="btn-small btn-secondary"
+                              onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}
+                              title="Voir les détails"
                             >
-                              🗑️ Supprimer
+                              👁️ Voir
                             </button>
-                          )}
-                        </div>
+                            <button
+                              className="btn-small btn-secondary"
+                              onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}/edit`)}
+                              title="Modifier la soumission"
+                            >
+                              ✏️ Modifier
+                            </button>
+                            <button
+                              className="btn-small btn-secondary"
+                              onClick={() => navigate(`/attachments?submission=${sub.id}`)}
+                              title="Gérer les pièces jointes"
+                            >
+                              📎 Fichiers
+                            </button>
+                          </div>
+
+                          <div className="submission-card-actions-center">
+                            <select
+                              value={sub.status}
+                              onChange={(e) => handleStatusChange(sub.id, e.target.value)}
+                              title="Changer le statut du dossier"
+                              className="submission-status-select"
+                              style={{
+                                color: STATUS_COLORS[sub.status],
+                                borderColor: STATUS_COLORS[sub.status],
+                                background: STATUS_COLORS[sub.status] + '12',
+                              }}
+                            >
+                              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="submission-card-actions-right">
+                            {subReports.length > 0 && (
+                              <button
+                                type="button"
+                                className="btn-small btn-outline"
+                                onClick={() => toggleDecisions(sub.id)}
+                                title={expandedDecisions[sub.id] ? "Masquer les décisions" : "Voir les décisions"}
+                              >
+                                ⚖️ {expandedDecisions[sub.id] ? 'Masquer déc.' : 'Voir déc.'}
+                              </button>
+                            )}
+                            <button
+                              className="btn-small btn-outline"
+                              onClick={() => navigate(`/reports?submission=${sub.id}`)}
+                              title="Voir le rapport RCP"
+                            >
+                              📑 Rapport RCP
+                            </button>
+                            {(user?.role === 'ADMIN' || user?.role === 'MEDECIN') && (
+                              <button
+                                className="btn-small btn-danger"
+                                onClick={() => handleDeleteSubmission(sub.id)}
+                                title="Supprimer le dossier"
+                              >
+                                🗑️ Supprimer
+                              </button>
+                            )}
+                          </div>
+                        </>
                       ) : (
                         <span className="text-muted" style={{ fontSize: '0.8rem' }}>
                           {subReports.length === 0 ? 'Aucune décision enregistrée' : ''}
                         </span>
                       )}
-
-                      <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
-                        {subReports.length > 0 && (
-                          <button
-                            type="button"
-                            className="btn-small btn-outline"
-                            onClick={() => toggleDecisions(sub.id)}
-                            title={expandedDecisions[sub.id] ? "Masquer les décisions" : "Voir les décisions"}
-                          >
-                            ⚖️ {expandedDecisions[sub.id] ? 'Masquer déc.' : 'Voir déc.'}
-                          </button>
-                        )}
-                        {user?.role !== 'COORDINATEUR' && (
-                          <button
-                            className="btn-small btn-outline"
-                            onClick={() => navigate(`/reports?submission=${sub.id}`)}
-                            title="Voir le rapport RCP"
-                          >
-                            📑 Rapport RCP
-                          </button>
-                        )}
-                      </div>
                     </div>
                   </div>
                 )

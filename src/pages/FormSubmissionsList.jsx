@@ -49,7 +49,7 @@ export default function FormSubmissionsList() {
         <h2>Soumissions : {form.name}</h2>
         <button
           className="btn-secondary"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/forms')}
         >
           ← Retour aux formulaires
         </button>
@@ -58,7 +58,8 @@ export default function FormSubmissionsList() {
       {submissions.length === 0 ? (
         <p className="empty">Aucune soumission pour ce formulaire.</p>
       ) : (
-        <div className="submissions-table-wrapper">
+        <>
+        <div className="submissions-table-wrapper-list">
           <table className="forms-table">
             <thead>
               <tr>
@@ -99,6 +100,37 @@ export default function FormSubmissionsList() {
             </tbody>
           </table>
         </div>
+
+        <div className="mobile-cards">
+          {submissions.map((sub) => (
+            <div key={sub.id} className="mobile-card" onClick={() => navigate(`/forms/${id}/submissions/${sub.id}`)}>
+              <div className="mobile-card-header">
+                <div className="mobile-card-title">
+                  <strong>{sub.patient_name ?? 'Patient inconnu'}</strong>
+                  <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                    {sub.reference_code ? <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>{sub.reference_code}</code> : '—'}
+                  </div>
+                </div>
+                <span className={`status-badge ${(sub.status || '').toLowerCase()}`}>{sub.status}</span>
+              </div>
+              <div className="mobile-card-body">
+                <span>{sub.form_name}</span>
+                <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>
+                  {new Date(sub.created_at).toLocaleDateString('fr-FR')}
+                </span>
+              </div>
+              <div className="mobile-card-actions">
+                <button className="btn-small btn-secondary" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${id}/submissions/${sub.id}`); }}>
+                  Voir le détail
+                </button>
+                <button className="btn-small btn-primary" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${id}/submissions/${sub.id}/edit`); }}>
+                  Modifier
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
     </div>
   )

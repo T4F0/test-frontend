@@ -120,7 +120,8 @@ export default function FormsList() {
       ) : filteredForms.length === 0 ? (
         <p className="empty">Aucun formulaire ne correspond à votre recherche "{search}"</p>
       ) : (
-        <div className="table-responsive-wrapper">
+        <>
+        <div className="forms-table-wrapper table-responsive-wrapper">
           <table className="forms-table" style={{ tableLayout: 'fixed', width: '100%' }}>
             <colgroup>
               <col style={{ width: '21%' }} />
@@ -159,6 +160,37 @@ export default function FormsList() {
             </tbody>
           </table>
         </div>
+
+        <div className="mobile-cards">
+          {filteredForms.map(form => (
+            <div key={form.id} className="mobile-card" onClick={() => navigate(`/forms/${form.id}/submissions`)}>
+              <div className="mobile-card-header">
+                <div className="mobile-card-title">
+                  <strong>{form.name}</strong>
+                  <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                    {form.description?.substring(0, 80)}{(form.description?.length > 80) ? '...' : ''}
+                  </div>
+                </div>
+              </div>
+              <div className="mobile-card-body">
+                <span className="text-muted" style={{fontSize: '0.8rem'}}>Créé le {formatDate(form.created_at)}</span>
+              </div>
+              <div className="mobile-card-actions">
+                {user?.role === 'MEDECIN' && (
+                  <button className="btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${form.id}/submit`, { state: { preselectPatientId } }); }}>Remplir</button>
+                )}
+                <button className="btn-small btn-secondary" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${form.id}/submissions`); }}>Voir les soumissions</button>
+                {user?.role !== 'COORDINATEUR' && (
+                  <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${form.id}/edit`); }}>Modifier</button>
+                )}
+                {isAdmin && (
+                  <button className="btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(form.id); }}>Supprimer</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
       {showExportModal && <ExportFormsModal onClose={() => setShowExportModal(false)} />}
     </div>

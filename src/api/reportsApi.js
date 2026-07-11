@@ -7,7 +7,12 @@ export const getReports = async (params = {}) => {
   const sp = new URLSearchParams(params).toString()
   const url = sp ? `${API_BASE}/reports/?${sp}` : `${API_BASE}/reports/`
   const { data } = await authAxios.get(url)
-  return data.results ?? data
+  return {
+    reports: data.results ?? data,
+    hasNext: !!data.next,
+    hasPrev: !!data.previous,
+    count: data.count || 0
+  }
 }
 
 export const getReport = async (id) => {

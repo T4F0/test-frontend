@@ -204,17 +204,17 @@ export default function UserProfile() {
 
   /* ─────────────────────────────────────────────────────── */
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '2rem' }}>
+    <div className="profile-container" style={{ maxWidth: 900, margin: '0 auto', padding: '2rem' }}>
 
       {/* ── Hero Header ────────────────────────────────── */}
-      <div style={{
+      <div className="profile-hero" style={{
         background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark, #0052a3) 100%)',
         borderRadius: 20, padding: '2.5rem', marginBottom: '2rem',
         display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap',
         boxShadow: '0 8px 32px rgba(0,102,204,0.25)'
       }}>
         {/* Avatar */}
-        <div style={{
+        <div className="profile-avatar" style={{
           width: 96, height: 96, borderRadius: '50%',
           background: 'rgba(255,255,255,0.2)',
           border: '3px solid rgba(255,255,255,0.4)',
@@ -228,7 +228,7 @@ export default function UserProfile() {
 
         {/* Name + meta */}
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="profile-hero-name-row" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 style={{ color: 'white', fontSize: '1.9rem', fontWeight: 800, margin: 0 }}>{fullName}</h1>
             {user.approval_status === 'APPROVED' && (
               <BadgeCheck size={22} color="rgba(255,255,255,0.8)" title="Compte approuvé" />
@@ -249,7 +249,7 @@ export default function UserProfile() {
               </span>
             )}
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.88rem', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <p className="profile-hero-email" style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.88rem', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Mail size={14} /> {user.email || 'Aucun email'}
           </p>
         </div>
@@ -351,7 +351,7 @@ export default function UserProfile() {
           )}
 
           {/* Content */}
-          <div style={{ padding: '2rem' }}>
+          <div className="profile-info-content" style={{ padding: '2rem' }}>
             {editing ? (
               /* ── Edit form ── */
               <form onSubmit={handleSaveInfo}>
@@ -560,26 +560,26 @@ export default function UserProfile() {
 function InfoRow({ icon, label, value, readonly = false }) {
   const empty = !value || value === ''
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', padding: '1rem 1.25rem',
+    <div className="profile-info-row" style={{
+      display: 'flex', alignItems: 'flex-start', padding: '1rem 1.25rem',
       background: 'var(--gray-50)', borderRadius: 12,
       border: '1px solid var(--gray-100)', transition: 'all 0.2s ease',
-      gap: '0.75rem'
+      gap: '0.75rem', position: 'relative'
     }}
       onMouseEnter={e => { if (!readonly) { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = '#f0f6ff' }}}
       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--gray-100)'; e.currentTarget.style.background = 'var(--gray-50)' }}
     >
-      <div style={{ color: 'var(--primary)', opacity: 0.7, flexShrink: 0 }}>{icon}</div>
+      <div style={{ color: 'var(--primary)', opacity: 0.7, flexShrink: 0, marginTop: 1 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>
           {label}
         </div>
-        <div style={{ fontWeight: 600, color: empty ? 'var(--gray-400)' : 'var(--gray-900)', fontSize: '0.97rem', fontStyle: empty ? 'italic' : 'normal' }}>
+        <div style={{ fontWeight: 600, color: empty ? 'var(--gray-400)' : 'var(--gray-900)', fontSize: '0.97rem', fontStyle: empty ? 'italic' : 'normal', wordBreak: 'break-word' }}>
           {empty ? 'Non renseigné' : value}
         </div>
       </div>
       {readonly && (
-        <span style={{ fontSize: '0.7rem', color: 'var(--gray-400)', background: 'var(--gray-200)', padding: '0.15rem 0.5rem', borderRadius: 6, fontWeight: 600 }}>
+        <span style={{ fontSize: '0.65rem', color: 'var(--gray-400)', background: 'var(--gray-200)', padding: '0.1rem 0.45rem', borderRadius: 5, fontWeight: 600, position: 'absolute', top: '0.4rem', right: '0.6rem' }}>
           Non modifiable
         </span>
       )}

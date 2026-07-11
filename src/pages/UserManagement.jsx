@@ -307,35 +307,21 @@ export default function UserManagement() {
 
       {activeTab === 'active' && (
         <div>
-          <div className="modern-search-container" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div className="modern-search-container">
             <div style={{ position: 'relative', flex: 1 }}>
               <Search className="search-icon" size={18} />
               <input
                 type="text"
-                placeholder="Rechercher par nom, email, hôpital ou service..."
+                placeholder="Rechercher par nom, email..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="modern-search-input"
-                style={{ paddingRight: '2.5rem' }}
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  style={{
-                    position: 'absolute',
-                    right: '1rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: 'var(--gray-400)',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+                  className="modern-search-input-clear"
                 >
                   ✕
                 </button>
@@ -360,7 +346,8 @@ export default function UserManagement() {
           ) : filteredUsers.length === 0 ? (
             <div className="empty" style={{ padding: '2rem' }}>Aucun résultat pour "{search}"</div>
           ) : (
-            <div style={{ position: 'relative', marginTop: '1.25rem' }}>
+            <>
+            <div className="users-table-wrapper" style={{ position: 'relative', marginTop: '1.25rem' }}>
               {/* Top Dummy Scrollbar */}
               {showTopScroll && (
                 <div
@@ -553,6 +540,47 @@ export default function UserManagement() {
             </table>
               </div>
             </div>
+
+            <div className="mobile-cards">
+              {filteredUsers.map(user => (
+                <div key={user.id} className="mobile-card" onClick={() => navigate(`/users/${user.id}`)}>
+                  <div className="mobile-card-header">
+                    <div className="mobile-card-title">
+                      <strong>{user.first_name} {user.last_name}</strong>
+                      <div className="text-muted" style={{fontSize: '0.8rem'}}>{user.email}</div>
+                    </div>
+                    <span className={`badge badge-${user.role.toLowerCase()}`}>
+                      {ROLE_LABELS[user.role] || user.role}
+                    </span>
+                  </div>
+                  <div className="mobile-card-body">
+                    {user.hospital && <span className="text-muted" style={{fontSize: '0.8rem'}}>{user.hospital}</span>}
+                    {currentUser?.is_global_admin && user.service_name && (
+                      <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>{user.service_name}</span>
+                    )}
+                    {user.phone_number && (
+                      <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>{user.phone_number}</span>
+                    )}
+                  </div>
+                  <div className="mobile-card-actions">
+                    {user.role === 'MEDECIN' && (
+                      <button className="btn-small btn-info" onClick={(e) => { e.stopPropagation(); navigate(`/patients?doctor=${user.id}`); }}>
+                        👥 Patients
+                      </button>
+                    )}
+                    <button className="btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/users/${user.id}/edit`); }}>
+                      Modifier
+                    </button>
+                    {currentUser?.role === 'ADMIN' && (
+                      <button className="btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }}>
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           )}
         </div>
       )}
@@ -561,6 +589,8 @@ export default function UserManagement() {
         pendingUsers.length === 0 ? (
           <div className="empty">Aucune inscription en attente trouvée</div>
         ) : (
+          <>
+          <div className="users-table-wrapper">
           <div className="table-responsive-wrapper">
             <table className="users-table">
             <thead>
@@ -607,6 +637,47 @@ export default function UserManagement() {
             </tbody>
           </table>
           </div>
+          </div>
+
+          <div className="mobile-cards">
+            {pendingUsers.map(user => (
+              <div key={user.id} className="mobile-card">
+                <div className="mobile-card-header">
+                  <div className="mobile-card-title">
+                    <strong>{user.first_name} {user.last_name}</strong>
+                    <div className="text-muted" style={{fontSize: '0.8rem'}}>{user.email}</div>
+                  </div>
+                </div>
+                <div className="mobile-card-body">
+                  <span className="text-muted" style={{fontSize: '0.8rem'}}>{user.hospital || '—'}</span>
+                  {currentUser?.is_global_admin && (
+                    <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', marginLeft: 'auto' }}>
+                      {user.service_name || '—'}
+                    </span>
+                  )}
+                  <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>
+                    {formatDate(user.created_at)}
+                  </span>
+                </div>
+                <div className="mobile-card-actions">
+                  <button 
+                    className="btn-small"
+                    onClick={() => handleApprove(user.id)}
+                    style={{ backgroundColor: '#28a745', color: 'white', border: 'none' }}
+                  >
+                    Approuver
+                  </button>
+                  <button 
+                    className="btn-small btn-danger"
+                    onClick={() => handleReject(user.id)}
+                  >
+                    Rejeter
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          </>
         )
       )}
 
@@ -622,7 +693,7 @@ export default function UserManagement() {
 
 
       {activeTab === 'services' && currentUser?.is_global_admin && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '2rem', marginTop: '1.5rem', padding: '0 2rem 2rem 2rem' }}>
+        <div className="services-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '2rem', marginTop: '1.5rem', padding: '0 2rem 2rem 2rem' }}>
           {/* Create Service form */}
           <div className="card" style={{ padding: '1.5rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', height: 'fit-content' }}>
             <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a' }}>Créer un nouveau service</h3>
@@ -659,6 +730,7 @@ export default function UserManagement() {
             ) : (
               <div>
                 {serviceError && <div className="error" style={{ marginBottom: '1rem' }}>{serviceError}</div>}
+                <div className="users-table-wrapper">
                 <div className="table-responsive-wrapper">
                   <table className="users-table">
                   <thead>
@@ -713,6 +785,48 @@ export default function UserManagement() {
                     ))}
                   </tbody>
                 </table>
+                </div>
+                </div>
+
+                <div className="mobile-cards">
+                  {services.map(service => (
+                    <div key={service.id} className="mobile-card">
+                      <div className="mobile-card-header">
+                        <div className="mobile-card-title">
+                          <strong>{service.name}</strong>
+                          <div className="text-muted" style={{fontSize: '0.8rem'}}><code>{service.slug}</code></div>
+                        </div>
+                        <span className={`badge ${service.is_active ? 'badge-active' : 'badge-inactive'}`} style={{ backgroundColor: service.is_active ? '#def7ec' : '#fde8e8', color: service.is_active ? '#03543f' : '#9b1c1c', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {service.is_active ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                      <div className="mobile-card-body">
+                        <select
+                          value={service.patient_name_display_mode || 'MASKED_NAME'}
+                          onChange={(e) => handleDisplayModeChange(service.id, e.target.value)}
+                          style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
+                        >
+                          <option value="FULL_NAME">Nom complet</option>
+                          <option value="MASKED_NAME">Masqué</option>
+                        </select>
+                        <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>{formatDate(service.created_at)}</span>
+                      </div>
+                      <div className="mobile-card-actions">
+                        <button
+                          className="btn-small"
+                          onClick={() => handleToggleService(service)}
+                          style={{ backgroundColor: service.is_active ? '#e2e8f0' : '#2563eb', color: service.is_active ? '#334155' : 'white', border: 'none' }}
+                        >
+                          {service.is_active ? 'Désactiver' : 'Activer'}
+                        </button>
+                        {service.slug !== 'default' && (
+                          <button className="btn-small btn-danger" onClick={() => handleDeleteService(service.id)}>
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

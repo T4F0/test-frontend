@@ -25,19 +25,27 @@ export default function ReportsList() {
   const [selectedMeeting, setSelectedMeeting] = useState('')
   const [meetingsLoading, setMeetingsLoading] = useState(true)
 
+  const [page, setPage] = useState(1)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
+
   useEffect(() => {
     loadMeetings()
   }, [])
 
   useEffect(() => {
-    loadReports()
+    setPage(1)
   }, [filterSubmission, selectedMeeting])
+
+  useEffect(() => {
+    loadReports()
+  }, [filterSubmission, selectedMeeting, page])
 
   const loadMeetings = async () => {
     try {
       setMeetingsLoading(true)
-      const data = await getMeetings()
-      setMeetings(Array.isArray(data) ? data : [])
+      const data = await getMeetings({ page_size: 100 })
+      setMeetings(Array.isArray(data.meetings) ? data.meetings : [])
     } catch (err) {
       console.error('Failed to load meetings:', err)
     } finally {
@@ -51,8 +59,11 @@ export default function ReportsList() {
       const params = {}
       if (filterSubmission) params.submission = filterSubmission
       if (selectedMeeting) params.meeting = selectedMeeting
+      if (page > 1) params.page = page
       const data = await getReports(params)
-      setReports(Array.isArray(data) ? data : [])
+      setReports(Array.isArray(data.reports) ? data.reports : [])
+      setHasNext(data.hasNext)
+      setHasPrev(data.hasPrev)
       setError(null)
     } catch (err) {
       setError('Échec du chargement des rapports')
@@ -214,7 +225,8 @@ export default function ReportsList() {
               <p>Aucun rapport ne correspond à votre recherche "{searchTerm}"</p>
             </div>
           ) : (
-            <div className="table-responsive-wrapper">
+            <>
+            <div className="reports-table-wrapper table-responsive-wrapper">
               <table className="forms-table" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <colgroup>
                   <col style={{ width: '25%' }} />
@@ -275,6 +287,38 @@ export default function ReportsList() {
                 </tbody>
               </table>
             </div>
+
+            <div className="mobile-cards">
+              {processedReports.map((r) => (
+                <div key={r.id} className="mobile-card">
+                  <div className="mobile-card-header">
+                    <div className="mobile-card-title">
+                      <strong>{r.submission_name || r.submission_patient_name || 'Sans titre'}</strong>
+                      <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name || r.submission_form_name}</div>
+                    </div>
+                  </div>
+                  <div className="mobile-card-body">
+                    <span className="text-muted" style={{fontSize: '0.8rem'}}>
+                      {r.written_by_name || '—'} · {new Date(r.created_at).toLocaleString()}
+                    </span>
+                    {r.meeting_names && r.meeting_names.length > 0 && (
+                      <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>
+                        {r.meeting_names.map((m) => m.name).join(', ')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mobile-card-actions">
+                    <button className="btn-small btn-outline" disabled={previewLoading === r.id || downloading === r.id} onClick={() => handlePreview(r.id)}>
+                      {previewLoading === r.id ? 'Chargement...' : 'Aperçu'}
+                    </button>
+                    <button className="btn-small btn-primary" disabled={downloading === r.id} onClick={() => handleDownload(r.id)}>
+                      {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           )}
 
 
@@ -345,6 +389,27 @@ export default function ReportsList() {
               Fermer
             </button>
           </div>
+            </div>
+          )}
+      {reports.length > 0 && (
+        <div className="pagination-controls" style={{ display: 'flex', gap: '1rem', marginTop: '2rem', justifyContent: 'center', alignItems: 'center' }}>
+          <button 
+            className="btn-secondary" 
+            disabled={!hasPrev || loading} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: (!hasPrev || loading) ? 'not-allowed' : 'pointer', opacity: (!hasPrev || loading) ? 0.6 : 1 }}
+          >
+            ← Page Précédente
+          </button>
+          <span style={{ fontWeight: 500, color: '#475569', minWidth: '80px', textAlign: 'center', fontSize: '0.95rem' }}>Page {page}</span>
+          <button 
+            className="btn-secondary" 
+            disabled={!hasNext || loading} 
+            onClick={() => setPage(p => p + 1)}
+            style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: (!hasNext || loading) ? 'not-allowed' : 'pointer', opacity: (!hasNext || loading) ? 0.6 : 1 }}
+          >
+            Page Suivante →
+          </button>
         </div>
       )}
     </div>

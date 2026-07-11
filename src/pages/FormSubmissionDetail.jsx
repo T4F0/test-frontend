@@ -125,22 +125,25 @@ export default function FormSubmissionDetail() {
     <div className="submission-detail-fullscreen">
       <div className="submission-detail-inner">
         <header className="submission-detail-header">
-          <h1 className="submission-detail-title">{submission.name || form.name}</h1>
-          <p className="submission-detail-subtitle">{form.name} — Dossier RCP</p>
-          <button
-            className="btn-secondary submission-detail-back"
-            onClick={() => navigate(-1)}
-          >
-            ← Retour
-          </button>
-          <button
-            className="btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}
-            onClick={() => navigate(`/forms/${formId}/submissions/${submissionId}/edit`)}
-          >
-            <Edit size={18} />
-            Modifier la soumission
-          </button>
+          <div className="submission-detail-header-text">
+            <h1 className="submission-detail-title">{submission.name || form.name}</h1>
+            <p className="submission-detail-subtitle">{form.name} — Dossier RCP</p>
+          </div>
+          <div className="submission-detail-header-actions">
+            <button
+              className="btn-secondary submission-detail-back"
+              onClick={() => navigate(-1)}
+            >
+              ← Retour
+            </button>
+            <button
+              className="btn-primary submission-detail-edit"
+              onClick={() => navigate(`/forms/${formId}/submissions/${submissionId}/edit`)}
+            >
+              <Edit size={16} />
+              Modifier
+            </button>
+          </div>
         </header>
 
         <section className="submission-detail-meta">

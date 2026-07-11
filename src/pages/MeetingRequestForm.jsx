@@ -114,7 +114,7 @@ export default function MeetingRequestForm() {
       {error && <div className="error">{error}</div>}
       <form onSubmit={handleSubmit} className="submission-form">
 
-        <div className="form-section-card" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+        <div className="form-section-card">
           <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a' }}>Sélection du patient</h3>
 
           <div style={{ marginBottom: '1.5rem' }}>

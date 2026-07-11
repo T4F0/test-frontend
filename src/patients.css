@@ -23,25 +23,132 @@
 }
 
 .search-bar {
-  padding: 0 2rem;
-  padding-top: 1rem;
+  padding: 1.25rem 2rem 0;
   display: flex;
   gap: 1rem;
 }
 
-.search-input {
+.search-field-wrapper {
+  position: relative;
   flex: 1;
-  padding: 0.75rem;
-  border: 1px solid var(--gray-300);
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.search-field-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-400);
+  pointer-events: none;
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+
+.search-field-wrapper:focus-within .search-field-icon {
+  color: var(--primary);
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.85rem 1rem 0.85rem 2.75rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--gray-900);
+  background: var(--gray-50);
+  transition: all 0.25s ease;
+  letter-spacing: -0.01em;
+}
+
+.search-input::placeholder {
+  color: var(--gray-400);
+  font-weight: 400;
+}
+
+.search-input:hover {
+  border-color: var(--gray-300);
+  background: white;
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+  background: white;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.search-field-clear {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--gray-100);
+  border: none;
+  cursor: pointer;
+  color: var(--gray-500);
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  z-index: 1;
+}
+
+.search-field-clear:hover {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+
+.search-field-count {
+  position: absolute;
+  right: 2.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.08);
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .search-bar {
+    padding: 1rem 1.25rem 0;
+  }
+  
+  .search-input {
+    font-size: 0.9rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-bar {
+    padding: 0.75rem 0.75rem 0;
+  }
+
+  .search-input {
+    font-size: 0.85rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  
+  .search-field-icon {
+    left: 0.85rem;
+  }
+
+  .search-field-count {
+    display: none; /* Hide count badge on tiny screens to avoid overlap */
+  }
 }
 
 .empty-state {
@@ -61,6 +168,12 @@
   border-radius: 8px;
   background: white;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.table-container::-webkit-scrollbar {
+  display: none;
 }
 
 .data-table {
@@ -1182,7 +1295,7 @@
   align-items: center;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid rgba(199, 196, 215, 0.3); /* Stitch border-t border-outline-variant/30 */
+  border-top: 1px solid rgba(199, 196, 215, 0.3);
   background: none;
   border-bottom: none;
   padding-bottom: 0;
@@ -1190,6 +1303,41 @@
   padding-right: 0;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.patient-detail-container .submission-card-actions-left {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.patient-detail-container .submission-card-actions-center {
+  display: flex;
+  align-items: center;
+}
+
+.patient-detail-container .submission-card-actions-right {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.patient-detail-container .submission-card-actions-right .btn-outline,
+.patient-detail-container .submission-card-actions-right .btn-danger {
+  font-size: 9px;
+  padding: 0.2rem 0.45rem;
+  letter-spacing: 0.03em;
+}
+
+.patient-detail-container .submission-status-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1.5px solid;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  outline: none;
+  min-width: 130px;
 }
 
 .patient-detail-container .action-group-horizontal {
@@ -1213,51 +1361,53 @@
   transition: background-color 0.2s ease, transform 0.1s ease;
   height: auto;
   line-height: 1.5;
+  white-space: nowrap;
 }
 
 .patient-detail-container .submission-card-actions button:active {
   transform: scale(0.95);
 }
 
-/* Edit / View / Files buttons */
-.patient-detail-container .submission-card-actions .btn-outline {
-  background-color: #eeecff; /* Stitch bg-surface-container */
+/* Left group: primary action buttons */
+.patient-detail-container .submission-card-actions-left .btn-secondary {
+  background-color: #eeecff;
   color: #464554;
 }
 
-.patient-detail-container .submission-card-actions .btn-outline:hover {
-  background-color: #e8e6fa; /* Stitch bg-surface-container-high */
+.patient-detail-container .submission-card-actions-left .btn-secondary:hover {
+  background-color: #e8e6fa;
 }
 
-/* Supprimer button */
-.patient-detail-container .submission-card-actions .btn-danger {
-  background-color: rgba(255, 218, 214, 0.4); /* Stitch bg-error-container/40 */
-  color: #ba1a1a; /* Stitch text-error */
-}
-
-.patient-detail-container .submission-card-actions .btn-danger:hover {
-  background-color: #ffdad6; /* Stitch bg-error-container */
-}
-
-/* View/Hide Decisions toggle button (first child of actions right group) */
-.patient-detail-container .submission-card-actions div:last-child button:first-child {
-  border: 1px solid #c7c4d7; /* Stitch outline-variant */
-  background-color: transparent;
+/* Right group: outline buttons */
+.patient-detail-container .submission-card-actions-right .btn-outline {
+  background-color: #eeecff;
   color: #464554;
+  border: 1px solid #c7c4d7;
 }
 
-.patient-detail-container .submission-card-actions div:last-child button:first-child:hover {
-  background-color: #f4f2ff; /* Stitch surface-container-low */
+.patient-detail-container .submission-card-actions-right .btn-outline:hover {
+  background-color: #e8e6fa;
 }
 
-/* Rapport RCP button (last child of actions right group) */
-.patient-detail-container .submission-card-actions div:last-child button:last-child {
-  background-color: #e2dfff; /* Stitch bg-primary-fixed */
-  color: #2512b3; /* Stitch primary */
-  font-weight: 700;
-  border: none;
+/* Right group: Supprimer button */
+.patient-detail-container .submission-card-actions-right .btn-danger {
+  background-color: rgba(255, 218, 214, 0.4);
+  color: #ba1a1a;
 }
 
-.patient-detail-container .submission-card-actions div:last-child button:last-child:hover {
-  filter: brightness(0.95);
+.patient-detail-container .submission-card-actions-right .btn-danger:hover {
+  background-color: #ffdad6;
+}
+
+@media (max-width: 640px) {
+  .patient-detail-container .submission-card-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .patient-detail-container .submission-card-actions-left,
+  .patient-detail-container .submission-card-actions-center,
+  .patient-detail-container .submission-card-actions-right {
+    width: auto;
+  }
 }

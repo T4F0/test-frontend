@@ -201,7 +201,8 @@ export default function AuditLogsList() {
           <p style={{ color: '#475569', fontSize: '1.1rem', margin: 0 }}>Aucune activité trouvée pour ces critères.</p>
         </div>
       ) : (
-        <div className="table-responsive-wrapper" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+        <>
+        <div className="audit-table-wrapper" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
           <table className="forms-table" style={{ margin: 0, width: '100%', borderCollapse: 'collapse' }}>
             <thead style={{ background: '#f1f5f9' }}>
               <tr>
@@ -287,6 +288,49 @@ export default function AuditLogsList() {
             </tbody>
           </table>
         </div>
+
+        <div className="mobile-cards">
+          {filteredLogs.map((log) => {
+            const objectLink = getObjectLink(log.object_type, log.object_id);
+            return (
+              <div key={log.id} className="mobile-card" onClick={() => { if (log.user) navigate(`/users/${log.user}`); }}>
+                <div className="mobile-card-header">
+                  <div className="mobile-card-title">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      {ACTION_ICONS[log.action] || <Activity size={14} />}
+                      <strong>{ACTION_LABELS[log.action] || log.action}</strong>
+                    </div>
+                    <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                      {formatDateTime(log.timestamp)}
+                    </div>
+                  </div>
+                </div>
+                <div className="mobile-card-body">
+                  <span>
+                    {log.username || 'Système'}
+                    {log.user_email && <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: '0.5rem'}}>{log.user_email}</span>}
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#f1f5f9', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', marginLeft: 'auto' }}>
+                    {OBJECT_TYPE_LABELS[log.object_type] || log.object_type}
+                  </span>
+                </div>
+                <div className="mobile-card-actions">
+                  {log.action !== 'DELETE' && objectLink ? (
+                    <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); navigate(objectLink); }}>
+                      Consulter
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>Élément supprimé</span>
+                  )}
+                  <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); setSelectedLog(log); }} style={{ marginLeft: 'auto' }}>
+                    Détails
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        </>
       )}
 
       {logs.length > 0 && (

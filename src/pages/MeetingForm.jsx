@@ -437,16 +437,7 @@ export default function MeetingForm() {
         </div>
 
         {/* ── Patient selection ─────────────────────────────────────────── */}
-        <div
-          className="form-section-card"
-          style={{
-            marginBottom: '2rem',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-          }}
-        >
+        <div className="form-section-card">
           <h3
             style={{
               marginBottom: '0.5rem',
@@ -532,7 +523,7 @@ export default function MeetingForm() {
             </label>
 
             {selectedPatients.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div className="selected-chips-container">
                 {selectedPatients.map((patient) => {
                   const subCount = countSubmissionsForPatient(patient.id)
                   const initials =
@@ -543,20 +534,7 @@ export default function MeetingForm() {
                     `${patient.first_name} ${patient.last_name}`.trim()
 
                   return (
-                    <div
-                      key={patient.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        background: 'white',
-                        border: '1.5px solid #bfdbfe',
-                        padding: '0.6rem 1rem 0.6rem 0.75rem',
-                        borderRadius: '10px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                        transition: 'box-shadow 0.2s',
-                      }}
-                    >
+                    <div key={patient.id} className="selected-chip">
                       {/* Avatar */}
                       <div
                         style={{
@@ -578,18 +556,11 @@ export default function MeetingForm() {
                       </div>
 
                       {/* Info */}
-                      <div>
-                        <div
-                          style={{
-                            fontWeight: '600',
-                            fontSize: '0.9rem',
-                            color: '#1e293b',
-                            lineHeight: 1.3,
-                          }}
-                        >
+                      <div className="selected-chip-info">
+                        <div className="selected-chip-title">
                           {displayName}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '1px' }}>
+                        <div className="selected-chip-subtitle">
                           {subCount > 0
                             ? `${subCount} dossier(s)`
                             : 'Aucun dossier'}
@@ -639,16 +610,7 @@ export default function MeetingForm() {
         </div>
 
         {/* ── Participants ──────────────────────────────────────────────── */}
-        <div
-          className="form-section-card"
-          style={{
-            marginBottom: '2rem',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-          }}
-        >
+        <div className="form-section-card">
           <div
             style={{
               display: 'flex',
@@ -780,13 +742,8 @@ export default function MeetingForm() {
               <div
                 className="participant-row"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '1rem',
                   background: '#faf5ff',
-                  borderRadius: '8px',
-                  border: '1px solid #d8b4fe',
-                  transition: 'background 0.2s',
+                  borderColor: '#d8b4fe',
                   marginBottom: '0.5rem'
                 }}
               >
@@ -830,11 +787,6 @@ export default function MeetingForm() {
                   style={{
                     padding: '0.4rem 1rem',
                     borderRadius: '6px',
-                    fontSize: '0.85rem',
-                    border: '1px solid',
-                    borderColor: expertUsers.length === 0 ? '#cbd5e1' : (allExpertsSelected ? '#ef4444' : '#7c3aed'),
-                    color: expertUsers.length === 0 ? '#94a3b8' : (allExpertsSelected ? '#ef4444' : '#7c3aed'),
-                    background: 'transparent',
                     cursor: expertUsers.length === 0 ? 'not-allowed' : 'pointer',
                   }}
                 >
@@ -843,19 +795,7 @@ export default function MeetingForm() {
               </div>
             )}
             {filteredUsers.map((u) => (
-              <div
-                key={u.id}
-                className="participant-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '1rem',
-                  background: 'white',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  transition: 'background 0.2s',
-                }}
-              >
+              <div key={u.id} className="participant-row">
                 <div
                   style={{
                     width: '40px',
@@ -874,15 +814,10 @@ export default function MeetingForm() {
                 >
                   {getInitials(u)}
                 </div>
-                <div style={{ flex: 1 }}>
+                <div className="participant-info">
                   <div
-                    style={{
-                      fontWeight: '600',
-                      color: u.has_pending_request ? '#16a34a' : '#1e293b',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
+                    className="participant-name-wrapper"
+                    style={{ color: u.has_pending_request ? '#16a34a' : '#1e293b' }}
                   >
                     {formatUserName(u)}
                     {u.has_pending_request && (
@@ -900,7 +835,7 @@ export default function MeetingForm() {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{formatUserMeta(u)}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{formatUserMeta(u)}</div>
                 </div>
                 <button
                   type="button"
@@ -934,22 +869,24 @@ export default function MeetingForm() {
         </div>
 
         {/* ── Date & Time ───────────────────────────────────────────────── */}
-        <div className="form-group">
-          <label>Date *</label>
-          <input
-            type="date"
-            value={form.scheduled_date}
-            onChange={(e) => handleChange('scheduled_date', e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label>Heure</label>
-          <input
-            type="time"
-            value={form.scheduled_time}
-            onChange={(e) => handleChange('scheduled_time', e.target.value)}
-          />
+        <div className="form-row">
+          <div className="form-group" style={{ flex: 1 }}>
+            <label>Date *</label>
+            <input
+              type="date"
+              value={form.scheduled_date}
+              onChange={(e) => handleChange('scheduled_date', e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label>Heure</label>
+            <input
+              type="time"
+              value={form.scheduled_time}
+              onChange={(e) => handleChange('scheduled_time', e.target.value)}
+            />
+          </div>
         </div>
 
         {/* ── Actions ───────────────────────────────────────────────────── */}

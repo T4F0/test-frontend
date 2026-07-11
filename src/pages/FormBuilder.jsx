@@ -380,6 +380,13 @@ export default function FormBuilder() {
 
   return (
     <div className="form-builder">
+      <div className="desktop-only-banner">
+        <span className="desktop-only-icon">🖥️</span>
+        <div>
+          <strong>Éditeur de formulaire</strong>
+          <p>La construction de formulaires avec glisser-déposer nécessite un ordinateur. Veuillez utiliser un appareil de bureau ou une tablette en mode paysage.</p>
+        </div>
+      </div>
       <h2>{isEdit ? 'Modifier le formulaire' : 'Créer un nouveau formulaire'}</h2>
 
       <form onSubmit={handleSaveForm} className="form-details">

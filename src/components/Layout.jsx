@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Activity, ClipboardList, Users, Calendar, Paperclip, FileText, Shield, Settings, LogOut, Bell, Send, UserCircle, CheckSquare, Trash2 } from 'lucide-react'
+import { Activity, ClipboardList, Users, Calendar, FileText, Shield, Settings, LogOut, Bell, Send, CheckSquare, Trash2, Menu, X } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications } from '../api/authApi'
 import { formatDate } from '../lib/dateUtils'
 
@@ -12,7 +12,10 @@ export default function Layout() {
   
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const notifRef = useRef(null)
+
+  const closeMobileMenu = () => setMobileMenuOpen(false)
 
   useEffect(() => {
     if (user?.role) {
@@ -136,7 +139,16 @@ export default function Layout() {
               Plateforme RCP
             </Link>
           </h1>
-          <nav>
+
+          <button
+            className="hamburger-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          <nav className="desktop-nav">
             {authenticated ? (
               <>
                 <div className="nav-links">
@@ -332,6 +344,88 @@ export default function Layout() {
               <Link to="/login" className="btn-primary">Connexion</Link>
             )}
           </nav>
+
+          {/* Mobile Drawer */}
+          {mobileMenuOpen && (
+            <div className="mobile-drawer-overlay" onClick={closeMobileMenu}>
+              <div className="mobile-drawer" onClick={(e) => e.stopPropagation()}>
+                <div className="mobile-drawer-header">
+                  <span className="mobile-drawer-title">Menu</span>
+                  <button onClick={closeMobileMenu} className="mobile-drawer-close">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="mobile-drawer-body">
+                  <div
+                    className="mobile-drawer-user"
+                    onClick={() => { closeMobileMenu(); navigate(user?.id ? `/users/${user.id}` : '#'); }}
+                  >
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'var(--primary)', color: 'white',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.95rem', fontWeight: 700, flexShrink: 0
+                    }}>
+                      {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#0f172a' }}>
+                        {user?.first_name || user?.last_name ? (
+                          `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
+                        ) : (
+                          user?.username || 'Utilisateur'
+                        )}
+                      </div>
+                      <span className={`badge badge-${user?.role?.toLowerCase()}`} style={{ fontSize: '0.7rem', padding: '2px 8px', marginTop: '2px', fontWeight: 600 }}>
+                        {user?.role === 'MEDECIN' ? 'Médecin traitant' : user?.role === 'MEDECIN_EXPERT' ? 'Médecin expert' : user?.role === 'COORDINATEUR' ? 'Coordinateur' : user?.role === 'ADMIN' ? 'Administrateur' : user?.role}
+                      </span>
+                    </div>
+                  </div>
+
+                  {unreadCount > 0 && (
+                    <div className="mobile-notifications-bar" onClick={() => { closeMobileMenu(); setShowNotifications(true); }}>
+                      <Bell size={16} />
+                      <span>{unreadCount} notification{unreadCount > 1 ? 's' : ''} non lue{unreadCount > 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+
+                  <nav className="mobile-nav-links">
+                    {navLinks.map(({ to, label, icon: Icon }) => (
+                      <Link
+                        key={to}
+                        to={to}
+                        className={location.pathname === to ? 'active' : ''}
+                        onClick={closeMobileMenu}
+                      >
+                        <Icon size={18} />
+                        {label}
+                      </Link>
+                    ))}
+                    {user?.role === 'ADMIN' && (
+                      <Link to="/audit-logs" className={location.pathname === '/audit-logs' ? 'active' : ''} onClick={closeMobileMenu}>
+                        <Shield size={18} />
+                        Audit
+                      </Link>
+                    )}
+                    {user?.is_global_admin && (
+                      <Link to="/settings/services" className={location.pathname === '/settings/services' ? 'active' : ''} onClick={closeMobileMenu}>
+                        <Settings size={18} />
+                        Paramètres
+                      </Link>
+                    )}
+                  </nav>
+
+                  <div className="mobile-drawer-footer">
+                    <button onClick={handleLogout} className="btn-logout mobile-logout-btn">
+                      <LogOut size={16} />
+                      <span>Déconnexion</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
       

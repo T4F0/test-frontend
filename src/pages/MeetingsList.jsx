@@ -21,9 +21,17 @@ export default function MeetingsList() {
   // Track ask-to-join request state per meeting: { [meetingId]: 'loading' | 'sent' | null }
   const [askJoinState, setAskJoinState] = useState({})
 
+  const [page, setPage] = useState(1)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
+
+  useEffect(() => {
+    setPage(1)
+  }, [filter, filterSubmission])
+
   useEffect(() => {
     loadMeetings()
-  }, [filter, filterSubmission])
+  }, [filter, filterSubmission, page])
 
   const loadMeetings = async () => {
     try {
@@ -32,8 +40,11 @@ export default function MeetingsList() {
         ...(filter && { status: filter }), 
         ...(filterSubmission && { submission: filterSubmission }) 
       }
+      if (page > 1) params.page = page
       const data = await getMeetings(params)
-      setMeetings(Array.isArray(data) ? data : [])
+      setMeetings(Array.isArray(data.meetings) ? data.meetings : [])
+      setHasNext(data.hasNext)
+      setHasPrev(data.hasPrev)
       setError(null)
     } catch (err) {
       setError('Échec du chargement des réunions')
@@ -133,8 +144,9 @@ export default function MeetingsList() {
           <p>Aucune réunion trouvée.</p>
         </div>
       ) : (
-        <div className="table-responsive-wrapper">
-          <table className="forms-table">
+        <>
+          <div className="table-responsive-wrapper meetings-table-wrapper">
+            <table className="forms-table">
             <thead>
               <tr>
                 <th>Date & Heure</th>
@@ -237,6 +249,98 @@ export default function MeetingsList() {
               })}
             </tbody>
           </table>
+        </div>
+
+        <div className="mobile-cards">
+          {meetings.map((m) => {
+            const isParticipant = m.participants?.some(pId => (pId.id || pId) === user?.id)
+            const isCoordinatorOrAdmin = user?.id === (m.coordinator_details?.id || m.coordinator) || user?.role === 'ADMIN'
+            const isToday = new Date(m.scheduled_date).toDateString() === new Date().toDateString()
+
+            return (
+              <div key={m.id} className="mobile-card" onClick={() => navigate(`/meetings/${m.id}`)}>
+                <div className="mobile-card-header">
+                  <div className="mobile-card-title">
+                    <strong>{m.title || formatDate(m.scheduled_date)}</strong>
+                    <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                      {formatDateTime(m.scheduled_date)}
+                    </div>
+                  </div>
+                  <span className={`status-badge ${m.status.toLowerCase()}`}>{STATUS_LABELS[m.status] ?? m.status}</span>
+                </div>
+                <div className="mobile-card-body">
+                  <span className="badge badge-neutral">
+                    {m.submissions?.length || 0} dossier(s)
+                  </span>
+                </div>
+                <div className="mobile-card-actions">
+                  <div className="mobile-card-visio">
+                    {m.status !== 'FINISHED' && (() => {
+                      if (m.status === 'LIVE' && !isParticipant && !isCoordinatorOrAdmin) {
+                        const state = askJoinState[m.id]
+                        return (
+                          <button
+                            className="btn-small btn-primary btn-with-icon"
+                            onClick={(e) => { e.stopPropagation(); handleAskToJoin(m); }}
+                            disabled={state === 'loading' || state === 'sent'}
+                            style={{ padding: '0.4rem 0.8rem' }}
+                          >
+                            <Video size={14} />
+                            {state === 'loading' ? 'Envoi...' : state === 'sent' ? '⏳ En attente' : 'Demander à rejoindre'}
+                          </button>
+                        )
+                      }
+                      const buttonText = isCoordinatorOrAdmin ? 'Démarrer' : 'Rejoindre'
+                      let disableReason = !isToday ? "Pas accessible aujourd'hui" : (!isCoordinatorOrAdmin && m.status !== 'LIVE') ? "Pas encore commencé" : ""
+                      return (
+                        <button 
+                          className="btn-small btn-primary btn-with-icon" 
+                          onClick={(e) => { e.stopPropagation(); handleQuickJoin(m.id); }}
+                          disabled={joiningId === m.id || disableReason !== ""}
+                          title={disableReason}
+                          style={{ padding: '0.4rem 0.8rem' }}
+                        >
+                          <Video size={14} />
+                          {joiningId === m.id ? 'Ouverture...' : buttonText}
+                        </button>
+                      )
+                    })()}
+                  </div>
+                  <div className="action-group-horizontal">
+                    <button className="btn-small btn-secondary" onClick={(e) => { e.stopPropagation(); navigate(`/meetings/${m.id}`); }}>Gérer</button>
+                    {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
+                      <>
+                        <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); navigate(`/meetings/${m.id}/edit`); }}>Modifier</button>
+                        <button className="btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}>×</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        </>
+      )}
+      {meetings.length > 0 && (
+        <div className="pagination-controls" style={{ display: 'flex', gap: '1rem', marginTop: '2rem', justifyContent: 'center', alignItems: 'center' }}>
+          <button 
+            className="btn-secondary" 
+            disabled={!hasPrev || loading} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: (!hasPrev || loading) ? 'not-allowed' : 'pointer', opacity: (!hasPrev || loading) ? 0.6 : 1 }}
+          >
+            ← Page Précédente
+          </button>
+          <span style={{ fontWeight: 500, color: '#475569', minWidth: '80px', textAlign: 'center', fontSize: '0.95rem' }}>Page {page}</span>
+          <button 
+            className="btn-secondary" 
+            disabled={!hasNext || loading} 
+            onClick={() => setPage(p => p + 1)}
+            style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: (!hasNext || loading) ? 'not-allowed' : 'pointer', opacity: (!hasNext || loading) ? 0.6 : 1 }}
+          >
+            Page Suivante →
+          </button>
         </div>
       )}
     </div>

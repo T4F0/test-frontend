@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getPatients, deletePatient } from '../api/patientsApi'
 import { formatDate } from '../lib/dateUtils'
+import { Search, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function PatientsList() {
@@ -116,36 +117,29 @@ export default function PatientsList() {
       {error && <div className="error">{error}</div>}
 
       <div className="search-bar">
-        <div style={{ position: 'relative', flex: 1 }}>
+        <div className="search-field-wrapper">
+          <Search className="search-field-icon" size={18} />
           <input
             type="text"
             placeholder="Rechercher par nom, identifiant patient ou médecin..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="search-input"
-            style={{ width: '100%', paddingRight: '2.5rem' }}
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
-              style={{
-                position: 'absolute',
-                right: '1rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--gray-400)',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              className="search-field-clear"
+              aria-label="Effacer la recherche"
             >
-              ✕
+              <X size={16} />
             </button>
+          )}
+          {!loading && debouncedSearch && (
+            <span className="search-field-count">
+              {patients.length} résultat{patients.length !== 1 ? 's' : ''}
+            </span>
           )}
         </div>
       </div>
@@ -157,7 +151,8 @@ export default function PatientsList() {
           <p>Aucun patient trouvé</p>
         </div>
       ) : (
-        <div style={{ position: 'relative', marginTop: '1.25rem' }}>
+        <>
+          <div className="patients-table-wrapper" style={{ position: 'relative', marginTop: '1.25rem' }}>
           {/* Top Dummy Scrollbar */}
           <div
             ref={topScrollRef}
@@ -268,7 +263,51 @@ export default function PatientsList() {
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
+
+          <div className="mobile-cards">
+            {patients.map((patient) => {
+              const ownerName = formatDoctorName(patient.created_by_info)
+              const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
+              return (
+                <div key={patient.id} className="mobile-card" onClick={() => navigate(`/patients/${patient.id}`)}>
+                  <div className="mobile-card-header">
+                    <div className="mobile-card-title">
+                      <strong>{patientName}</strong>
+                      <div className="text-muted" style={{fontSize: '0.8rem'}}>
+                        ID: {patient.anonymized_code || '-'}
+                      </div>
+                    </div>
+                    <span className="gender-badge">
+                      {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : '⚪ Autre'}
+                    </span>
+                  </div>
+                  <div className="mobile-card-body">
+                    <span>{ownerName}</span>
+                    <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>
+                      Né(e) le {formatDate(patient.birth_date)} · Créé le {formatDate(patient.created_at)}
+                    </span>
+                  </div>
+                  <div className="mobile-card-actions">
+                    <button className="btn-small btn-info" onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}`); }}>
+                      Dossier patient
+                    </button>
+                    {user?.role !== 'COORDINATEUR' && (
+                      <>
+                        <button className="btn-small btn-secondary" onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}/edit`); }}>
+                          Modifier
+                        </button>
+                        <button className="btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(patient.id); }} disabled={deleting === patient.id}>
+                          {deleting === patient.id ? '...' : 'Supprimer'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )

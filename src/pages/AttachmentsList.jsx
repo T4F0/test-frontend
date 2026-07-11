@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getAttachments, deleteAttachment, uploadAttachment, downloadAttachment } from '../api/attachmentsApi'
 import { getSubmissions } from '../api/submissionsApi'
 import { formatDate } from '../lib/dateUtils'
+import { Download } from 'lucide-react'
 
 const FILE_TYPE_LABELS = { PDF: 'PDF', IMAGE: 'Image', VIDEO: 'Video', DICOM: 'DICOM' }
 
@@ -156,9 +157,9 @@ export default function AttachmentsList() {
             ))}
           </select>
           {filterSubmission && (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <label className="btn-primary" style={{ marginBottom: 0 }}>
-                {uploading ? 'Téléchargement…' : '+ Télécharger un fichier'}
+            <div className="attachments-upload-row">
+              <label className="btn-primary attachments-upload-btn">
+                {uploading ? 'Upload en cours…' : '+ Uploader un fichier'}
                 <input
                   type="file"
                   accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp,.tiff,.bmp,.mp4,.avi,.mov,.webm,.mpeg,.dcm,.dicom,.ima"
@@ -171,7 +172,6 @@ export default function AttachmentsList() {
                 <button 
                   className="btn-danger btn-small"
                   onClick={handleCancelUpload}
-                  style={{ padding: '0.4rem 0.8rem', borderRadius: '4px' }}
                 >
                   Annuler
                 </button>
@@ -192,7 +192,8 @@ export default function AttachmentsList() {
       ) : attachments.length === 0 ? (
         <p className="empty">Aucune pièce jointe pour ce dossier.</p>
       ) : (
-        <div className="table-responsive-wrapper">
+        <>
+        <div className="attachments-table-wrapper table-responsive-wrapper">
           <table className="forms-table">
             <thead>
               <tr>
@@ -214,12 +215,21 @@ export default function AttachmentsList() {
                   <td>{formatDate(a.uploaded_at)}</td>
                   <td className="actions">
                     {a.file && (
-                      <button 
-                        className="btn-small btn-secondary" 
-                        onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}
-                      >
-                        Ouvrir
-                      </button>
+                      <>
+                        <button 
+                          className="btn-small btn-outline" 
+                          onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}
+                        >
+                          Ouvrir
+                        </button>
+                        <button 
+                          className="btn-small btn-secondary" 
+                          onClick={() => downloadAttachment(getRelativeUrl(a.file), a.file_name)}
+                        >
+                          <Download size={12} />
+                          Télécharger
+                        </button>
+                      </>
                     )}
                     <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
                   </td>
@@ -228,6 +238,42 @@ export default function AttachmentsList() {
             </tbody>
           </table>
         </div>
+
+        <div className="mobile-cards">
+          {attachments.map((a) => (
+            <div key={a.id} className="mobile-card">
+              <div className="mobile-card-header">
+                <div className="mobile-card-title">
+                  <span className={`file-type-badge ${(a.file_type || '').toLowerCase()}`} style={{display: 'inline-block', marginBottom: '0.35rem'}}>
+                    {FILE_TYPE_LABELS[a.file_type] ?? a.file_type}
+                  </span>
+                  <strong>{a.file_name || 'Sans titre'}</strong>
+                </div>
+              </div>
+              <div className="mobile-card-body">
+                <span className="text-muted">{a.submission_name || '—'}</span>
+                <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>
+                  {a.uploaded_by_name ?? '—'} · {formatDate(a.uploaded_at)}
+                </span>
+              </div>
+              <div className="mobile-card-actions">
+                {a.file && (
+                  <>
+                    <button className="btn-small btn-outline" onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}>
+                      Ouvrir
+                    </button>
+                    <button className="btn-small btn-secondary" onClick={() => downloadAttachment(getRelativeUrl(a.file), a.file_name)}>
+                      <Download size={12} />
+                      Télécharger
+                    </button>
+                  </>
+                )}
+                <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
     </div>
   )

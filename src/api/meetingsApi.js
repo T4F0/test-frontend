@@ -7,7 +7,12 @@ export const getMeetings = async (params = {}) => {
   const sp = new URLSearchParams(params).toString()
   const url = sp ? `${API_BASE}/meetings/?${sp}` : `${API_BASE}/meetings/`
   const { data } = await authAxios.get(url)
-  return data.results ?? data
+  return {
+    meetings: data.results ?? data,
+    hasNext: !!data.next,
+    hasPrev: !!data.previous,
+    count: data.count || 0
+  }
 }
 
 export const getMeeting = async (id) => {
