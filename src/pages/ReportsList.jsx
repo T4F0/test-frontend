@@ -392,23 +392,21 @@ export default function ReportsList() {
             </div>
           )}
       {reports.length > 0 && (
-        <div className="pagination-controls" style={{ display: 'flex', gap: '1rem', marginTop: '2rem', justifyContent: 'center', alignItems: 'center' }}>
-          <button 
-            className="btn-secondary" 
-            disabled={!hasPrev || loading} 
+        <div className="pagination-bar">
+          <button
+            className="pagination-bar__btn"
+            disabled={!hasPrev || loading}
             onClick={() => setPage(p => Math.max(1, p - 1))}
-            style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: (!hasPrev || loading) ? 'not-allowed' : 'pointer', opacity: (!hasPrev || loading) ? 0.6 : 1 }}
           >
-            ← Page Précédente
+            ← Précédente
           </button>
-          <span style={{ fontWeight: 500, color: '#475569', minWidth: '80px', textAlign: 'center', fontSize: '0.95rem' }}>Page {page}</span>
-          <button 
-            className="btn-secondary" 
-            disabled={!hasNext || loading} 
+          <span className="pagination-bar__page">Page {page}</span>
+          <button
+            className="pagination-bar__btn"
+            disabled={!hasNext || loading}
             onClick={() => setPage(p => p + 1)}
-            style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: (!hasNext || loading) ? 'not-allowed' : 'pointer', opacity: (!hasNext || loading) ? 0.6 : 1 }}
           >
-            Page Suivante →
+            Suivante →
           </button>
         </div>
       )}

@@ -165,9 +165,9 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: 12px;
   background: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025);
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -181,39 +181,59 @@
   border-collapse: separate;
   border-spacing: 0;
   min-width: max-content;
+  background: white;
 }
 
 .data-table thead {
-  background: var(--gray-50);
+  background: #f8fafc;
 }
 
 .data-table thead th {
   position: sticky;
   top: 0;
-  background: var(--gray-50);
+  background: #f8fafc;
   z-index: 10;
   text-align: left;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   font-weight: 600;
-  color: var(--gray-900);
-  border-bottom: 2px solid var(--gray-200);
-  font-size: 0.9rem;
+  color: var(--gray-500);
+  border-bottom: 1.5px solid #e2e8f0;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
+}
+
+/* Rounded corner cell clipping for sticky headers */
+.data-table tr:first-child th:first-child {
+  border-top-left-radius: 11px;
+}
+.data-table tr:first-child th:last-child {
+  border-top-right-radius: 11px;
+}
+.data-table tr:last-child td:first-child {
+  border-bottom-left-radius: 11px;
+}
+.data-table tr:last-child td:last-child {
+  border-bottom-right-radius: 11px;
 }
 
 .data-table tbody tr {
-  transition: background-color 0.2s ease;
+  transition: background-color 0.15s ease;
 }
 
 .data-table tbody tr:hover {
-  background-color: var(--primary-light);
+  background-color: rgba(99, 102, 241, 0.04);
 }
 
 .data-table tbody td {
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   color: var(--gray-700);
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.92rem;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .name-cell {

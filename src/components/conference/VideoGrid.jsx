@@ -1,9 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { resolveApiUrl } from '../../api/config'
 
 /**
  * Dynamic video grid layout for conference participants.
- * Auto-sizes based on participant count with screen-share focus mode.
+ *
+ * Two distinct layout modes:
+ *
+ * 1. **Screen-share mode** (filmstrip):
+ *    The sharer's stream occupies the main stage. All other participants
+ *    are rendered in a scrollable vertical filmstrip on the right.
+ *    This design scales to any number of participants without breaking.
+ *
+ * 2. **Gallery mode** (adaptive grid):
+ *    All participants are rendered in a CSS grid whose column/row count
+ *    is calculated dynamically based on participant count, ensuring
+ *    tiles fill available space without overflow.
  */
 export default function VideoGrid({
   localStream,
@@ -20,7 +31,7 @@ export default function VideoGrid({
   const activeParticipants = participants.filter((p) => String(p.user_id) !== String(currentUserId))
   const localDisplayStream = screenSharer && String(screenSharer) === String(currentUserId) && screenStream ? screenStream : localStream
 
-  const tiles = [
+  const tiles = useMemo(() => [
     {
       id: currentUserId,
       label: 'Vous',
@@ -54,29 +65,79 @@ export default function VideoGrid({
         profilePicture: p.profile_picture,
       }
     }),
-  ]
+  ], [currentUserId, localDisplayStream, isMuted, isCameraOff, screenSharer, currentParticipant, localProfilePicture, activeParticipants, remoteStreams])
 
-  const orderedTiles = screenSharer
-    ? [
-        ...tiles.filter((t) => String(t.id) === String(screenSharer)),
-        ...tiles.filter((t) => String(t.id) !== String(screenSharer))
-      ]
-    : tiles
+  // ── Screen-share mode: filmstrip layout ──────────────────────
+  if (screenSharer) {
+    const sharerTile = tiles.find((t) => String(t.id) === String(screenSharer))
+    const otherTiles = tiles.filter((t) => String(t.id) !== String(screenSharer))
 
-  const totalVideos = orderedTiles.length
+    return (
+      <div className="video-layout-screenshare">
+        {/* Main stage — the shared screen */}
+        <div className="screenshare-main-stage">
+          {sharerTile && (
+            <VideoTile
+              key={sharerTile.id}
+              stream={sharerTile.stream}
+              label={sharerTile.label}
+              role={sharerTile.role}
+              userRole={sharerTile.userRole}
+              isMuted={sharerTile.isMuted}
+              isCameraOff={sharerTile.isCameraOff}
+              isLocal={sharerTile.isLocal}
+              handRaised={sharerTile.handRaised}
+              isScreenSharer={true}
+              profilePicture={sharerTile.profilePicture}
+              variant="main"
+            />
+          )}
+        </div>
+
+        {/* Filmstrip — scrollable vertical strip */}
+        {otherTiles.length > 0 && (
+          <div className="screenshare-filmstrip">
+            <div className="filmstrip-scroll">
+              {otherTiles.map((tile) => (
+                <div className="filmstrip-tile-wrapper" key={tile.id || 'local'}>
+                  <VideoTile
+                    stream={tile.stream}
+                    label={tile.label}
+                    role={tile.role}
+                    userRole={tile.userRole}
+                    isMuted={tile.isMuted}
+                    isCameraOff={tile.isCameraOff}
+                    isLocal={tile.isLocal}
+                    handRaised={tile.handRaised}
+                    isScreenSharer={false}
+                    profilePicture={tile.profilePicture}
+                    variant="filmstrip"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Gallery mode: adaptive grid ──────────────────────────────
+  const totalVideos = tiles.length
   const getGridClass = () => {
-    if (screenSharer) return 'video-grid screen-share-layout'
     if (totalVideos === 1) return 'video-grid grid-1'
     if (totalVideos <= 2) return 'video-grid grid-2'
     if (totalVideos <= 4) return 'video-grid grid-4'
     if (totalVideos <= 6) return 'video-grid grid-6'
     if (totalVideos <= 9) return 'video-grid grid-9'
+    if (totalVideos <= 12) return 'video-grid grid-12'
+    if (totalVideos <= 16) return 'video-grid grid-16'
     return 'video-grid grid-many'
   }
 
   return (
     <div className={getGridClass()}>
-      {orderedTiles.map((tile) => (
+      {tiles.map((tile) => (
         <VideoTile
           key={tile.id || 'local'}
           stream={tile.stream}
@@ -95,7 +156,7 @@ export default function VideoGrid({
   )
 }
 
-function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRaised, isScreenSharer, profilePicture }) {
+function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRaised, isScreenSharer, profilePicture, variant }) {
   const videoRef = useRef(null)
 
   useEffect(() => {
@@ -123,8 +184,16 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
     }
   }, [stream])
 
+  const tileClass = [
+    'video-tile',
+    isScreenSharer ? 'screen-sharer' : '',
+    handRaised ? 'hand-raised' : '',
+    variant === 'filmstrip' ? 'filmstrip-variant' : '',
+    variant === 'main' ? 'main-variant' : '',
+  ].filter(Boolean).join(' ')
+
   return (
-    <div className={`video-tile ${isScreenSharer ? 'screen-sharer' : ''} ${handRaised ? 'hand-raised' : ''}`}>
+    <div className={tileClass}>
       <video 
         ref={videoRef} 
         autoPlay 
@@ -139,8 +208,8 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
               src={resolveApiUrl(profilePicture)} 
               alt={label} 
               style={{
-                width: 96,
-                height: 96,
+                width: variant === 'filmstrip' ? 48 : 96,
+                height: variant === 'filmstrip' ? 48 : 96,
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '3px solid rgba(255, 255, 255, 0.2)',
@@ -148,7 +217,9 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
               }}
             />
           ) : (
-            <div className="avatar-circle">{(label || '?')[0].toUpperCase()}</div>
+            <div className={`avatar-circle ${variant === 'filmstrip' ? 'avatar-sm' : ''}`}>
+              {(label || '?')[0].toUpperCase()}
+            </div>
           )}
         </div>
       )}

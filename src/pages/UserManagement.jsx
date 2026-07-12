@@ -356,13 +356,13 @@ export default function UserManagement() {
                   style={{
                     overflowX: 'auto',
                     overflowY: 'hidden',
-                    height: '14px',
+                    height: '8px',
                     width: '100%',
                     position: 'sticky',
                     top: '0',
                     zIndex: 12,
-                    background: '#f8fafc',
-                    borderBottom: '1px solid #e2e8f0',
+                    background: 'transparent',
+                    border: 'none',
                   }}
                 >
                   <div style={{ width: `${activeScrollWidth}px`, height: '1px' }}></div>

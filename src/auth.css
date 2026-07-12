@@ -170,37 +170,62 @@
 
 .users-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   min-width: max-content;
+  background: white;
 }
 
 .users-table thead {
-  background: linear-gradient(135deg, var(--primary-light) 0%, #f0f9ff 100%);
-  border-bottom: 2px solid var(--gray-300);
+  background: #f8fafc;
 }
 
 .users-table th {
   position: sticky !important;
   top: 0 !important;
-  background: var(--primary-light) !important;
+  background: #f8fafc !important;
   z-index: 10 !important;
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
   text-align: left;
   font-weight: 600;
-  color: var(--primary-dark);
+  color: var(--gray-500);
+  border-bottom: 1.5px solid #e2e8f0;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  font-size: 0.85rem;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
+}
+
+/* Rounded corner cell clipping for sticky headers */
+.users-table tr:first-child th:first-child {
+  border-top-left-radius: 15px;
+}
+.users-table tr:first-child th:last-child {
+  border-top-right-radius: 15px;
+}
+.users-table tr:last-child td:first-child {
+  border-bottom-left-radius: 15px;
+}
+.users-table tr:last-child td:last-child {
+  border-bottom-right-radius: 15px;
 }
 
 .users-table td {
-  padding: 1.25rem;
-  border-bottom: 1px solid var(--gray-200);
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
   color: var(--gray-700);
+  font-size: 0.92rem;
+}
+
+.users-table tbody tr {
+  transition: background-color 0.15s ease;
 }
 
 .users-table tbody tr:hover {
-  background-color: var(--gray-50);
+  background-color: rgba(99, 102, 241, 0.04);
+}
+
+.users-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .users-table .actions {

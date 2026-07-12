@@ -734,7 +734,9 @@ export default function VideoConferenceRoom() {
             <span>{conference?.participants?.length || 0} participant(s) invité(s)</span>
           </div>
           <div className="lobby-actions">
-            <button className="btn-join" onClick={handleJoin}>Rejoindre la réunion</button>
+            {(!isHost || conference?.status !== 'WAITING') && (
+              <button className="btn-join" onClick={handleJoin}>Rejoindre la réunion</button>
+            )}
             {isHost && conference?.status === 'WAITING' && (
               <button className="btn-start" onClick={handleStartMeeting}>Démarrer la réunion</button>
             )}
