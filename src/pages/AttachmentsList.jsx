@@ -133,6 +133,9 @@ export default function AttachmentsList() {
   }
 
   const getRelativeUrl = (url) => {
+    if (url && url.includes('/api/media/')) {
+      return url.substring(url.indexOf('/api/media/'))
+    }
     if (url && url.includes('/media/')) {
       return url.substring(url.indexOf('/media/'))
     }

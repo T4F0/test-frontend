@@ -213,15 +213,39 @@ export default function MeetingRequestsList() {
                 style={{ padding: '1rem', cursor: 'pointer' }}
               >
                 <div className="meeting-request-summary-top">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
                     <UserAvatar user={req.doctor_details} size={40} style={{ background: '#eff6ff', color: '#3b82f6', flexShrink: 0 }} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '0.95rem' }}>Dr. {req.doctor_details?.first_name} {req.doctor_details?.last_name}</div>
                       <div style={{ fontSize: '0.8rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.doctor_details?.email}</div>
                     </div>
                   </div>
-                  <div style={{ flexShrink: 0, color: '#94a3b8', marginLeft: '0.5rem' }}>
-                    {expandedRequestId === req.id ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
+                  <div className="meeting-request-summary-right" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem', marginLeft: '0.5rem' }}>
+                    <div style={{ color: '#94a3b8' }}>
+                      {expandedRequestId === req.id ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
+                    </div>
+                    {!isIncluded && (
+                      <button
+                        className="btn-small btn-danger meeting-request-classer-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRejectRequest(req.id);
+                        }}
+                        style={{ 
+                          padding: '0.3rem 0.6rem', 
+                          fontSize: '0.75rem',
+                          background: '#fee2e2',
+                          color: '#b91c1c',
+                          border: '1px solid #fecaca',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Classer
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -276,28 +300,6 @@ export default function MeetingRequestsList() {
                           {addingToMeeting === req.id ? 'Ajout...' : 'Ajouter à la prochaine réunion'}
                         </button>
                       )}
-                      <button
-                        className="btn-small btn-danger hide-mobile"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRejectRequest(req.id);
-                        }}
-                        style={{ 
-                          padding: '0.4rem 0.75rem', 
-                          fontSize: '0.82rem', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.25rem',
-                          background: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Classer
-                      </button>
                     </>
                   )}
                 </div>

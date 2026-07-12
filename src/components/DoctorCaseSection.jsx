@@ -19,7 +19,8 @@ export default function DoctorCaseSection({ doctorName, hospital, cases, onRemov
           border: 'none',
           borderBottom: isOpen ? '1px solid #e2e8f0' : 'none',
           cursor: 'pointer',
-          textAlign: 'left'
+          textAlign: 'left',
+          padding: '35px 8px',
         }}
       >
         <div>

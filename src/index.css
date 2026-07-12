@@ -1986,6 +1986,16 @@ button:disabled {
   align-items: center;
 }
 
+.meeting-request-classer-btn {
+  display: inline-flex;
+}
+
+@media (max-width: 768px) {
+  .meeting-request-classer-btn {
+    display: none !important;
+  }
+}
+
 /* ── Mobile attachment header redesign ── */
 @media (max-width: 640px) {
   .list-header {
@@ -3519,6 +3529,31 @@ body.theme-medecin_expert .navbar {
     width: 100% !important;
     padding: 0.5rem !important;
   }
+}
+
+/* Attachments table: visible horizontal scrollbar */
+.attachments-table-wrapper {
+  overflow-x: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-300) transparent;
+}
+
+.attachments-table-wrapper::-webkit-scrollbar {
+  display: block;
+  height: 8px;
+}
+
+.attachments-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.attachments-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 4px;
+}
+
+.attachments-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
 }
 
 

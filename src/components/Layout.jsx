@@ -57,11 +57,18 @@ export default function Layout() {
   }, []);
 
   const getNotificationRedirect = (notification) => {
+    if (notification.link) {
+      return { path: notification.link, search: '' };
+    }
+
     const title = notification.title || '';
     const titleLower = title.toLowerCase();
 
     if (titleLower.includes('registration') || titleLower.includes('inscription') || titleLower.includes('nouveau médecin')) {
       return { path: '/users', search: '?tab=pending' };
+    }
+    if (titleLower.includes('demande') && titleLower.includes('acceptée')) {
+      return { path: '/meetings', search: '' };
     }
     if (titleLower.includes('demande')) {
       return { path: '/meetings/requests', search: '' };

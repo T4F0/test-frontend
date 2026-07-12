@@ -161,8 +161,12 @@ export default function VideoConferenceRoom() {
     setLobbyConnected(true)
   }, [])
 
+  const connectingRef = useRef(false)
+
   // Shared logic: called both from WS join_accepted event and from poll fallback
   const doJoinAfterAcceptance = useCallback(async () => {
+    if (connectingRef.current) return
+    connectingRef.current = true
     // Stop the polling interval immediately to prevent duplicate calls
     if (lobbyPollIntervalRef.current) {
       clearInterval(lobbyPollIntervalRef.current)
@@ -187,6 +191,7 @@ export default function VideoConferenceRoom() {
       console.error('Failed to reconnect as participant:', err)
     }
     setJoined(true)
+    connectingRef.current = false
   }, [])
 
   const handleJoinAccepted = useCallback(async () => {
@@ -204,19 +209,16 @@ export default function VideoConferenceRoom() {
   }, [navigate])
 
   const handleJoinRequested = useCallback((data) => {
-    // Host received a new join request via WebSocket
     const { request_id, user_id, user_name, user_role } = data
     setJoinRequests(prev => {
       if (prev.find(r => r.id === request_id)) return prev
+      triggerToast(`${user_name} demande à rejoindre`, request_id)
+      setShowAdmissions(true)
+      setShowParticipants(false)
+      setShowChat(false)
+      setShowCases(false)
       return [...prev, { id: request_id, user_id, user_name, user_role }]
     })
-    // Show toast notification
-    triggerToast(`${user_name} demande à rejoindre`, request_id)
-    // Auto-open admissions panel
-    setShowAdmissions(true)
-    setShowParticipants(false)
-    setShowChat(false)
-    setShowCases(false)
   }, [triggerToast])
 
   const {
@@ -476,6 +478,7 @@ export default function VideoConferenceRoom() {
     try {
       await acceptMeetingJoinRequest(meetingId, requestId)
       setJoinRequests(prev => prev.filter(r => r.id !== requestId))
+      if (joinRequests.length <= 1) setShowAdmissions(false)
       if (joinToastRef.current?.requestId === requestId) {
         dismissToast()
       }
@@ -492,6 +495,7 @@ export default function VideoConferenceRoom() {
     try {
       await rejectMeetingJoinRequest(meetingId, requestId)
       setJoinRequests(prev => prev.filter(r => r.id !== requestId))
+      if (joinRequests.length <= 1) setShowAdmissions(false)
       if (joinToastRef.current?.requestId === requestId) {
         dismissToast()
       }

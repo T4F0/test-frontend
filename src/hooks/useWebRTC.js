@@ -32,7 +32,9 @@ export default function useWebRTC(
   const localStreamRef = useRef(null);
   const currentVideoTrackRef = useRef(null);
   const handleSignalingMessageRef = useRef(null);
-  const isLobbyConnectionRef = useRef(false); // true when WS is in lobby mode (not yet accepted)
+  const isLobbyConnectionRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectMaxAttempts = 5;
 
   const cleanupPeers = useCallback(() => {
     Object.values(peersRef.current).forEach((p) => {
@@ -61,13 +63,13 @@ export default function useWebRTC(
     });
 
     peer.on("signal", (signalData) => {
+      let type =
+        signalData.type === "answer"
+          ? "webrtc_answer"
+          : signalData.candidate
+            ? "webrtc_ice_candidate"
+            : "webrtc_offer";
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        let type =
-          signalData.type === "answer"
-            ? "webrtc_answer"
-            : signalData.candidate
-              ? "webrtc_ice_candidate"
-              : "webrtc_offer";
         wsRef.current.send(
           JSON.stringify({ type, target_user_id: peerId, data: signalData }),
         );
@@ -122,6 +124,9 @@ export default function useWebRTC(
                 { ...data.user_info, is_muted: true, is_camera_off: true },
               ];
             });
+            if (!peersRef.current[data.user_id]) {
+              createPeer(data.user_id, false);
+            }
           }
           break;
         case "participant_left":
@@ -170,6 +175,13 @@ export default function useWebRTC(
                 : p,
             ),
           );
+          break;
+        case "chat_history":
+          if (onChatMessage && data.messages) {
+            data.messages.forEach((msg) => {
+              onChatMessage({ ...msg, type: 'chat_message' });
+            });
+          }
           break;
         case "chat_message":
           if (onChatMessage) onChatMessage(data);
@@ -263,14 +275,17 @@ export default function useWebRTC(
       }
 
       // Close any existing WS before opening a new one
-      if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
-        wsRef.current.onclose = null; // Prevent triggering cleanupPeers on intentional close
+      if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED
+          && wsRef.current.readyState !== WebSocket.CLOSING) {
+        wsRef.current.onclose = null;
         wsRef.current.close();
         wsRef.current = null;
         if (!lobbyMode) {
-          // Only cleanup peers when reconnecting as full participant
           cleanupPeers();
         }
+      } else if (wsRef.current) {
+        wsRef.current = null;
+        if (!lobbyMode) cleanupPeers();
       }
 
       isLobbyConnectionRef.current = lobbyMode;
@@ -284,32 +299,60 @@ export default function useWebRTC(
       );
       wsRef.current = ws;
 
-      ws.onopen = () => {
-        console.log(`WS: Connected to signaling server (lobby=${lobbyMode})`);
-        setIsConnected(true);
-        // Only report media state for full participant connections
-        if (!isLobbyConnectionRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(
-            JSON.stringify({
-              type: "media_state_update",
-              is_muted: true,
-              is_camera_off: true,
-            }),
+      const wsOpenPromise = new Promise((resolve, reject) => {
+        let opened = false;
+        ws.onopen = () => {
+          opened = true;
+          console.log(`WS: Connected to signaling server (lobby=${lobbyMode})`);
+          setIsConnected(true);
+          if (!isLobbyConnectionRef.current && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                type: "media_state_update",
+                is_muted: true,
+                is_camera_off: true,
+              }),
+            );
+          }
+          resolve();
+        };
+        ws.onerror = (e) => {
+          console.error("WS: Connection error", e);
+          if (!opened) reject(new Error("WebSocket connection failed"));
+        };
+        ws.onmessage = (e) =>
+          handleSignalingMessageRef.current?.(JSON.parse(e.data));
+        ws.onclose = (e) => {
+          console.warn(
+            `WS: Closed code=${e.code} reason=${e.reason} clean=${e.wasClean}`,
           );
-        }
-      };
-      ws.onmessage = (e) =>
-        handleSignalingMessageRef.current?.(JSON.parse(e.data));
-      ws.onerror = (e) => console.error("WS: Connection error", e);
-      ws.onclose = (e) => {
-        console.warn(
-          `WS: Closed code=${e.code} reason=${e.reason} clean=${e.wasClean}`,
-        );
-        setIsConnected(false);
-        if (!lobbyMode) {
-          cleanupPeers();
-        }
-      };
+          setIsConnected(false);
+          if (!opened) {
+            reject(new Error(`WebSocket closed before open: code=${e.code}`));
+            return;
+          }
+          if (!lobbyMode) {
+            cleanupPeers();
+            if (e.code === 1011 && reconnectAttemptsRef.current < reconnectMaxAttempts) {
+              const delay = Math.min(2000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+              reconnectAttemptsRef.current += 1;
+              console.log(`WS: Unexpected close (1011), reconnect #${reconnectAttemptsRef.current} in ${delay}ms`);
+              setTimeout(() => connect({ lobbyMode: false }), delay);
+            } else if (e.code === 1011) {
+              console.warn("WS: Max reconnect attempts reached, giving up");
+              reconnectAttemptsRef.current = 0;
+            }
+          }
+        };
+      });
+
+      try {
+        await wsOpenPromise;
+      } catch (err) {
+        console.error("WebRTC: WS open failed", err);
+        if (!lobbyMode) cleanupPeers();
+        return;
+      }
     } catch (err) {
       console.error("WebRTC: Connection error", err);
     }
@@ -461,8 +504,11 @@ export default function useWebRTC(
     toggleCamera,
     startScreenShare,
     stopScreenShare,
-    sendChatMessage: (c) =>
-      wsRef.current?.send(JSON.stringify({ type: "chat_message", content: c })),
+    sendChatMessage: (c) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "chat_message", content: c }));
+      }
+    },
     broadcastNotes: (n) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: "notes_update", notes: n }));
@@ -470,9 +516,15 @@ export default function useWebRTC(
       }
       return false;
     },
-    raiseHand: () =>
-      wsRef.current?.send(JSON.stringify({ type: "raise_hand" })),
-    muteRemoteParticipant: (targetUserId) =>
-      wsRef.current?.send(JSON.stringify({ type: "mute_participant", target_user_id: targetUserId })),
+    raiseHand: () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "raise_hand" }));
+      }
+    },
+    muteRemoteParticipant: (targetUserId) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "mute_participant", target_user_id: targetUserId }));
+      }
+    },
   };
 }

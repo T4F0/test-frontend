@@ -52,7 +52,13 @@ export const resolveApiUrl = (url) => {
           parsed.pathname.startsWith("/media/")) &&
         apiOrigin
       ) {
-        return `${apiOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+        let resolved = `${apiOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+        if (parsed.pathname.startsWith("/api/media/")) {
+          const token = localStorage.getItem("access_token");
+          const sep = parsed.search ? "&" : "?";
+          resolved = `${resolved}${token ? `${sep}token=${token}` : ""}`;
+        }
+        return resolved;
       }
     } catch {
       return url;
@@ -61,12 +67,20 @@ export const resolveApiUrl = (url) => {
   }
   if (!apiOrigin) return url;
 
+  if (url.startsWith("/api/media/")) {
+    const token = localStorage.getItem("access_token");
+    const sep = url.includes("?") ? "&" : "?";
+    return `${apiOrigin}${url}${token ? `${sep}token=${token}` : ""}`;
+  }
+
   if (url.startsWith("/api/")) {
     return `${apiOrigin}${url}`;
   }
 
   if (url.startsWith("/media/")) {
-    return `${apiOrigin}${url}`;
+    const token = localStorage.getItem("access_token");
+    const apiUrl = `/api${url}`;
+    return `${apiOrigin}${apiUrl}${token ? `?token=${token}` : ""}`;
   }
 
   return url;

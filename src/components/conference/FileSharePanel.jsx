@@ -60,7 +60,9 @@ export default function FileSharePanel({
 
   const normalizeAttachment = (attachment, source) => {
     let fileUrl = attachment.file || ''
-    if (fileUrl.includes('/media/')) {
+    if (fileUrl.includes('/api/media/')) {
+      fileUrl = fileUrl.substring(fileUrl.indexOf('/api/media/'))
+    } else if (fileUrl.includes('/media/')) {
       fileUrl = fileUrl.substring(fileUrl.indexOf('/media/'))
     }
 
