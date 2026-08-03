@@ -209,7 +209,7 @@ export default function MedicalCasesSidebar({
               >
                 <div className="case-title">
                   <strong>{submission.patient_name}</strong>
-                  <span className="case-subtitle">{submission.name || submission.form_name}</span>
+                  <span className="case-subtitle">{submission.form_name} - {submission.submitted_by_name || 'Médecin inconnu'}</span>
                 </div>
                 {isActive ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
               </div>
