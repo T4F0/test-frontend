@@ -1795,6 +1795,27 @@
   gap: 0.2rem;
 }
 
+.case-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.case-patient-age {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 0.1rem 0.5rem;
+  border-radius: 9999px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
 .case-title strong {
   font-size: 0.95rem;
   font-weight: 600;
@@ -1985,15 +2006,15 @@
   border-radius: 12px;
   overflow: hidden;
   animation: fadeIn 0.3s ease;
-  background: #1e293b;
+  background: #ffffff;
 }
 
 .main-stage-form-details {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: #ffffff;
+  color: #1e293b;
 }
 
 .main-stage-form-header {
@@ -2001,20 +2022,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: rgba(30, 41, 59, 0.8);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
 }
 
 .main-stage-form-header .form-title {
-  color: #f8fafc;
+  color: #0f172a;
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
 }
 
 .main-stage-form-header .form-subtitle {
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.8rem;
   margin: 0.2rem 0 0 0;
 }
@@ -2023,38 +2044,38 @@
   flex: 1;
   padding: 1.5rem;
   overflow-y: auto;
-  background: #1e293b;
+  background: #ffffff;
 }
 
-/* Override form detail elements for dark theme in conference call */
+/* Override form detail elements for light theme in conference presentation */
 .main-stage-form-body .submission-detail-meta {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   box-shadow: none;
 }
 
 .main-stage-form-body .submission-detail-meta-label {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .main-stage-form-body .submission-detail-meta-value {
-  color: #f1f5f9;
+  color: #0f172a;
 }
 
 .main-stage-form-body .submission-detail-data {
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(99, 102, 241, 0.1);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   box-shadow: none;
 }
 
 .main-stage-form-body .submission-detail-data-title {
-  background: rgba(15, 23, 42, 0.5);
-  border-bottom: 2px solid rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
+  background: #f1f5f9;
+  border-bottom: 2px solid #c7d2fe;
+  color: #4f46e5;
 }
 
 .main-stage-form-body .submission-section {
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid #e2e8f0;
   padding: 0.5rem 0.75rem;
   break-inside: avoid;
 }
@@ -2071,28 +2092,28 @@
 /* Nested sections inside the grid take full width of their column */
 .submission-detail-sections-grid .submission-section.nested {
   margin-left: 0;
-  border-left: 2px solid rgba(99, 102, 241, 0.4);
-  background: rgba(0, 0, 0, 0.15);
+  border-left: 2px solid #818cf8;
+  background: #eef2ff;
   padding: 0.4rem 0.6rem;
 }
 
 .main-stage-form-body .submission-section.nested {
-  border-left: 3px solid rgba(99, 102, 241, 0.4);
-  background: rgba(0, 0, 0, 0.15);
+  border-left: 3px solid #818cf8;
+  background: #eef2ff;
 }
 
 .main-stage-form-body .submission-section-title {
-  color: #a5b4fc;
+  color: #4f46e5;
   font-size: 0.75rem;
   margin-bottom: 0.3rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding-bottom: 0.25rem;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+  border-bottom: 1px solid #c7d2fe;
 }
 
 .main-stage-form-body .submission-detail-field {
-  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  border-bottom: 1px solid #f1f5f9;
   padding: 0.22rem 0.6rem;
   min-height: unset;
   gap: 0.5rem;
@@ -2102,19 +2123,29 @@
 }
 
 .main-stage-form-body .submission-detail-field-label {
-  color: #cbd5e1;
+  color: #475569;
 }
 
 .main-stage-form-body .submission-detail-field-value {
-  color: #f1f5f9;
+  color: #0f172a;
 }
 
 .main-stage-form-body .submission-detail-empty {
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .main-stage-form-body .file-field-preview {
-  color: #a5b4fc;
+  color: #4f46e5;
+}
+
+/* Close button adapts to light background */
+.main-stage-form-header .btn-close-viewer {
+  color: #64748b;
+}
+
+.main-stage-form-header .btn-close-viewer:hover {
+  color: #0f172a;
+  background: #e2e8f0;
 }
 
 /* ── RCP Decision Panel (Conference) ───────────────────────── */
@@ -2169,6 +2200,11 @@
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
+.form-details-accordion-btn {
+  padding-top: calc(0.4rem + 1rem) !important;
+  padding-bottom: calc(0.4rem + 1rem) !important;
+}
+
 .rcp-decision-save-btn {
   display: flex;
   align-items: center;
@@ -2179,7 +2215,7 @@
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: calc(0.4rem + 1rem) 12px !important;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;

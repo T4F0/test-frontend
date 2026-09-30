@@ -24,9 +24,10 @@ function formatFieldValue(value) {
 }
 
 function isFieldVisible(field, submissionData) {
+  if (field.hide_on_presentation) return false
   const value = submissionData[field.id]
   const hasValue = value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)
-  return hasValue || field.required || field.show_rdv
+  return hasValue || field.show_rdv
 }
 
 function hasDataInChildren(section, submissionData) {

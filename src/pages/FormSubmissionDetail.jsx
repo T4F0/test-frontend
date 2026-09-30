@@ -16,9 +16,10 @@ function formatValue(value) {
 }
 
 function shouldShowField(field, submissionData) {
+  if (field.hide_on_presentation) return false
   const value = submissionData[field.id]
   const hasValue = value !== undefined && value !== '' && value !== '—'
-  return hasValue || field.required || field.show_rdv
+  return hasValue || field.show_rdv
 }
 
 function SectionDataRenderer({ section, submissionData }) {

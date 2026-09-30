@@ -4,6 +4,22 @@ import { downloadAttachment, getAttachmentBlobUrl } from '../../api/attachmentsA
 import { resolveApiUrl } from '../../api/config'
 import { getReportsBySubmission, upsertReport } from '../../api/reportsApi'
 
+function getSubmissionAge(submission) {
+  if (submission.patient_age != null) return submission.patient_age
+  const bd = submission.patient?.birth_date || submission.patient_birth_date
+  if (bd) {
+    const birth = new Date(bd)
+    if (!isNaN(birth.getTime())) {
+      const today = new Date()
+      let age = today.getFullYear() - birth.getFullYear()
+      const m = today.getMonth() - birth.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+      return age
+    }
+  }
+  return null
+}
+
 export default function MedicalCasesSidebar({
   submissions,
   attachments,
@@ -200,6 +216,7 @@ export default function MedicalCasesSidebar({
           const caseSubFiles = subFiles.filter(f => f.submissionId === submission.id)
           const caseConfFiles = conferenceFiles.filter(f => f.submissionId === submission.id)
           const rs = reportState[submission.id]
+          const patientAge = getSubmissionAge(submission)
 
           return (
             <div key={submission.id} className={`case-accordion ${isActive ? 'expanded' : ''}`}>
@@ -208,7 +225,14 @@ export default function MedicalCasesSidebar({
                 onClick={() => handleAccordionClick(submission.id)}
               >
                 <div className="case-title">
-                  <strong>{submission.patient_name}</strong>
+                  <div className="case-title-row">
+                    {patientAge != null && (
+                      <span className="case-patient-age">
+                        {patientAge} ans
+                      </span>
+                    )}
+                    <strong>{submission.patient_name}</strong>
+                  </div>
                   <span className="case-subtitle">{submission.form_name} - {submission.submitted_by_name || 'Médecin inconnu'}</span>
                 </div>
                 {isActive ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -229,6 +253,8 @@ export default function MedicalCasesSidebar({
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
+                      paddingTop: '0.7rem',
+                      paddingBottom: '0.7rem',
                       backgroundColor: activeFormDetailId === submission.id ? 'var(--secondary)' : ''
                     }}
                   >
@@ -272,6 +298,7 @@ export default function MedicalCasesSidebar({
                             className="btn-small btn-primary rcp-decision-save-btn"
                             onClick={(e) => { e.stopPropagation(); handleSaveReport(submission.id) }}
                             disabled={rs?.saving || !rs?.text?.trim()}
+                            style={{ paddingTop: '0.7rem', paddingBottom: '0.7rem' }}
                           >
                             {rs?.saving ? (
                               <><Loader size={13} className="rcp-spin" /> Sauvegarde...</>

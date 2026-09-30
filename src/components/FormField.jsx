@@ -43,7 +43,7 @@ export default function FormField({ field, value, onChange }) {
       )}
 
       {field.field_type === 'select' && (
-        <select {...baseProps} style={{ padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--border-radius)' }}>
+        <select {...baseProps} style={{ padding: '0.15rem 0.35rem', fontSize: '0.725rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--border-radius)' }}>
           <option value="">-- Sélectionner --</option>
           {field.options?.map((opt, i) => (
             <option key={i} value={opt}>{opt}</option>
@@ -52,25 +52,25 @@ export default function FormField({ field, value, onChange }) {
       )}
 
       {field.field_type === 'checkbox' && (
-        <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.15rem' }}>
           {(!field.options || field.options.length === 0) ? (
-            <label className="checkbox-item single" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--border-radius)', cursor: 'pointer' }}>
+            <label className="checkbox-item single" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.15rem 0.3rem', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--border-radius)', cursor: 'pointer', fontSize: '0.725rem' }}>
               <input
                 type="checkbox"
                 checked={!!value}
                 onChange={(e) => onChange(e.target.checked)}
                 required={field.required}
               />
-              <span className="checkbox-label">{field.name}</span>
+              <span className="checkbox-label" style={{ fontSize: '0.725rem' }}>{field.name}</span>
             </label>
           ) : (
-            <div className="checkbox-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div className="checkbox-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
               {field.options.map((opt, i) => {
                 const currentValues = Array.isArray(value) ? value : []
                 const isChecked = currentValues.includes(opt)
                 
                 return (
-                  <label key={i} className="checkbox-item" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--border-radius)', cursor: 'pointer', transition: 'background-color 0.2s' }}>
+                  <label key={i} className="checkbox-item" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.15rem 0.35rem', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--border-radius)', cursor: 'pointer', transition: 'background-color 0.2s' }}>
                     <input
                       type="checkbox"
                       checked={isChecked}
@@ -80,9 +80,9 @@ export default function FormField({ field, value, onChange }) {
                           : currentValues.filter(v => v !== opt)
                         onChange(newValues)
                       }}
-                      style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--primary)' }}
+                      style={{ width: '0.8rem', height: '0.8rem', accentColor: 'var(--primary)' }}
                     />
-                    <span className="checkbox-label" style={{ fontSize: '1rem' }}>{opt}</span>
+                    <span className="checkbox-label" style={{ fontSize: '0.725rem' }}>{opt}</span>
                   </label>
                 )
               })}

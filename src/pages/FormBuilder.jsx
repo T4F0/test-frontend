@@ -121,6 +121,8 @@ export default function FormBuilder() {
           options: f.options,
           accepted_file_types: f.accepted_file_types,
           show_rdv: f.show_rdv,
+          hide_on_presentation: f.hide_on_presentation,
+          hide_on_report: f.hide_on_report,
           order: f.order
         })),
         deleted_sections: deletedSections,
@@ -167,6 +169,8 @@ export default function FormBuilder() {
       options: null,
       accepted_file_types: '',
       show_rdv: false,
+      hide_on_presentation: false,
+      hide_on_report: false,
       order: sectionFields.length
     }
     setFields(prev => [...prev, newField])
