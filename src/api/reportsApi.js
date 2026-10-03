@@ -43,12 +43,16 @@ export const getReportsByMeeting = async (meetingId) => {
  * Create or update the RCP decision/report for a given submission.
  * Only coordinators are allowed by the backend.
  */
-export const upsertReport = async (submissionId, content) => {
+export const upsertReport = async (submissionId, content, decisionOptionId = null) => {
   const authAxios = getAuthAxios()
-  const { data } = await authAxios.post(`${API_BASE}/reports/upsert/`, {
+  const payload = {
     submission: submissionId,
     content,
-  })
+  }
+  if (decisionOptionId) {
+    payload.decision_option = decisionOptionId
+  }
+  const { data } = await authAxios.post(`${API_BASE}/reports/upsert/`, payload)
   return data
 }
 

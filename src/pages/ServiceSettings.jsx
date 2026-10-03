@@ -2,10 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 import { getServices, updateServiceHeader, updateServiceParticipants } from '../api/authApi'
 import { resolveApiUrl } from '../api/config'
 import { useAuth } from '../context/AuthContext'
+import { getForms } from '../api/formsApi'
+import {
+  getAllDecisionOptions,
+  createDecisionOption,
+  updateDecisionOption,
+  deleteDecisionOption,
+  reorderDecisionOptions,
+} from '../api/decisionOptionsApi'
 import {
   Settings, Upload, Trash2, Users, Plus, X, ChevronDown,
   ChevronUp, Check, Image as ImageIcon, ToggleLeft, ToggleRight,
-  GripVertical,
+  GripVertical, Gavel, ArrowUp, ArrowDown, Pencil,
 } from 'lucide-react'
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
@@ -405,6 +413,389 @@ function GroupEditor({ group, index, total, onTitleChange, onAddMember, onRemove
   )
 }
 
+// ─── Decision Options Section ──────────────────────────────────────────────────
+
+function DecisionOptionsSection({ service }) {
+  const [forms, setForms] = useState([])
+  const [selectedFormId, setSelectedFormId] = useState('')
+  const [decisionOptions, setDecisionOptions] = useState([])
+  const [loadingForms, setLoadingForms] = useState(false)
+  const [loadingOptions, setLoadingOptions] = useState(false)
+  const [newOptionLabel, setNewOptionLabel] = useState('')
+  const [editingOptionId, setEditingOptionId] = useState(null)
+  const [editingOptionLabel, setEditingOptionLabel] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [savedSuccess, setSavedSuccess] = useState(false)
+
+  // Load forms when service changes
+  useEffect(() => {
+    let isMounted = true
+    const loadForms = async () => {
+      if (!service?.id) return
+      setLoadingForms(true)
+      try {
+        const data = await getForms()
+        const allForms = Array.isArray(data) ? data : (data.results || [])
+        const serviceForms = allForms.filter(f => !f.service || f.service === service.id || f.service?.id === service.id)
+        if (isMounted) {
+          const list = serviceForms.length > 0 ? serviceForms : allForms
+          setForms(list)
+          if (list.length > 0) {
+            setSelectedFormId(list[0].id)
+          } else {
+            setSelectedFormId('')
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load forms:', err)
+      } finally {
+        if (isMounted) setLoadingForms(false)
+      }
+    }
+    loadForms()
+    return () => { isMounted = false }
+  }, [service?.id])
+
+  // Load decision options when form is selected
+  useEffect(() => {
+    let isMounted = true
+    const loadOptions = async () => {
+      if (!selectedFormId) {
+        setDecisionOptions([])
+        return
+      }
+      setLoadingOptions(true)
+      try {
+        const data = await getAllDecisionOptions(selectedFormId)
+        if (isMounted) {
+          setDecisionOptions(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        console.error('Failed to load decision options:', err)
+      } finally {
+        if (isMounted) setLoadingOptions(false)
+      }
+    }
+    loadOptions()
+    return () => { isMounted = false }
+  }, [selectedFormId])
+
+  const handleAddOption = async (e) => {
+    e?.preventDefault()
+    if (!newOptionLabel.trim() || !selectedFormId || saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      const created = await createDecisionOption(selectedFormId, newOptionLabel.trim(), decisionOptions.length)
+      setDecisionOptions(prev => [...prev, created])
+      setNewOptionLabel('')
+      setSavedSuccess(true)
+      setTimeout(() => setSavedSuccess(false), 2500)
+    } catch (err) {
+      setError("Échec de l'ajout de la proposition.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleUpdateOption = async (optionId) => {
+    if (!editingOptionLabel.trim() || saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await updateDecisionOption(optionId, { label: editingOptionLabel.trim() })
+      setDecisionOptions(prev => prev.map(o => o.id === optionId ? updated : o))
+      setEditingOptionId(null)
+      setEditingOptionLabel('')
+    } catch (err) {
+      setError("Échec de la modification.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleToggleActive = async (option) => {
+    try {
+      const updated = await updateDecisionOption(option.id, { is_active: !option.is_active })
+      setDecisionOptions(prev => prev.map(o => o.id === option.id ? updated : o))
+    } catch (err) {
+      setError("Échec de la mise à jour du statut.")
+    }
+  }
+
+  const handleDelete = async (optionId) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cette proposition ?")) return
+    try {
+      await deleteDecisionOption(optionId)
+      setDecisionOptions(prev => prev.filter(o => o.id !== optionId))
+    } catch (err) {
+      setError("Échec de la suppression.")
+    }
+  }
+
+  const handleMove = async (index, direction) => {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= decisionOptions.length) return
+    const reordered = [...decisionOptions]
+    const [moved] = reordered.splice(index, 1)
+    reordered.splice(targetIndex, 0, moved)
+    setDecisionOptions(reordered)
+    try {
+      await reorderDecisionOptions(reordered.map(o => o.id))
+    } catch (err) {
+      console.error('Failed to save order:', err)
+    }
+  }
+
+  return (
+    <SectionCard title="Propositions de Décision RCP" icon={Gavel}>
+      <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: 0, marginBottom: '1.25rem' }}>
+        Configurez la liste des décisions préétablies pour chaque formulaire médical. En réunion, les coordinateurs pourront choisir parmi ces propositions ou saisir une décision personnalisée.
+      </p>
+
+      {error && (
+        <div style={{ padding: '0.65rem 1rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Form selector */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: '600', color: '#374151' }}>
+          Formulaire médical
+        </label>
+        {loadingForms ? (
+          <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Chargement des formulaires...</div>
+        ) : forms.length === 0 ? (
+          <div style={{ color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>Aucun formulaire trouvé pour ce service.</div>
+        ) : (
+          <select
+            value={selectedFormId}
+            onChange={(e) => setSelectedFormId(e.target.value)}
+            style={{
+              width: '100%',
+              maxWidth: '450px',
+              padding: '0.6rem 0.75rem',
+              border: '1.5px solid #cbd5e1',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              color: '#0f172a',
+              background: '#fff',
+            }}
+          >
+            {forms.map(f => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {selectedFormId && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#374151' }}>
+              Propositions ({decisionOptions.length})
+            </span>
+            {savedSuccess && (
+              <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <Check size={14} /> Ajouté avec succès
+              </span>
+            )}
+          </div>
+
+          {loadingOptions ? (
+            <div style={{ padding: '1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
+              Chargement des propositions...
+            </div>
+          ) : (
+            <>
+              {decisionOptions.length === 0 ? (
+                <div style={{
+                  padding: '1.5rem', textAlign: 'center', border: '1.5px dashed #cbd5e1',
+                  borderRadius: '8px', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem',
+                }}>
+                  Aucune proposition pour ce formulaire. Les coordinateurs utiliseront un champ de texte libre par défaut.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                  {decisionOptions.map((opt, idx) => (
+                    <div
+                      key={opt.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.65rem 0.85rem',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        background: opt.is_active ? '#ffffff' : '#f8fafc',
+                        opacity: opt.is_active ? 1 : 0.65,
+                      }}
+                    >
+                      {/* Move controls */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => handleMove(idx, -1)}
+                          style={{
+                            background: 'none', border: 'none', padding: '1px',
+                            cursor: idx === 0 ? 'default' : 'pointer',
+                            color: idx === 0 ? '#cbd5e1' : '#64748b',
+                            lineHeight: 1,
+                          }}
+                          title="Monter"
+                        >
+                          <ArrowUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === decisionOptions.length - 1}
+                          onClick={() => handleMove(idx, 1)}
+                          style={{
+                            background: 'none', border: 'none', padding: '1px',
+                            cursor: idx === decisionOptions.length - 1 ? 'default' : 'pointer',
+                            color: idx === decisionOptions.length - 1 ? '#cbd5e1' : '#64748b',
+                            lineHeight: 1,
+                          }}
+                          title="Descendre"
+                        >
+                          <ArrowDown size={13} />
+                        </button>
+                      </div>
+
+                      {editingOptionId === opt.id ? (
+                        <div style={{ display: 'flex', flex: 1, gap: '0.5rem', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={editingOptionLabel}
+                            onChange={(e) => setEditingOptionLabel(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleUpdateOption(opt.id)
+                              if (e.key === 'Escape') { setEditingOptionId(null); setEditingOptionLabel('') }
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '0.35rem 0.5rem',
+                              border: '1.5px solid #2563eb',
+                              borderRadius: '6px',
+                              fontSize: '0.85rem',
+                              outline: 'none',
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateOption(opt.id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#16a34a', padding: '4px' }}
+                            title="Enregistrer"
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setEditingOptionId(null); setEditingOptionLabel('') }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}
+                            title="Annuler"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span style={{
+                            flex: 1, fontSize: '0.875rem',
+                            color: opt.is_active ? '#0f172a' : '#64748b',
+                            textDecoration: opt.is_active ? 'none' : 'line-through',
+                          }}>
+                            {opt.label}
+                          </span>
+                          {!opt.is_active && (
+                            <span style={{ fontSize: '0.68rem', background: '#fee2e2', color: '#b91c1c', padding: '1px 7px', borderRadius: '4px', fontWeight: '600' }}>
+                              Désactivée
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => { setEditingOptionId(opt.id); setEditingOptionLabel(opt.label) }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px' }}
+                            title="Modifier le texte"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleActive(opt)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: opt.is_active ? '#16a34a' : '#9ca3af', padding: '4px' }}
+                            title={opt.is_active ? 'Désactiver (masquer du dropdown)' : 'Réactiver'}
+                          >
+                            {opt.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(opt.id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px' }}
+                            title="Supprimer définitivement"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new option */}
+              <form onSubmit={handleAddOption} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <input
+                  type="text"
+                  value={newOptionLabel}
+                  onChange={(e) => setNewOptionLabel(e.target.value)}
+                  placeholder="Nouvelle proposition (ex: Chimiothérapie adjuvante)..."
+                  style={{
+                    flex: 1,
+                    padding: '0.55rem 0.75rem',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    color: '#0f172a',
+                    background: '#fff',
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={!newOptionLabel.trim() || saving}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.55rem 1rem',
+                    background: newOptionLabel.trim() ? '#2563eb' : '#94a3b8',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: newOptionLabel.trim() ? 'pointer' : 'default',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                  }}
+                >
+                  <Plus size={14} /> Ajouter
+                </button>
+              </form>
+
+              <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                💡 Utilisez les flèches pour réordonner les propositions. Les options désactivées restent visibles dans les anciens comptes-rendus mais ne sont plus proposées aux coordinateurs.
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ServiceSettings() {
@@ -420,8 +811,13 @@ export default function ServiceSettings() {
     setLoading(true); setError(null)
     try {
       const data = await getServices()
-      setServices(data)
-      if (data.length > 0) setSelectedId(prev => prev || data[0].id)
+      const availableServices = Array.isArray(data) ? data : []
+      setServices(availableServices)
+      if (availableServices.length > 0) {
+        const myServiceId = currentUser?.service?.id || currentUser?.service
+        const foundMine = availableServices.find(s => s.id === myServiceId)
+        setSelectedId(prev => prev || (foundMine ? foundMine.id : availableServices[0].id))
+      }
     } catch { setError('Impossible de charger les services.') }
     finally { setLoading(false) }
   }
@@ -430,10 +826,11 @@ export default function ServiceSettings() {
     setServices(prev => prev.map(s => s.id === updated.id ? updated : s))
   }
 
-  if (!currentUser?.is_global_admin) {
+  const isAllowed = currentUser?.is_global_admin || currentUser?.role === 'ADMIN'
+  if (!isAllowed) {
     return (
       <div className="empty" style={{ padding: '2rem' }}>
-        Accès réservé aux administrateurs globaux.
+        Accès réservé aux administrateurs.
       </div>
     )
   }
@@ -523,6 +920,7 @@ export default function ServiceSettings() {
 
             <HeaderSection service={selectedService} onUpdated={handleUpdated} />
             <ParticipantsSection service={selectedService} onUpdated={handleUpdated} />
+            <DecisionOptionsSection service={selectedService} />
           </>
         )}
       </div>

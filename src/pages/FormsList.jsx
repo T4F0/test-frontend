@@ -4,13 +4,15 @@ import { getForms, deleteForm } from '../api/formsApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
 import ExportFormsModal from '../components/ExportFormsModal'
-import { Search, Download } from 'lucide-react'
+import DecisionOptionsModal from '../components/DecisionOptionsModal'
+import { Search, Download, Gavel } from 'lucide-react'
 
 export default function FormsList() {
   const [forms, setForms] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [decisionForm, setDecisionForm] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
   const preselectPatientId = location.state?.preselectPatientId
@@ -150,6 +152,15 @@ export default function FormsList() {
                     {user?.role !== 'COORDINATEUR' && (
                       <button onClick={() => navigate(`/forms/${form.id}/submissions`)}>Voir les soumissions</button>
                     )}
+                    {(isAdmin || user?.role === 'COORDINATEUR') && (
+                      <button
+                        onClick={() => setDecisionForm(form)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                        title="Gérer les propositions de décision RCP"
+                      >
+                        <Gavel size={14} /> Décisions
+                      </button>
+                    )}
                     <button onClick={() => navigate(`/forms/${form.id}/edit`)}>Modifier</button>
                     {isAdmin && (
                       <button onClick={() => handleDelete(form.id)} className="btn-danger">Supprimer</button>
@@ -180,6 +191,15 @@ export default function FormsList() {
                   <button className="btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${form.id}/submit`, { state: { preselectPatientId } }); }}>Remplir</button>
                 )}
                 <button className="btn-small btn-secondary" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${form.id}/submissions`); }}>Voir les soumissions</button>
+                {(isAdmin || user?.role === 'COORDINATEUR') && (
+                  <button
+                    className="btn-small"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                    onClick={(e) => { e.stopPropagation(); setDecisionForm(form); }}
+                  >
+                    <Gavel size={14} /> Décisions
+                  </button>
+                )}
                 {user?.role !== 'COORDINATEUR' && (
                   <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); navigate(`/forms/${form.id}/edit`); }}>Modifier</button>
                 )}
@@ -193,6 +213,11 @@ export default function FormsList() {
         </>
       )}
       {showExportModal && <ExportFormsModal onClose={() => setShowExportModal(false)} />}
+      <DecisionOptionsModal
+        isOpen={!!decisionForm}
+        onClose={() => setDecisionForm(null)}
+        form={decisionForm}
+      />
     </div>
   )
 }

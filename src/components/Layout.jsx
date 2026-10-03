@@ -176,7 +176,7 @@ export default function Layout() {
                       Audit
                     </Link>
                   )}
-                  {user?.is_global_admin && (
+                  {(user?.is_global_admin || user?.role === 'ADMIN') && (
                     <Link to="/settings/services" className={location.pathname === '/settings/services' ? 'active' : ''}>
                       <Settings size={18} />
                       Paramètres
@@ -402,7 +402,7 @@ export default function Layout() {
                         Audit
                       </Link>
                     )}
-                    {user?.is_global_admin && (
+                    {(user?.is_global_admin || user?.role === 'ADMIN') && (
                       <Link to="/settings/services" className={location.pathname === '/settings/services' ? 'active' : ''} onClick={closeMobileMenu}>
                         <Settings size={18} />
                         Paramètres

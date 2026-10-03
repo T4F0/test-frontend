@@ -20,6 +20,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SortableItem } from '../components/SortableItem'
+import DecisionOptionsModal from '../components/DecisionOptionsModal'
+import { Gavel } from 'lucide-react'
 
 export default function FormBuilder() {
   const { id } = useParams()
@@ -38,6 +40,7 @@ export default function FormBuilder() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [showDecisionModal, setShowDecisionModal] = useState(false)
   const [deletedSections, setDeletedSections] = useState([])
   const [deletedFields, setDeletedFields] = useState([])
   const [tempIdCounter, setTempIdCounter] = useState(1)
@@ -391,7 +394,19 @@ export default function FormBuilder() {
           <p>La construction de formulaires avec glisser-déposer nécessite un ordinateur. Veuillez utiliser un appareil de bureau ou une tablette en mode paysage.</p>
         </div>
       </div>
-      <h2>{isEdit ? 'Modifier le formulaire' : 'Créer un nouveau formulaire'}</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <h2 style={{ margin: 0 }}>{isEdit ? 'Modifier le formulaire' : 'Créer un nouveau formulaire'}</h2>
+        {isEdit && form.id && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setShowDecisionModal(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '0.5rem 0.85rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '0.875rem' }}
+          >
+            <Gavel size={16} /> Propositions de Décision RCP
+          </button>
+        )}
+      </div>
 
       <form onSubmit={handleSaveForm} className="form-details">
         <div className="form-group">
@@ -505,6 +520,14 @@ export default function FormBuilder() {
             </button>
           </div>
         </div>
+      )}
+
+      {isEdit && form.id && (
+        <DecisionOptionsModal
+          isOpen={showDecisionModal}
+          onClose={() => setShowDecisionModal(false)}
+          form={form}
+        />
       )}
     </div>
   )

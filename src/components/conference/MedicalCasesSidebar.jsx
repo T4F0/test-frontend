@@ -3,6 +3,8 @@ import { ClipboardList, Upload, FileText, Image, Download, Eye, X, Save, Video, 
 import { downloadAttachment, getAttachmentBlobUrl } from '../../api/attachmentsApi'
 import { resolveApiUrl } from '../../api/config'
 import { getReportsBySubmission, upsertReport } from '../../api/reportsApi'
+import { getDecisionOptions } from '../../api/decisionOptionsApi'
+import { getSubmission } from '../../api/submissionsApi'
 
 function getSubmissionAge(submission) {
   if (submission.patient_age != null) return submission.patient_age
@@ -42,6 +44,8 @@ export default function MedicalCasesSidebar({
 
   // Per-submission report state: { [submissionId]: { text, saved, saving, error } }
   const [reportState, setReportState] = useState({})
+  const loadedSubmissionsRef = useRef(new Set())
+  const loadingSubmissionsRef = useRef(new Set())
 
   const normalizeAttachment = (attachment, source) => {
     let fileUrl = attachment.file || ''
@@ -67,19 +71,63 @@ export default function MedicalCasesSidebar({
   const conferenceFiles = (attachments || []).map((attachment) => normalizeAttachment(attachment, 'meeting'))
   const subFiles = (submissionAttachments || []).map((attachment) => normalizeAttachment(attachment, 'submission'))
 
-  // Load existing report when a submission is expanded
-  const loadReport = useCallback(async (submissionId) => {
+  // Load existing report and decision options when a submission is expanded
+  const loadReport = useCallback(async (submissionId, formIdHint = null) => {
     if (!submissionId) return
-    if (reportState[submissionId]) return // already loaded
+    if (loadedSubmissionsRef.current.has(submissionId) || loadingSubmissionsRef.current.has(submissionId)) {
+      return
+    }
+    loadingSubmissionsRef.current.add(submissionId)
 
     setReportState(prev => ({
       ...prev,
-      [submissionId]: { text: '', saved: false, saving: false, error: null, loaded: false }
+      [submissionId]: {
+        text: '',
+        saved: false,
+        saving: false,
+        error: null,
+        loaded: false,
+        options: [],
+        selectedOptionId: null,
+        isCustom: false,
+        formId: null,
+      }
     }))
 
     try {
-      const reports = await getReportsBySubmission(submissionId)
+      // Load report and check for formId
+      const fetchSubPromise = formIdHint ? Promise.resolve(null) : getSubmission(submissionId).catch(() => null)
+      const [reports, subData] = await Promise.all([
+        getReportsBySubmission(submissionId),
+        fetchSubPromise,
+      ])
       const report = Array.isArray(reports) && reports.length > 0 ? reports[0] : null
+      const formId = formIdHint || subData?.form || null
+
+      let options = []
+      if (formId) {
+        try {
+          const optData = await getDecisionOptions(formId)
+          options = (Array.isArray(optData) ? optData : []).filter(o => o.is_active !== false)
+        } catch (e) {
+          options = []
+        }
+      }
+
+      let selectedOptionId = null
+      let isCustom = false
+      if (report?.decision_option) {
+        selectedOptionId = report.decision_option
+      } else if (report?.content) {
+        // If content matches one of the options, select that option
+        const matchedOpt = options.find(o => o.label === report.content)
+        if (matchedOpt) {
+          selectedOptionId = matchedOpt.id
+        } else {
+          isCustom = true
+        }
+      }
+
       setReportState(prev => ({
         ...prev,
         [submissionId]: {
@@ -89,15 +137,32 @@ export default function MedicalCasesSidebar({
           saving: false,
           error: null,
           loaded: true,
+          options,
+          selectedOptionId,
+          isCustom,
+          formId,
         }
       }))
+      loadedSubmissionsRef.current.add(submissionId)
+      loadingSubmissionsRef.current.delete(submissionId)
     } catch (e) {
+      loadingSubmissionsRef.current.delete(submissionId)
       setReportState(prev => ({
         ...prev,
-        [submissionId]: { text: '', saved: false, saving: false, error: 'Échec du chargement', loaded: true }
+        [submissionId]: {
+          text: '',
+          saved: false,
+          saving: false,
+          error: 'Échec du chargement',
+          loaded: true,
+          options: [],
+          selectedOptionId: null,
+          isCustom: false,
+          formId: null,
+        }
       }))
     }
-  }, [reportState])
+  }, []) // Empty dependencies - uses refs and functional setState
 
   const handleSaveReport = async (submissionId) => {
     const state = reportState[submissionId]
@@ -105,7 +170,11 @@ export default function MedicalCasesSidebar({
 
     setReportState(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], saving: true, error: null } }))
     try {
-      await upsertReport(submissionId, state.text)
+      if (state.options?.length > 0 && !state.isCustom && state.selectedOptionId) {
+        await upsertReport(submissionId, state.text || null, state.selectedOptionId)
+      } else {
+        await upsertReport(submissionId, state.text, null)
+      }
       setReportState(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], saving: false, saved: true } }))
     } catch (e) {
       setReportState(prev => ({
@@ -176,17 +245,18 @@ export default function MedicalCasesSidebar({
 
   useEffect(() => {
     if (isOpen && activeSubmissionId && isCoordinator) {
-      loadReport(activeSubmissionId)
+      const activeSub = submissions?.find(s => s.id === activeSubmissionId)
+      loadReport(activeSubmissionId, activeSub?.form_id || activeSub?.form)
     }
-  }, [isOpen, activeSubmissionId, isCoordinator, loadReport])
+  }, [isOpen, activeSubmissionId, isCoordinator, loadReport, submissions])
 
-  const handleAccordionClick = (submissionId) => {
+  const handleAccordionClick = (submissionId, formIdHint = null) => {
     if (activeSubmissionId === submissionId) {
       setActiveSubmissionId(null)
     } else {
       setActiveSubmissionId(submissionId)
       if (isCoordinator) {
-        loadReport(submissionId)
+        loadReport(submissionId, formIdHint)
       }
     }
   }
@@ -222,7 +292,7 @@ export default function MedicalCasesSidebar({
             <div key={submission.id} className={`case-accordion ${isActive ? 'expanded' : ''}`}>
               <div 
                 className="case-accordion-header" 
-                onClick={() => handleAccordionClick(submission.id)}
+                onClick={() => handleAccordionClick(submission.id, submission.form_id || submission.form)}
               >
                 <div className="case-title">
                   <div className="case-title-row">
@@ -281,23 +351,83 @@ export default function MedicalCasesSidebar({
                         </div>
                       ) : (
                         <>
-                          <textarea
-                            className="rcp-decision-textarea"
-                            placeholder="Saisissez ici la décision prise lors de la réunion RCP pour ce dossier..."
-                            value={rs?.text || ''}
-                            onChange={(e) => setReportState(prev => ({
-                              ...prev,
-                              [submission.id]: { ...prev[submission.id], text: e.target.value, saved: false }
-                            }))}
-                            rows={5}
-                          />
+                          {rs?.options?.length > 0 ? (
+                            <>
+                              <select
+                                className="rcp-decision-select"
+                                value={rs?.isCustom ? '__custom__' : (rs?.selectedOptionId || '')}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  if (val === '__custom__') {
+                                    setReportState(prev => ({
+                                      ...prev,
+                                      [submission.id]: {
+                                        ...prev[submission.id],
+                                        isCustom: true,
+                                        selectedOptionId: null,
+                                        saved: false,
+                                      }
+                                    }))
+                                  } else {
+                                    const selectedOpt = rs.options.find(o => o.id === val)
+                                    setReportState(prev => ({
+                                      ...prev,
+                                      [submission.id]: {
+                                        ...prev[submission.id],
+                                        isCustom: false,
+                                        selectedOptionId: val,
+                                        text: selectedOpt?.label || '',
+                                        saved: false,
+                                      }
+                                    }))
+                                  }
+                                }}
+                              >
+                                <option value="" disabled>-- Choisir une décision --</option>
+                                {rs.options.map(opt => (
+                                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                                ))}
+                                <option value="__custom__">✏️ Autre (personnalisé)</option>
+                              </select>
+
+                              {rs?.isCustom && (
+                                <textarea
+                                  className="rcp-decision-textarea"
+                                  placeholder="Saisissez votre décision personnalisée..."
+                                  value={rs?.text || ''}
+                                  onChange={(e) => setReportState(prev => ({
+                                    ...prev,
+                                    [submission.id]: { ...prev[submission.id], text: e.target.value, saved: false }
+                                  }))}
+                                  rows={4}
+                                />
+                              )}
+                            </>
+                          ) : (
+                            <textarea
+                              className="rcp-decision-textarea"
+                              placeholder="Saisissez ici la décision prise lors de la réunion RCP pour ce dossier..."
+                              value={rs?.text || ''}
+                              onChange={(e) => setReportState(prev => ({
+                                ...prev,
+                                [submission.id]: { ...prev[submission.id], text: e.target.value, saved: false }
+                              }))}
+                              rows={5}
+                            />
+                          )}
+
                           {rs?.error && (
                             <div className="rcp-decision-error">{rs.error}</div>
                           )}
                           <button
                             className="btn-small btn-primary rcp-decision-save-btn"
                             onClick={(e) => { e.stopPropagation(); handleSaveReport(submission.id) }}
-                            disabled={rs?.saving || !rs?.text?.trim()}
+                            disabled={
+                              rs?.saving ||
+                              (rs?.options?.length > 0 && !rs?.isCustom && !rs?.selectedOptionId) ||
+                              (rs?.isCustom && !rs?.text?.trim()) ||
+                              (rs?.options?.length === 0 && !rs?.text?.trim())
+                            }
                             style={{ paddingTop: '0.7rem', paddingBottom: '0.7rem' }}
                           >
                             {rs?.saving ? (

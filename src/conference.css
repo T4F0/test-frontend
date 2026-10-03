@@ -2257,15 +2257,17 @@
 
 .rcp-decision-textarea {
   width: 100%;
+  font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 0.95rem;
   background: #ffffff !important;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
   color: #0f172a !important;
-  padding: 8px 10px;
-  font-size: 0.875rem;
+  padding: 10px 12px;
   line-height: 1.5;
   resize: vertical;
-  min-height: 85px;
+  min-height: 90px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .rcp-decision-textarea::placeholder {
@@ -2277,7 +2279,38 @@
   outline: none;
   background: #ffffff !important;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.rcp-decision-select {
+  width: 100%;
+  font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a !important;
+  padding: 10px 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  margin-bottom: 8px;
+  appearance: auto;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.rcp-decision-select option {
+  font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.95rem;
+  color: #0f172a;
+  padding: 8px 12px;
+}
+
+.rcp-decision-select:focus {
+  outline: none;
+  background: #ffffff !important;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .form-details-accordion-btn {
