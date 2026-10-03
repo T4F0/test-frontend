@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getReports, downloadReportPdf, fetchReportPdfBlob } from '../api/reportsApi'
+import { getReports, downloadReportPdf, downloadReportDocx, fetchReportPdfBlob } from '../api/reportsApi'
 import { getMeetings } from '../api/meetingsApi'
 import { Search, Filter } from 'lucide-react'
 
@@ -8,7 +8,8 @@ export default function ReportsList() {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [downloading, setDownloading] = useState(null)
+  const [downloadingPdf, setDownloadingPdf] = useState(null)
+  const [downloadingDocx, setDownloadingDocx] = useState(null)
   const [searchParams] = useSearchParams()
   const filterSubmission = searchParams.get('submission') || ''
 
@@ -73,14 +74,25 @@ export default function ReportsList() {
     }
   }
 
-  const handleDownload = async (id) => {
+  const handleDownloadPdf = async (id) => {
     try {
-      setDownloading(id)
+      setDownloadingPdf(id)
       await downloadReportPdf(id)
     } catch (err) {
-      setError('Échec du téléchargement')
+      setError('Échec du téléchargement PDF')
     } finally {
-      setDownloading(null)
+      setDownloadingPdf(null)
+    }
+  }
+
+  const handleDownloadDocx = async (id) => {
+    try {
+      setDownloadingDocx(id)
+      await downloadReportDocx(id)
+    } catch (err) {
+      setError('Échec du téléchargement Word')
+    } finally {
+      setDownloadingDocx(null)
     }
   }
 
@@ -265,10 +277,10 @@ export default function ReportsList() {
                       </td>
                       <td>{r.written_by_name || '—'}</td>
                       <td>{new Date(r.created_at).toLocaleString()}</td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         <button
                           className="btn-small btn-outline"
-                          disabled={previewLoading === r.id || downloading === r.id}
+                          disabled={previewLoading === r.id || downloadingPdf === r.id || downloadingDocx === r.id}
                           onClick={() => handlePreview(r.id)}
                           style={{ marginRight: 6 }}
                         >
@@ -276,10 +288,18 @@ export default function ReportsList() {
                         </button>
                         <button
                           className="btn-small btn-primary"
-                          disabled={downloading === r.id}
-                          onClick={() => handleDownload(r.id)}
+                          disabled={downloadingPdf === r.id || downloadingDocx === r.id}
+                          onClick={() => handleDownloadPdf(r.id)}
+                          style={{ marginRight: 6 }}
                         >
-                          {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
+                          {downloadingPdf === r.id ? 'Génération...' : 'PDF'}
+                        </button>
+                        <button
+                          className="btn-small btn-secondary"
+                          disabled={downloadingDocx === r.id || downloadingPdf === r.id}
+                          onClick={() => handleDownloadDocx(r.id)}
+                        >
+                          {downloadingDocx === r.id ? 'Génération...' : 'Word (.docx)'}
                         </button>
                       </td>
                     </tr>
@@ -307,12 +327,15 @@ export default function ReportsList() {
                       </span>
                     )}
                   </div>
-                  <div className="mobile-card-actions">
-                    <button className="btn-small btn-outline" disabled={previewLoading === r.id || downloading === r.id} onClick={() => handlePreview(r.id)}>
+                  <div className="mobile-card-actions" style={{ flexWrap: 'wrap', gap: '6px' }}>
+                    <button className="btn-small btn-outline" disabled={previewLoading === r.id || downloadingPdf === r.id || downloadingDocx === r.id} onClick={() => handlePreview(r.id)}>
                       {previewLoading === r.id ? 'Chargement...' : 'Aperçu'}
                     </button>
-                    <button className="btn-small btn-primary" disabled={downloading === r.id} onClick={() => handleDownload(r.id)}>
-                      {downloading === r.id ? 'Génération...' : 'Télécharger PDF'}
+                    <button className="btn-small btn-primary" disabled={downloadingPdf === r.id || downloadingDocx === r.id} onClick={() => handleDownloadPdf(r.id)}>
+                      {downloadingPdf === r.id ? 'Génération...' : 'PDF'}
+                    </button>
+                    <button className="btn-small btn-secondary" disabled={downloadingDocx === r.id || downloadingPdf === r.id} onClick={() => handleDownloadDocx(r.id)}>
+                      {downloadingDocx === r.id ? 'Génération...' : 'Word (.docx)'}
                     </button>
                   </div>
                 </div>
@@ -345,13 +368,20 @@ export default function ReportsList() {
               padding: '12px 16px', borderBottom: '1px solid #e0e0e0',
             }}>
               <h3 style={{ margin: 0 }}>Aperçu du rapport</h3>
-              <div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button
                   className="btn-small btn-primary"
-                  onClick={() => { handleDownload(previewReportId) }}
-                  style={{ marginRight: 8 }}
+                  disabled={downloadingPdf === previewReportId}
+                  onClick={() => { handleDownloadPdf(previewReportId) }}
                 >
-                  Télécharger
+                  {downloadingPdf === previewReportId ? 'Génération...' : 'Télécharger PDF'}
+                </button>
+                <button
+                  className="btn-small btn-secondary"
+                  disabled={downloadingDocx === previewReportId}
+                  onClick={() => { handleDownloadDocx(previewReportId) }}
+                >
+                  {downloadingDocx === previewReportId ? 'Génération...' : 'Télécharger Word (.docx)'}
                 </button>
                 <button className="btn-small" onClick={closePreview}>
                   Fermer

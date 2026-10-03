@@ -74,3 +74,18 @@ export const downloadReportPdf = async (id) => {
   link.remove()
   window.URL.revokeObjectURL(url)
 }
+
+export const downloadReportDocx = async (id) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/reports/${id}/download_report_docx/`, {
+    responseType: 'blob',
+  })
+  const url = window.URL.createObjectURL(data)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `rcp_report_${id}.docx`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}

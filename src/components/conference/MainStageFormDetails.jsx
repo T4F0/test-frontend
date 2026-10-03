@@ -40,7 +40,7 @@ function SectionDataRenderer({ section, submissionData }) {
               <span className={`submission-detail-field-value ${isFile ? 'is-file' : ''}`}>
                 {isFile ? (
                   <span className="file-field-preview">
-                    <FileText size={18} style={{ marginRight: '8px' }} />
+                    <FileText size={20} style={{ marginRight: '8px' }} />
                     {formatFieldValue(value)}
                   </span>
                 ) : (

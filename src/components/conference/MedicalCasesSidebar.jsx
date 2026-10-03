@@ -248,13 +248,13 @@ export default function MedicalCasesSidebar({
                     }}
                     style={{
                       width: '100%',
-                      marginBottom: '1rem',
+                      marginBottom: '0',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      paddingTop: '0.7rem',
-                      paddingBottom: '0.7rem',
+                      paddingTop: '0.5rem',
+                      paddingBottom: '0.5rem',
                       backgroundColor: activeFormDetailId === submission.id ? 'var(--secondary)' : ''
                     }}
                   >
