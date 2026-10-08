@@ -726,6 +726,124 @@
   font-weight: 500;
 }
 
+/* --- Form Font Size Volume Bar (beside Plein écran) --- */
+.control-btn.control-font-volume {
+  cursor: default;
+  padding: 0.5rem 0.85rem;
+  min-width: 175px;
+  user-select: none;
+}
+
+.control-btn.control-font-volume:hover {
+  background: rgba(51, 65, 85, 0.75);
+}
+
+.control-btn.control-font-volume.form-active {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+}
+
+.font-volume-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 22px;
+  width: 100%;
+}
+
+.font-volume-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.control-font-volume.form-active .font-volume-icon {
+  color: #a5b4fc;
+}
+
+.font-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+  background: linear-gradient(
+    to right,
+    #6366f1 0%,
+    #6366f1 var(--slider-fill, 25%),
+    rgba(148, 163, 184, 0.25) var(--slider-fill, 25%),
+    rgba(148, 163, 184, 0.25) 100%
+  );
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.font-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #6366f1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.font-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  background: #f8fafc;
+}
+
+.font-volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #6366f1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.font-volume-slider::-moz-range-thumb:hover {
+  transform: scale(1.18);
+}
+
+.font-volume-pct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+
+.font-volume-reset-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.font-volume-reset-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: rotate(-45deg);
+}
+
 .leave-btn {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.3);
@@ -2010,6 +2128,7 @@
 }
 
 .main-stage-form-details {
+  --form-font-scale: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -2029,20 +2148,20 @@
 
 .main-stage-form-header .form-title {
   color: #0f172a;
-  font-size: 1.6rem;
+  font-size: calc(1.0rem * var(--form-font-scale, 1));
   font-weight: 600;
   margin: 0;
 }
 
 .main-stage-form-header .form-subtitle {
   color: #64748b;
-  font-size: 1.3rem;
+  font-size: calc(0.75rem * var(--form-font-scale, 1));
   margin: 0.2rem 0 0 0;
 }
 
 .main-stage-form-body {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1.25rem;
   overflow-y: auto;
   background: #ffffff;
 }
@@ -2052,26 +2171,26 @@
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   box-shadow: none;
-  padding: 0.65rem 1rem;
-  gap: 0.65rem 1.75rem;
+  padding: 0.5rem 0.85rem;
+  gap: 0.5rem 1.25rem;
   border-radius: 8px;
 }
 
 .main-stage-form-body .submission-detail-meta .badge {
-  font-size: 1.3rem;
-  padding: 0.25rem 0.75rem;
+  font-size: calc(0.7rem * var(--form-font-scale, 1));
+  padding: 0.2rem 0.6rem;
 }
 
 .main-stage-form-body .submission-detail-meta-label {
   color: #64748b;
-  font-size: 1.325rem;
+  font-size: calc(0.65rem * var(--form-font-scale, 1));
   font-weight: 600;
   letter-spacing: 0.04em;
 }
 
 .main-stage-form-body .submission-detail-meta-value {
   color: #0f172a;
-  font-size: 1.55rem;
+  font-size: calc(0.75rem * var(--form-font-scale, 1));
   font-weight: 600;
 }
 
@@ -2087,9 +2206,9 @@
   background: #f1f5f9;
   border-bottom: 2px solid #c7d2fe;
   color: #4338ca;
-  font-size: 1.55rem;
+  font-size: calc(0.75rem * var(--form-font-scale, 1));
   font-weight: 700;
-  padding: 0.75rem 1rem;
+  padding: 0.55rem 0.85rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2098,7 +2217,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #ffffff;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.85rem;
   break-inside: avoid;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
@@ -2106,20 +2225,20 @@
 /* Multi-column grid: sections displayed side by side like a presentation */
 .submission-detail-sections-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 1.1rem;
+  grid-template-columns: repeat(auto-fill, minmax(calc(280px * var(--form-font-scale, 1)), 1fr));
+  gap: 0.85rem;
   align-items: start;
-  padding: 0.85rem;
+  padding: 0.65rem;
 }
 
 /* Nested sections inside the grid take full width of their column */
 .submission-detail-sections-grid .submission-section.nested {
   margin-left: 0;
-  margin-top: 0.6rem;
+  margin-top: 0.5rem;
   border: 1px solid #c7d2fe;
   border-left: 3px solid #6366f1;
   background: #f8faff;
-  padding: 0.65rem 0.85rem;
+  padding: 0.5rem 0.7rem;
 }
 
 .main-stage-form-body .submission-section.nested {
@@ -2129,82 +2248,93 @@
 
 .main-stage-form-body .submission-section-title {
   color: #4338ca;
-  font-size: 1.55rem;
+  font-size: calc(0.75rem * var(--form-font-scale, 1));
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
   border-bottom: 1px solid #c7d2fe;
 }
 
 .main-stage-form-body .submission-detail-field {
-  border-bottom: 1px solid #f1f5f9;
-  padding: 0.55rem 0.75rem;
-  min-height: unset;
-  gap: 1rem;
-  font-size: 1.55rem;
-  line-height: 1.5;
-  grid-template-columns: minmax(200px, auto) 1fr;
+  display: grid;
+  grid-template-columns: minmax(70px, 35%) minmax(0, 1fr);
+  gap: 0.75rem;
   align-items: baseline;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.4rem 0.6rem;
+  min-height: unset;
+  font-size: calc(0.65rem * var(--form-font-scale, 1));
+  line-height: 1.45;
 }
 
 .main-stage-form-body .submission-detail-field-label {
   color: #475569;
-  font-size: 1.45rem;
+  font-size: calc(0.65rem * var(--form-font-scale, 1));
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .main-stage-form-body .submission-detail-field-value {
   color: #0f172a;
-  font-size: 1.625rem;
+  font-size: calc(0.625rem * var(--form-font-scale, 1));
   font-weight: 500;
-  word-break: break-word;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .main-stage-form-body .submission-detail-empty {
   color: #94a3b8;
-  font-size: 1.5rem;
-  padding: 1.25rem 0.75rem;
+  font-size: calc(0.7rem * var(--form-font-scale, 1));
+  padding: 1rem 0.65rem;
 }
 
 .main-stage-form-body .file-field-preview {
   color: #4338ca;
   display: inline-flex;
   align-items: center;
-  font-size: 1.55rem;
+  font-size: calc(0.7rem * var(--form-font-scale, 1));
   font-weight: 500;
+}
+
+.main-stage-form-body .file-field-preview svg {
+  width: calc(1.3em);
+  height: calc(1.3em);
 }
 
 /* Tablet and touch screen optimizations for presentation grid */
 @media (max-width: 900px) {
   .submission-detail-sections-grid {
     grid-template-columns: 1fr;
-    gap: 0.85rem;
+    gap: 0.75rem;
     padding: 0.5rem;
   }
 
   .main-stage-form-body .submission-section {
-    padding: 0.75rem 0.85rem;
+    padding: 0.65rem 0.75rem;
   }
 
   .main-stage-form-body .submission-section-title {
-    font-size: 1.6rem;
+    font-size: calc(0.8rem * var(--form-font-scale, 1));
   }
 
   .main-stage-form-body .submission-detail-field {
     grid-template-columns: 1fr;
-    gap: 0.25rem;
-    padding: 0.55rem 0.65rem;
+    gap: 0.2rem;
+    padding: 0.4rem 0.5rem;
   }
 
   .main-stage-form-body .submission-detail-field-label {
-    font-size: 1.4rem;
+    font-size: calc(0.65rem * var(--form-font-scale, 1));
     color: #64748b;
   }
 
   .main-stage-form-body .submission-detail-field-value {
-    font-size: 1.7rem;
+    font-size: calc(0.7rem * var(--form-font-scale, 1));
     font-weight: 600;
   }
 }

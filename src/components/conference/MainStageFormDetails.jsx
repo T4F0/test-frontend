@@ -59,11 +59,11 @@ function SectionDataRenderer({ section, submissionData }) {
   )
 }
 
-export default function MainStageFormDetails({ form, submission, attachments, onClose, downloadAttachment }) {
+export default function MainStageFormDetails({ form, submission, attachments, onClose, downloadAttachment, fontScale = 1 }) {
   if (!form || !submission) return null
 
   return (
-    <div className="main-stage-form-details">
+    <div className="main-stage-form-details" style={{ '--form-font-scale': fontScale }}>
       <div className="main-stage-form-header">
         <div>
           <h3 className="form-title">{form.name}</h3>

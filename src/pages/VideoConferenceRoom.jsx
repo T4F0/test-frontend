@@ -59,6 +59,32 @@ export default function VideoConferenceRoom() {
   const [formDetailData, setFormDetailData] = useState({ form: null, submission: null, attachments: [] })
   const [formDetailError, setFormDetailError] = useState(null)
 
+  // Local doctor preference for form visualization font scale (75% to 175%)
+  const [formFontScale, setFormFontScale] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ercp_conference_form_font_scale')
+      if (saved) {
+        const parsed = parseFloat(saved)
+        if (!isNaN(parsed) && parsed >= 0.75 && parsed <= 1.75) {
+          return parsed
+        }
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+    return 1.0
+  })
+
+  const handleFormFontScaleChange = useCallback((newScale) => {
+    const clamped = Math.min(1.75, Math.max(0.75, Math.round(newScale * 100) / 100))
+    setFormFontScale(clamped)
+    try {
+      localStorage.setItem('ercp_conference_form_font_scale', String(clamped))
+    } catch (err) {
+      console.warn('Unable to persist form font scale preference:', err)
+    }
+  }, [])
+
   // ---- Ask-to-Join state ----
   // Whether the current user is in lobby mode (non-participant waiting for host approval)
   const [isInLobby, setIsInLobby] = useState(false)
@@ -850,6 +876,7 @@ export default function VideoConferenceRoom() {
                   attachments={formDetailData.attachments}
                   onClose={() => { setActiveFormDetail(null); setFormDetailData({ form: null, submission: null, attachments: [] }) }}
                   downloadAttachment={downloadAttachment}
+                  fontScale={formFontScale}
                 />
               )}
             </div>
@@ -1067,6 +1094,9 @@ export default function VideoConferenceRoom() {
         isHandRaised={isHandRaised}
         isHost={isHost}
         isFullscreen={isFullscreen}
+        formFontScale={formFontScale}
+        onFormFontScaleChange={handleFormFontScaleChange}
+        isFormOpen={Boolean(activeFormDetail)}
         onToggleMute={toggleMute}
         onToggleCamera={toggleCamera}
         onStartScreenShare={startScreenShare}
