@@ -59,6 +59,10 @@ export default function VideoConferenceRoom() {
   const [formDetailData, setFormDetailData] = useState({ form: null, submission: null, attachments: [] })
   const [formDetailError, setFormDetailError] = useState(null)
 
+  // ---- DICOM Collaboration & Presenter State (Phase 2) ----
+  const [dicomPresenter, setDicomPresenter] = useState(null)
+  const [dicomSyncState, setDicomSyncState] = useState(null)
+
   // Local doctor preference for form visualization font scale (75% to 175%)
   const [formFontScale, setFormFontScale] = useState(() => {
     try {
@@ -247,6 +251,35 @@ export default function VideoConferenceRoom() {
     })
   }, [triggerToast])
 
+  // ---- DICOM Collaboration event handlers (passed to useWebRTC) ----
+  const handleDicomViewportSync = useCallback((data) => {
+    setDicomSyncState({
+      attachmentId: data.attachment_id,
+      viewportState: data.viewport_state,
+      senderUserId: data.sender_user_id,
+      senderName: data.sender_name,
+      timestamp: Date.now(),
+    })
+  }, [])
+
+  const handleDicomPresenterMode = useCallback((data) => {
+    if (data.is_presenting) {
+      setDicomPresenter({
+        userId: data.sender_user_id,
+        userName: data.sender_name,
+        attachmentId: data.attachment_id,
+        fileInfo: data.file_info,
+      })
+    } else {
+      setDicomPresenter((prev) => {
+        if (prev && String(prev.userId) === String(data.sender_user_id)) {
+          return null
+        }
+        return prev
+      })
+    }
+  }, [])
+
   const {
     localStream,
     screenStream,
@@ -268,6 +301,8 @@ export default function VideoConferenceRoom() {
     broadcastNotes,
     raiseHand,
     muteRemoteParticipant,
+    sendDicomViewportSync,
+    sendDicomPresenterMode,
   } = useWebRTC(
     roomId,
     user?.id,
@@ -278,6 +313,8 @@ export default function VideoConferenceRoom() {
     handleJoinAccepted,
     handleJoinRejected,
     handleJoinRequested,
+    handleDicomViewportSync,
+    handleDicomPresenterMode,
   )
 
   // Keep the ref in sync so handleJoinAccepted can call it without a circular dep
@@ -850,6 +887,37 @@ export default function VideoConferenceRoom() {
       </div>
 
       <div className="conference-body">
+        {/* DICOM Live Presentation Invitation Banner */}
+        {dicomPresenter && String(dicomPresenter.userId) !== String(user?.id) && (
+          (!activePreviewItem || String(activePreviewItem.id || activePreviewItem.originalId) !== String(dicomPresenter.attachmentId))
+        ) && (
+          <div className="dicom-presenter-banner">
+            <div className="dicom-presenter-banner-content">
+              <span className="dicom-presenter-pulse-dot" />
+              <span className="dicom-presenter-banner-text">
+                <strong>{dicomPresenter.userName || 'Un médecin'}</strong> présente une imagerie DICOM
+                {dicomPresenter.fileInfo?.name ? ` : ${dicomPresenter.fileInfo.name}` : ''}
+              </span>
+            </div>
+            <button
+              className="btn-join-dicom-presentation"
+              onClick={() => {
+                setActivePreviewItem({
+                  id: dicomPresenter.attachmentId,
+                  originalId: dicomPresenter.attachmentId,
+                  name: dicomPresenter.fileInfo?.name || 'Imagerie DICOM',
+                  original_filename: dicomPresenter.fileInfo?.name || 'Imagerie DICOM',
+                  file_type: 'DICOM',
+                  dicom_url: `/api/conferences/dicom/${dicomPresenter.attachmentId}/`,
+                  ...dicomPresenter.fileInfo,
+                })
+                setActiveFormDetail(null)
+              }}
+            >
+              Suivre la présentation
+            </button>
+          </div>
+        )}
         <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''} ${(activePreviewItem || activeFormDetail) ? 'has-preview' : ''}`}>
           {activeFormDetail && (
             <div className="main-stage-form-wrapper" style={{ flex: 1, height: '100%', overflowY: 'auto', background: '#0f172a', borderRadius: '12px', display: 'flex', flexDirection: 'column', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
@@ -885,6 +953,12 @@ export default function VideoConferenceRoom() {
             <MainStageFileViewer 
               file={activePreviewItem} 
               onClose={() => setActivePreviewItem(null)} 
+              dicomPresenter={dicomPresenter}
+              dicomSyncState={dicomSyncState}
+              onBroadcastViewportSync={sendDicomViewportSync}
+              onBroadcastPresenterMode={sendDicomPresenterMode}
+              currentUserId={user?.id}
+              currentUserName={user?.first_name ? `${user.first_name} ${user.last_name}`.trim() : user?.username}
             />
           )}
           {/* Video grid — hidden when a dossier or file viewer is active */}

@@ -1,4 +1,4 @@
-import { FileText, Image, Video, Eye } from 'lucide-react'
+import { FileText, Image, Video, Eye, Scan } from 'lucide-react'
 
 /**
  * Permanent horizontal strip showing all case attachments.
@@ -9,6 +9,16 @@ export default function AttachmentsStrip({ attachments, onPreview }) {
 
   const getFileIcon = (file) => {
     const t = (file.fileType || file.file_type || '').toUpperCase()
+    const n = (file.name || file.original_filename || file.file_name || '').toLowerCase()
+    if (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima')
+    ) {
+      return <Scan size={13} />
+    }
     if (t.startsWith('IMAGE/') || t === 'IMAGE') return <Image size={13} />
     if (t.startsWith('VIDEO/') || t === 'VIDEO') return <Video size={13} />
     return <FileText size={13} />
@@ -16,10 +26,20 @@ export default function AttachmentsStrip({ attachments, onPreview }) {
 
   const isPreviewable = (file) => {
     const t = (file.fileType || file.file_type || '').toUpperCase()
+    const n = (file.name || file.original_filename || file.file_name || '').toLowerCase()
     return (
-      t.startsWith('IMAGE/') || t === 'IMAGE' ||
-      t.startsWith('VIDEO/') || t === 'VIDEO' ||
-      t === 'PDF' || t === 'APPLICATION/PDF'
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima') ||
+      Boolean(file.dicom_url || file.dicomUrl) ||
+      t.startsWith('IMAGE/') ||
+      t === 'IMAGE' ||
+      t.startsWith('VIDEO/') ||
+      t === 'VIDEO' ||
+      t === 'PDF' ||
+      t === 'APPLICATION/PDF'
     )
   }
 

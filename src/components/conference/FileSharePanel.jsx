@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
-import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save, Video } from 'lucide-react'
+import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save, Video, Scan } from 'lucide-react'
 import { downloadAttachment, getAttachmentBlobUrl } from '../../api/attachmentsApi'
 import { resolveApiUrl } from '../../api/config'
+import DicomViewer from './DicomViewer'
 
 /**
  * File sharing panel for conference attachments.
@@ -23,12 +24,31 @@ export default function FileSharePanel({
   const [previewError, setPreviewError] = useState('')
   const fileInputRef = useRef(null)
 
+  const previewType = (file) => {
+    if (!file) return 'pdf'
+    const t = file.fileType?.toUpperCase() || ''
+    const n = file.name?.toLowerCase() || ''
+    if (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima') ||
+      Boolean(file.dicom_url)
+    ) {
+      return 'dicom'
+    }
+    if (t.startsWith('IMAGE/') || t === 'IMAGE') return 'image'
+    if (t.startsWith('VIDEO/') || t === 'VIDEO') return 'video'
+    return 'pdf'
+  }
+
   useEffect(() => {
     let objectUrl = ''
     let canceled = false
 
     const loadPreview = async () => {
-      if (!previewItem) {
+      if (!previewItem || previewType(previewItem) === 'dicom') {
         setPreviewUrl('')
         setPreviewError('')
         return
@@ -75,6 +95,8 @@ export default function FileSharePanel({
       uploadedByName: attachment.uploaded_by_name || 'Unknown',
       source,
       originalId: attachment.id,
+      dicom_metadata: attachment.dicom_metadata || null,
+      dicom_url: attachment.dicom_url || null,
     }
   }
 
@@ -115,8 +137,18 @@ export default function FileSharePanel({
     e.target.value = ''
   }
 
-  const getFileIcon = (type) => {
+  const getFileIcon = (type, name = '') => {
     const t = type?.toUpperCase() || ''
+    const n = name?.toLowerCase() || ''
+    if (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima')
+    ) {
+      return <Scan size={16} />
+    }
     if (t.startsWith('IMAGE/') || t === 'IMAGE') return <Image size={16} />
     if (t.startsWith('VIDEO/') || t === 'VIDEO') return <Video size={16} />
     return <FileText size={16} />
@@ -131,16 +163,21 @@ export default function FileSharePanel({
 
   const isPreviewable = (file) => {
     const t = file.fileType?.toUpperCase() || ''
-    return t.startsWith('IMAGE/') || t === 'IMAGE' || 
-           t.startsWith('VIDEO/') || t === 'VIDEO' || 
-           t === 'PDF' || t === 'APPLICATION/PDF'
-  }
-    
-  const previewType = (file) => {
-    const t = file.fileType?.toUpperCase() || ''
-    if (t.startsWith('IMAGE/') || t === 'IMAGE') return 'image'
-    if (t.startsWith('VIDEO/') || t === 'VIDEO') return 'video'
-    return 'pdf'
+    const n = file.name?.toLowerCase() || ''
+    return (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima') ||
+      Boolean(file.dicom_url) ||
+      t.startsWith('IMAGE/') ||
+      t === 'IMAGE' ||
+      t.startsWith('VIDEO/') ||
+      t === 'VIDEO' ||
+      t === 'PDF' ||
+      t === 'APPLICATION/PDF'
+    )
   }
 
   if (!isOpen) return null
@@ -197,7 +234,7 @@ export default function FileSharePanel({
                 className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
                 onClick={() => isPreviewable(file) && setPreviewItem(file)}
               >
-                <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                <div className="file-icon">{getFileIcon(file.fileType, file.name)}</div>
                 <div className="file-info">
                   <span className="file-name" title={file.name}>{file.name}</span>
                   <span className="file-meta">{file.fileType || 'Type inconnu'} · {file.uploadedByName}</span>
@@ -236,7 +273,7 @@ export default function FileSharePanel({
                 className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
                 onClick={() => isPreviewable(file) && setPreviewItem(file)}
               >
-                <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                <div className="file-icon">{getFileIcon(file.fileType, file.name)}</div>
                 <div className="file-info">
                   <span className="file-name" title={file.name}>{file.name}</span>
                   <span className="file-meta">{[formatFileSize(file.size), file.uploadedByName].filter(Boolean).join(' · ')}</span>
@@ -283,7 +320,7 @@ export default function FileSharePanel({
               </button>
             </div>
             <div className="file-preview-body">
-              {!previewUrl && !previewError && (
+              {!previewUrl && !previewError && previewType(previewItem) !== 'dicom' && (
                 <div className="loading">Chargement de l'aperçu...</div>
               )}
               {previewError && (
@@ -299,6 +336,11 @@ export default function FileSharePanel({
               )}
               {previewUrl && previewType(previewItem) === 'pdf' && (
                 <iframe src={previewUrl} title={previewItem.name} className="file-preview-frame" />
+              )}
+              {previewType(previewItem) === 'dicom' && (
+                <div style={{ height: '70vh', width: '100%', minHeight: '450px' }}>
+                  <DicomViewer file={previewItem} onClose={() => setPreviewItem(null)} />
+                </div>
               )}
             </div>
           </div>

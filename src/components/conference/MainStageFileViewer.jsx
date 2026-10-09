@@ -1,8 +1,18 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { getAttachmentBlobUrl } from '../../api/attachmentsApi'
+import DicomViewer from './DicomViewer'
 
-export default function MainStageFileViewer({ file, onClose }) {
+export default function MainStageFileViewer({
+  file,
+  onClose,
+  dicomPresenter,
+  dicomSyncState,
+  onBroadcastViewportSync,
+  onBroadcastPresenterMode,
+  currentUserId,
+  currentUserName,
+}) {
   const [previewUrl, setPreviewUrl] = useState('')
   const [previewError, setPreviewError] = useState('')
 
@@ -11,12 +21,30 @@ export default function MainStageFileViewer({ file, onClose }) {
   const fileName = file?.name || file?.file_name || file?.original_filename || 'Fichier'
   const fileTypeStr = file?.fileType || file?.file_type || ''
 
+  const previewType = () => {
+    const t = fileTypeStr.toUpperCase()
+    const name = fileName.toLowerCase()
+    if (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      name.endsWith('.dcm') ||
+      name.endsWith('.dicom') ||
+      name.endsWith('.ima') ||
+      Boolean(file?.dicom_url || file?.dicomUrl)
+    ) {
+      return 'dicom'
+    }
+    if (t.startsWith('IMAGE/') || t === 'IMAGE') return 'image'
+    if (t.startsWith('VIDEO/') || t === 'VIDEO') return 'video'
+    return 'pdf'
+  }
+
   useEffect(() => {
     let objectUrl = ''
     let canceled = false
 
     const loadPreview = async () => {
-      if (!fileUrl) return
+      if (!fileUrl || previewType() === 'dicom') return
 
       try {
         setPreviewUrl('')
@@ -40,16 +68,26 @@ export default function MainStageFileViewer({ file, onClose }) {
         window.URL.revokeObjectURL(objectUrl)
       }
     }
-  }, [fileUrl])
-
-  const previewType = () => {
-    const t = fileTypeStr.toUpperCase()
-    if (t.startsWith('IMAGE/') || t === 'IMAGE') return 'image'
-    if (t.startsWith('VIDEO/') || t === 'VIDEO') return 'video'
-    return 'pdf'
-  }
+  }, [fileUrl, fileTypeStr])
 
   if (!file) return null
+
+  if (previewType() === 'dicom') {
+    return (
+      <div className="main-stage-file-viewer">
+        <DicomViewer
+          file={file}
+          onClose={onClose}
+          dicomPresenter={dicomPresenter}
+          dicomSyncState={dicomSyncState}
+          onBroadcastViewportSync={onBroadcastViewportSync}
+          onBroadcastPresenterMode={onBroadcastPresenterMode}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="main-stage-file-viewer">

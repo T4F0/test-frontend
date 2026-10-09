@@ -16,6 +16,8 @@ export default function useWebRTC(
   onJoinAccepted,
   onJoinRejected,
   onJoinRequested,
+  onDicomViewportSync,
+  onDicomPresenterMode,
 ) {
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
@@ -211,11 +213,29 @@ export default function useWebRTC(
           // A new user is requesting to join (sent to hosts)
           if (onJoinRequested) onJoinRequested(data);
           break;
+        case "dicom_viewport_sync":
+          if (onDicomViewportSync) onDicomViewportSync(data);
+          break;
+        case "dicom_presenter_mode":
+          if (onDicomPresenterMode) onDicomPresenterMode(data);
+          break;
         default:
           break;
       }
     },
-    [createPeer, onChatMessage, onConferenceEnded, onJoinAccepted, onJoinRejected, onJoinRequested, onLobbyWaiting, onNotesUpdate, userId],
+    [
+      createPeer,
+      onChatMessage,
+      onConferenceEnded,
+      onJoinAccepted,
+      onJoinRejected,
+      onJoinRequested,
+      onLobbyWaiting,
+      onNotesUpdate,
+      onDicomViewportSync,
+      onDicomPresenterMode,
+      userId,
+    ],
   );
 
 
@@ -525,6 +545,33 @@ export default function useWebRTC(
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: "mute_participant", target_user_id: targetUserId }));
       }
+    },
+    sendDicomViewportSync: (attachmentId, viewportState) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "dicom_viewport_sync",
+            attachment_id: attachmentId,
+            viewport_state: viewportState,
+          }),
+        );
+        return true;
+      }
+      return false;
+    },
+    sendDicomPresenterMode: (attachmentId, isPresenting, fileInfo = {}) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "dicom_presenter_mode",
+            attachment_id: attachmentId,
+            is_presenting: isPresenting,
+            file_info: fileInfo,
+          }),
+        );
+        return true;
+      }
+      return false;
     },
   };
 }
