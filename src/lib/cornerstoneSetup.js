@@ -131,7 +131,9 @@ export async function initCornerstone() {
   cornerstoneTools.addTool(cornerstoneTools.ZoomTool)
   cornerstoneTools.addTool(cornerstoneTools.LengthTool)
   cornerstoneTools.addTool(cornerstoneTools.AngleTool)
+  cornerstoneTools.addTool(cornerstoneTools.ArrowAnnotateTool)
   cornerstoneTools.addTool(cornerstoneTools.EllipticalROITool)
+  cornerstoneTools.addTool(cornerstoneTools.RectangleROITool)
   cornerstoneTools.addTool(cornerstoneTools.StackScrollTool)
   cornerstoneTools.addTool(CustomEraserTool)
 

@@ -597,3 +597,299 @@
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
+/* =========================================================
+   Phase 3: W/L Presets, Anonymization & Series Grouping Styles
+   ========================================================= */
+
+/* W/L Presets Dropdown */
+.dicom-preset-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.dicom-tool-btn.preset-active {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.dicom-preset-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 210px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
+  z-index: 50;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: preset-dropdown-appear 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes preset-dropdown-appear {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dicom-preset-menu-header {
+  padding: 5px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+
+.dicom-preset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #e2e8f0;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.dicom-preset-item:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #fff;
+}
+
+.dicom-preset-item.selected {
+  background: rgba(59, 130, 246, 0.28);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #93c5fd;
+  font-weight: 500;
+}
+
+.preset-item-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.preset-item-values {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+/* Anonymization PHI Shield Button */
+.dicom-tool-btn.anonymize-active {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.dicom-tool-btn.anonymize-active:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.7);
+}
+
+/* HUD Anonymization Badges */
+.dicom-hud-patient-anonymized {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #34d399 !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.dicom-hud-phi-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  border-radius: 4px;
+  color: #a7f3d0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.dicom-hud-preset-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  background: rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  border-radius: 3px;
+  color: #bfdbfe;
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* DICOM Series Drawer */
+.dicom-series-drawer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  background: rgba(11, 17, 32, 0.94);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(59, 130, 246, 0.3);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.7);
+  animation: series-drawer-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes series-drawer-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dicom-series-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dicom-series-drawer-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #93c5fd;
+  letter-spacing: 0.3px;
+}
+
+.btn-close-drawer {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.btn-close-drawer:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dicom-series-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.dicom-study-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dicom-study-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.dicom-study-header strong {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.dicom-series-cards-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.dicom-series-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 170px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dicom-series-card:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.dicom-series-card.is-active {
+  background: rgba(59, 130, 246, 0.28);
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+}
+
+.series-card-thumb {
+  width: 40px;
+  height: 40px;
+  background: #000;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.series-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.series-thumb-placeholder {
+  color: #64748b;
+}
+
+.series-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.series-card-desc {
+  font-size: 12px;
+  font-weight: 500;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+.series-card-slices {
+  font-size: 11px;
+  color: #94a3b8;
+}
+

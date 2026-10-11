@@ -59,9 +59,10 @@ export default function VideoConferenceRoom() {
   const [formDetailData, setFormDetailData] = useState({ form: null, submission: null, attachments: [] })
   const [formDetailError, setFormDetailError] = useState(null)
 
-  // ---- DICOM Collaboration & Presenter State (Phase 2) ----
+  // ---- DICOM Collaboration & Presenter State (Phase 2 & Phase 3) ----
   const [dicomPresenter, setDicomPresenter] = useState(null)
   const [dicomSyncState, setDicomSyncState] = useState(null)
+  const [dicomAnnotationSyncState, setDicomAnnotationSyncState] = useState(null)
 
   // Local doctor preference for form visualization font scale (75% to 175%)
   const [formFontScale, setFormFontScale] = useState(() => {
@@ -280,6 +281,19 @@ export default function VideoConferenceRoom() {
     }
   }, [])
 
+  const handleDicomAnnotationSync = useCallback((data) => {
+    setDicomAnnotationSyncState({
+      attachmentId: data.attachment_id,
+      action: data.action,
+      annotation: data.annotation,
+      annotations: data.annotations,
+      annotationUid: data.annotation_uid,
+      senderUserId: data.sender_user_id,
+      senderName: data.sender_name,
+      timestamp: Date.now(),
+    })
+  }, [])
+
   const {
     localStream,
     screenStream,
@@ -303,6 +317,7 @@ export default function VideoConferenceRoom() {
     muteRemoteParticipant,
     sendDicomViewportSync,
     sendDicomPresenterMode,
+    sendDicomAnnotationSync,
   } = useWebRTC(
     roomId,
     user?.id,
@@ -315,6 +330,7 @@ export default function VideoConferenceRoom() {
     handleJoinRequested,
     handleDicomViewportSync,
     handleDicomPresenterMode,
+    handleDicomAnnotationSync,
   )
 
   // Keep the ref in sync so handleJoinAccepted can call it without a circular dep
@@ -961,10 +977,13 @@ export default function VideoConferenceRoom() {
               onClose={() => setActivePreviewItem(null)} 
               dicomPresenter={dicomPresenter}
               dicomSyncState={dicomSyncState}
+              dicomAnnotationSyncState={dicomAnnotationSyncState}
               onBroadcastViewportSync={sendDicomViewportSync}
               onBroadcastPresenterMode={sendDicomPresenterMode}
+              onBroadcastAnnotationSync={sendDicomAnnotationSync}
               currentUserId={user?.id}
               currentUserName={user?.first_name ? `${user.first_name} ${user.last_name}`.trim() : user?.username}
+              conferenceId={conference?.id}
             />
           )}
           {/* Video grid — hidden when a dossier or file viewer is active */}

@@ -7,6 +7,8 @@ import {
   RotateCcw,
   Sun,
   Maximize2,
+  Square,
+  ArrowUpRight,
   Layers,
   Radio,
   Eye,
@@ -17,6 +19,10 @@ import {
   Pause,
   Eraser,
   Trash2,
+  Sliders,
+  Shield,
+  ShieldCheck,
+  FolderOpen,
 } from 'lucide-react'
 import { initCornerstone } from '../../lib/cornerstoneSetup'
 import * as cornerstone from '@cornerstonejs/core'
@@ -27,13 +33,24 @@ import { getAuthAxios } from '../../api/authApi'
 import { resolveApiUrl } from '../../api/config'
 import '../../styles/dicom-viewer.css'
 
+export const WL_PRESETS = [
+  { name: 'Abdomen', label: 'Abdomen (Tissus mous)', windowWidth: 400, windowCenter: 50 },
+  { name: 'Poumon', label: 'Poumon (Parenchyme)', windowWidth: 1500, windowCenter: -600 },
+  { name: 'Os', label: 'Os (Squelette)', windowWidth: 2500, windowCenter: 480 },
+  { name: 'Cerveau', label: 'Cerveau (Neuro)', windowWidth: 80, windowCenter: 40 },
+  { name: 'Foie', label: 'Foie (Hépatique)', windowWidth: 150, windowCenter: 30 },
+  { name: 'Médiastin', label: 'Médiastin (Thorax)', windowWidth: 350, windowCenter: 50 },
+]
+
 const TOOLS = [
   { name: 'WindowLevel', toolClass: 'WindowLevelTool', icon: Sun, label: 'Contraste (W/L)' },
   { name: 'Pan', toolClass: 'PanTool', icon: Move, label: 'Déplacer' },
   { name: 'Zoom', toolClass: 'ZoomTool', icon: ZoomIn, label: 'Zoomer' },
   { name: 'Length', toolClass: 'LengthTool', icon: Ruler, label: 'Mesurer' },
   { name: 'Angle', toolClass: 'AngleTool', icon: RotateCcw, label: 'Angle' },
-  { name: 'EllipticalROI', toolClass: 'EllipticalROITool', icon: Maximize2, label: 'ROI' },
+  { name: 'ArrowAnnotate', toolClass: 'ArrowAnnotateTool', icon: ArrowUpRight, label: 'Flèche' },
+  { name: 'EllipticalROI', toolClass: 'EllipticalROITool', icon: Maximize2, label: 'ROI Ellipse' },
+  { name: 'RectangleROI', toolClass: 'RectangleROITool', icon: Square, label: 'ROI Rectangle' },
   { name: 'Eraser', toolClass: 'EraserTool', icon: Eraser, label: 'Gomme' },
 ]
 
@@ -43,10 +60,13 @@ export default function DicomViewer({
   onViewportChange,
   dicomPresenter,
   dicomSyncState,
+  dicomAnnotationSyncState,
   onBroadcastViewportSync,
   onBroadcastPresenterMode,
+  onBroadcastAnnotationSync,
   currentUserId,
   currentUserName,
+  conferenceId,
 }) {
   const viewportRef = useRef(null)
   const renderingEngineRef = useRef(null)
@@ -71,8 +91,26 @@ export default function DicomViewer({
   const [isPresenter, setIsPresenter] = useState(false)
   const [isFollowing, setIsFollowing] = useState(true)
 
-  const fileName = file?.name || file?.original_filename || file?.display_name || 'DICOM'
-  const fileId = file?.originalId || file?.id || 'dicom-view'
+  // Phase 3: Presets, Anonymization & Series State
+  const [activeWLPreset, setActiveWLPreset] = useState(null)
+  const [showPresetMenu, setShowPresetMenu] = useState(false)
+  const [currentVOI, setCurrentVOI] = useState({ windowWidth: null, windowCenter: null })
+  const [isAnonymized, setIsAnonymized] = useState(false)
+  const [studiesList, setStudiesList] = useState([])
+  const [loadingStudies, setLoadingStudies] = useState(false)
+  const [showSeriesDrawer, setShowSeriesDrawer] = useState(false)
+  const [activeSeriesUid, setActiveSeriesUid] = useState(null)
+  const [currentSeriesFile, setCurrentSeriesFile] = useState(null)
+
+  const isApplyingRemoteAnnotationRef = useRef(false)
+  const onBroadcastAnnotationSyncRef = useRef(onBroadcastAnnotationSync)
+  useEffect(() => {
+    onBroadcastAnnotationSyncRef.current = onBroadcastAnnotationSync
+  }, [onBroadcastAnnotationSync])
+
+  const activeFile = currentSeriesFile || file
+  const fileName = activeFile?.name || activeFile?.original_filename || activeFile?.display_name || 'DICOM'
+  const fileId = activeFile?.originalId || activeFile?.id || activeFile?.attachment_id || 'dicom-view'
 
   // Is another participant currently presenting THIS file?
   const isRemotePresenter = Boolean(
@@ -105,8 +143,41 @@ export default function DicomViewer({
     onViewportChangeRef.current = onViewportChange
   }, [onViewportChange])
 
+  // Fetch studies for series drawer if conferenceId is provided
+  useEffect(() => {
+    let mounted = true
+    if (!conferenceId) return
+
+    const fetchStudies = async () => {
+      try {
+        setLoadingStudies(true)
+        const authAxios = getAuthAxios()
+        const res = await authAxios.get(resolveApiUrl(`/api/conferences/${conferenceId}/dicom-studies/`))
+        if (mounted && Array.isArray(res.data)) {
+          setStudiesList(res.data)
+        }
+      } catch (e) {
+        console.warn('Could not load conference DICOM studies:', e)
+      } finally {
+        if (mounted) setLoadingStudies(false)
+      }
+    }
+
+    fetchStudies()
+    return () => {
+      mounted = false
+    }
+  }, [conferenceId])
+
+  // Sync anonymization state if remote presenter controls it
+  useEffect(() => {
+    if (dicomPresenter?.fileInfo?.is_anonymized !== undefined && isRemotePresenter && isFollowing) {
+      setIsAnonymized(Boolean(dicomPresenter.fileInfo.is_anonymized))
+    }
+  }, [dicomPresenter, isFollowing, isRemotePresenter])
+
   // Determine DICOM fetch URL
-  let dicomUrl = file?.dicom_url || file?.dicomUrl || file?.url || file?.file
+  let dicomUrl = activeFile?.dicom_url || activeFile?.dicomUrl || activeFile?.url || activeFile?.file
   if (!dicomUrl && fileId && fileId !== 'dicom-view') {
     const cleanId = String(fileId).replace('submission-', '').replace('meeting-', '')
     dicomUrl = `/api/conferences/dicom/${cleanId}/`
@@ -168,14 +239,15 @@ export default function DicomViewer({
 
     if (onBroadcastPresenterModeRef.current) {
       onBroadcastPresenterModeRef.current(fileId, nextPresenterState, {
-        name: fileName,
+        name: isAnonymized ? `[Imagerie Anonymisée #${fileId.slice(-4)}]` : fileName,
         modality: dicomInfo?.modality || '',
         study_description: dicomInfo?.study_description || '',
-        institution_name: dicomInfo?.institution_name || '',
+        institution_name: isAnonymized ? '[Établissement Masqué]' : (dicomInfo?.institution_name || ''),
         dicom_url: dicomUrl,
-        url: file?.url || file?.file || '',
-        file_type: file?.file_type || file?.fileType || 'DICOM',
-        original_id: file?.originalId || fileId,
+        url: activeFile?.url || activeFile?.file || '',
+        file_type: activeFile?.file_type || activeFile?.fileType || 'DICOM',
+        original_id: activeFile?.originalId || fileId,
+        is_anonymized: isAnonymized,
       })
     }
 
@@ -186,8 +258,117 @@ export default function DicomViewer({
       if (viewport) {
         broadcastCurrentViewport(viewport)
       }
+      // Broadcast current snapshot of all annotations to followers
+      try {
+        const all = cornerstoneTools.annotation.state.getAllAnnotations() || []
+        if (all.length > 0 && onBroadcastAnnotationSyncRef.current) {
+          onBroadcastAnnotationSyncRef.current(fileId, 'snapshot', { annotations: all })
+        }
+      } catch (e) {}
     }
-  }, [broadcastCurrentViewport, dicomInfo, dicomUrl, file, fileId, fileName, isPresenter])
+  }, [activeFile, broadcastCurrentViewport, dicomInfo, dicomUrl, fileId, fileName, isAnonymized, isPresenter])
+
+  // --- Apply Window / Level Preset (Phase 3) ---
+  const handleApplyWLPreset = useCallback((preset) => {
+    setActiveWLPreset(preset.name)
+    setShowPresetMenu(false)
+
+    const viewportId = `dicom-viewport-${fileId}`
+    const viewport = renderingEngineRef.current?.getViewport(viewportId)
+    if (!viewport) return
+
+    const lower = preset.windowCenter - preset.windowWidth / 2
+    const upper = preset.windowCenter + preset.windowWidth / 2
+
+    viewport.setProperties({ voiRange: { lower, upper } })
+    viewport.render()
+
+    setCurrentVOI({ windowWidth: preset.windowWidth, windowCenter: preset.windowCenter })
+
+    if (isPresenterRef.current) {
+      broadcastCurrentViewport(viewport)
+    }
+  }, [broadcastCurrentViewport, fileId])
+
+  // --- Select Series from Drawer (Phase 3) ---
+  const handleSelectSeries = useCallback((series) => {
+    if (!series || !series.slices || series.slices.length === 0) return
+    setActiveSeriesUid(series.series_instance_uid || series.series_id)
+    const firstSlice = series.slices[0]
+    setCurrentSeriesFile(firstSlice)
+  }, [])
+
+  // --- Handle Collaborative Annotation Sync (Phase 3 - Follower) ---
+  useEffect(() => {
+    if (isPresenter || !isFollowing || !dicomAnnotationSyncState) return
+
+    const syncAttachmentId = String(dicomAnnotationSyncState.attachmentId || '')
+    const currentId = String(fileId || '')
+    const cleanSync = syncAttachmentId.replace('submission-', '').replace('meeting-', '')
+    const cleanCurrent = currentId.replace('submission-', '').replace('meeting-', '')
+    const cleanOriginal = String(activeFile?.originalId || '').replace('submission-', '').replace('meeting-', '')
+    if (syncAttachmentId !== currentId && cleanSync !== cleanCurrent && cleanSync !== cleanOriginal) return
+
+    const viewportId = `dicom-viewport-${fileId}`
+    const viewport = renderingEngineRef.current?.getViewport(viewportId)
+    if (!viewport) return
+
+    isApplyingRemoteAnnotationRef.current = true
+
+    try {
+      const { action, annotation, annotations, annotationUid } = dicomAnnotationSyncState
+      const element = viewportRef.current
+
+      if (action === 'clear') {
+        try {
+          cornerstoneTools.annotation.selection.deselectAnnotation()
+          cornerstoneTools.annotation.state.removeAllAnnotations()
+        } catch (e) {}
+      } else if (action === 'remove' && annotationUid) {
+        try {
+          cornerstoneTools.annotation.selection.deselectAnnotation(annotationUid)
+          cornerstoneTools.annotation.state.removeAnnotation(annotationUid)
+        } catch (e) {}
+      } else if (action === 'add' || action === 'modify') {
+        if (annotation && annotation.annotationUID) {
+          try {
+            cornerstoneTools.annotation.state.removeAnnotation(annotation.annotationUID)
+          } catch (e) {}
+          if (element) {
+            try {
+              cornerstoneTools.annotation.state.addAnnotation(annotation, element)
+            } catch (e) {}
+          }
+        }
+      } else if (action === 'snapshot') {
+        try {
+          cornerstoneTools.annotation.selection.deselectAnnotation()
+          cornerstoneTools.annotation.state.removeAllAnnotations()
+        } catch (e) {}
+        if (element && Array.isArray(annotations)) {
+          annotations.forEach((ann) => {
+            try {
+              cornerstoneTools.annotation.state.addAnnotation(ann, element)
+            } catch (e) {}
+          })
+        }
+      }
+
+      cornerstoneTools.utilities.triggerAnnotationRenderForViewportIds([viewportId])
+      viewport.render()
+
+      try {
+        const all = cornerstoneTools.annotation.state.getAllAnnotations() || []
+        setAnnotationCount(all.length)
+      } catch (e) {}
+    } catch (err) {
+      console.warn('Error applying remote annotation sync:', err)
+    } finally {
+      setTimeout(() => {
+        isApplyingRemoteAnnotationRef.current = false
+      }, 60)
+    }
+  }, [activeFile?.originalId, dicomAnnotationSyncState, fileId, isFollowing, isPresenter])
 
   // --- Handle remote sync updates (Follower) ---
   useEffect(() => {
@@ -343,6 +524,13 @@ export default function DicomViewer({
         await viewport.setStack(imageIds)
         viewport.render()
 
+        const initialProps = viewport.getProperties()
+        if (initialProps?.voiRange) {
+          const ww = Math.round(initialProps.voiRange.upper - initialProps.voiRange.lower)
+          const wc = Math.round(initialProps.voiRange.lower + (initialProps.voiRange.upper - initialProps.voiRange.lower) / 2)
+          setCurrentVOI({ windowWidth: ww, windowCenter: wc })
+        }
+
         // Set up tool group
         let toolGroup = cornerstoneTools.ToolGroupManager.getToolGroup(toolGroupId)
         if (!toolGroup) {
@@ -375,6 +563,19 @@ export default function DicomViewer({
           }
         }
 
+        const handleVOIChange = () => {
+          const currentVp = renderingEngineRef.current?.getViewport(viewportId)
+          if (currentVp) {
+            const props = currentVp.getProperties()
+            if (props?.voiRange) {
+              const ww = Math.round(props.voiRange.upper - props.voiRange.lower)
+              const wc = Math.round(props.voiRange.lower + (props.voiRange.upper - props.voiRange.lower) / 2)
+              setCurrentVOI({ windowWidth: ww, windowCenter: wc })
+            }
+          }
+          handleViewportChange()
+        }
+
         const handleNewImage = (evt) => {
           if (evt.detail?.imageIdIndex !== undefined) {
             setCurrentSlice(evt.detail.imageIdIndex)
@@ -397,30 +598,44 @@ export default function DicomViewer({
           } catch (e) {}
         }
 
-        const handleAnnotationRemoved = () => {
+        const handleAnnotationChanged = (evt) => {
+          refreshAnnotationStats()
+          if (!isPresenterRef.current || isApplyingRemoteAnnotationRef.current) return
+          const ann = evt.detail?.annotation
+          if (ann && onBroadcastAnnotationSyncRef.current) {
+            onBroadcastAnnotationSyncRef.current(fileId, 'modify', { annotation: ann })
+          }
+        }
+
+        const handleAnnotationRemoved = (evt) => {
           refreshAnnotationStats()
           const currentVp = renderingEngineRef.current?.getViewport(viewportId)
           if (currentVp) {
             cornerstoneTools.utilities.triggerAnnotationRenderForViewportIds([viewportId])
             currentVp.render()
           }
+          if (!isPresenterRef.current || isApplyingRemoteAnnotationRef.current) return
+          const annUID = evt.detail?.annotation?.annotationUID || evt.detail?.annotationUID
+          if (annUID && onBroadcastAnnotationSyncRef.current) {
+            onBroadcastAnnotationSyncRef.current(fileId, 'remove', { annotation_uid: annUID })
+          }
         }
 
         element.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, handleViewportChange)
-        element.addEventListener(cornerstone.Enums.Events.VOI_MODIFIED, handleViewportChange)
+        element.addEventListener(cornerstone.Enums.Events.VOI_MODIFIED, handleVOIChange)
         element.addEventListener(cornerstone.Enums.Events.STACK_NEW_IMAGE, handleNewImage)
 
         cornerstone.eventTarget.addEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_ADDED,
-          refreshAnnotationStats
+          handleAnnotationChanged
         )
         cornerstone.eventTarget.addEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_COMPLETED,
-          refreshAnnotationStats
+          handleAnnotationChanged
         )
         cornerstone.eventTarget.addEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_MODIFIED,
-          refreshAnnotationStats
+          handleAnnotationChanged
         )
         cornerstone.eventTarget.addEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_SELECTION_CHANGE,
@@ -467,7 +682,7 @@ export default function DicomViewer({
       if (element) {
         try {
           element.removeEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, handleViewportChange)
-          element.removeEventListener(cornerstone.Enums.Events.VOI_MODIFIED, handleViewportChange)
+          element.removeEventListener(cornerstone.Enums.Events.VOI_MODIFIED, handleVOIChange)
           element.removeEventListener(cornerstone.Enums.Events.STACK_NEW_IMAGE, handleNewImage)
         } catch (e) {}
       }
@@ -475,15 +690,15 @@ export default function DicomViewer({
       try {
         cornerstone.eventTarget.removeEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_ADDED,
-          refreshAnnotationStats
+          handleAnnotationChanged
         )
         cornerstone.eventTarget.removeEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_COMPLETED,
-          refreshAnnotationStats
+          handleAnnotationChanged
         )
         cornerstone.eventTarget.removeEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_MODIFIED,
-          refreshAnnotationStats
+          handleAnnotationChanged
         )
         cornerstone.eventTarget.removeEventListener(
           cornerstoneTools.Enums.Events.ANNOTATION_SELECTION_CHANGE,
@@ -610,6 +825,9 @@ export default function DicomViewer({
     selectedUIDs.forEach((uid) => {
       cornerstoneTools.annotation.selection.deselectAnnotation(uid)
       cornerstoneTools.annotation.state.removeAnnotation(uid)
+      if (isPresenterRef.current && onBroadcastAnnotationSyncRef.current) {
+        onBroadcastAnnotationSyncRef.current(fileId, 'remove', { annotation_uid: uid })
+      }
     })
 
     const viewportId = `dicom-viewport-${fileId}`
@@ -644,6 +862,10 @@ export default function DicomViewer({
 
       setAnnotationCount(0)
       setSelectedCount(0)
+
+      if (isPresenterRef.current && onBroadcastAnnotationSyncRef.current) {
+        onBroadcastAnnotationSyncRef.current(fileId, 'clear', {})
+      }
     }
   }, [fileId])
 
@@ -661,6 +883,9 @@ export default function DicomViewer({
           selectedUIDs.forEach((uid) => {
             cornerstoneTools.annotation.selection.deselectAnnotation(uid)
             cornerstoneTools.annotation.state.removeAnnotation(uid)
+            if (isPresenterRef.current && onBroadcastAnnotationSyncRef.current) {
+              onBroadcastAnnotationSyncRef.current(fileId, 'remove', { annotation_uid: uid })
+            }
           })
 
           const viewportId = `dicom-viewport-${fileId}`
@@ -693,7 +918,7 @@ export default function DicomViewer({
       {/* Header */}
       <div className="dicom-viewer-header">
         <div className="dicom-header-info">
-          <h3>{fileName}</h3>
+          <h3>{isAnonymized ? `[Imagerie Anonymisée #${fileId.slice(-4)}]` : fileName}</h3>
           {dicomInfo?.modality && (
             <span className="dicom-modality-badge">{dicomInfo.modality}</span>
           )}
@@ -704,8 +929,30 @@ export default function DicomViewer({
           )}
         </div>
 
-        {/* Real-time Presenter Mode Controls (Phase 2) */}
+        {/* Real-time Presenter Mode & Phase 3 Collaboration Controls */}
         <div className="dicom-header-collaboration">
+          {/* Anonymization PHI Masking Toggle (Phase 3) */}
+          <button
+            className={`dicom-tool-btn ${isAnonymized ? 'anonymize-active' : ''}`}
+            onClick={() => setIsAnonymized(!isAnonymized)}
+            title={isAnonymized ? "Afficher les identifiants patients" : "Masquer les données identifiantes (Protection PHI)"}
+          >
+            {isAnonymized ? <ShieldCheck size={15} /> : <Shield size={15} />}
+            <span>{isAnonymized ? 'Anonymisé' : 'Anonymiser'}</span>
+          </button>
+
+          {/* Séries Drawer Toggle (Phase 3) */}
+          {studiesList.length > 0 && (
+            <button
+              className={`dicom-tool-btn ${showSeriesDrawer ? 'active' : ''}`}
+              onClick={() => setShowSeriesDrawer(!showSeriesDrawer)}
+              title="Afficher les séries et coupes disponibles"
+            >
+              <FolderOpen size={15} />
+              <span>Séries ({studiesList.reduce((acc, s) => acc + (s.total_series || s.series?.length || 0), 0)})</span>
+            </button>
+          )}
+
           {/* Case 1: Current user is the presenter */}
           {isPresenter && (
             <div className="presenter-live-indicator">
@@ -779,6 +1026,38 @@ export default function DicomViewer({
             <span className="tool-label">{label}</span>
           </button>
         ))}
+
+        <div className="dicom-toolbar-divider" />
+
+        {/* W/L Presets Dropdown (Phase 3) */}
+        <div className="dicom-preset-dropdown-container">
+          <button
+            className={`dicom-tool-btn ${activeWLPreset ? 'preset-active' : ''}`}
+            onClick={() => setShowPresetMenu(!showPresetMenu)}
+            title="Préréglages Fenêtrage (Window / Level)"
+          >
+            <Sliders size={17} />
+            <span className="tool-label">{activeWLPreset || 'Fenêtrage'}</span>
+          </button>
+
+          {showPresetMenu && (
+            <div className="dicom-preset-menu">
+              <div className="dicom-preset-menu-header">
+                <span>Préréglages Cliniques</span>
+              </div>
+              {WL_PRESETS.map((p) => (
+                <button
+                  key={p.name}
+                  className={`dicom-preset-item ${activeWLPreset === p.name ? 'selected' : ''}`}
+                  onClick={() => handleApplyWLPreset(p)}
+                >
+                  <div className="preset-item-label">{p.label}</div>
+                  <div className="preset-item-values">W: {p.windowWidth} / C: {p.windowCenter}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="dicom-toolbar-divider" />
 
@@ -894,13 +1173,68 @@ export default function DicomViewer({
             <span>Mode Gomme : cliquez sur une mesure pour l'effacer</span>
           </div>
         )}
+
+        {/* DICOM Series Drawer (Phase 3) */}
+        {showSeriesDrawer && studiesList.length > 0 && (
+          <div className="dicom-series-drawer">
+            <div className="dicom-series-drawer-header">
+              <h4>Séries & Coupes Cliniques</h4>
+              <button className="btn-close-drawer" onClick={() => setShowSeriesDrawer(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="dicom-series-drawer-content">
+              {studiesList.map((study) => (
+                <div key={study.study_id} className="dicom-study-group">
+                  <div className="dicom-study-header">
+                    <strong>{study.study_description || 'Examen DICOM'}</strong>
+                    <span>{study.modality} {study.study_date ? `• ${study.study_date}` : ''}</span>
+                  </div>
+                  <div className="dicom-series-cards-row">
+                    {(study.series || []).map((ser) => (
+                      <div
+                        key={ser.series_id || ser.series_instance_uid}
+                        className={`dicom-series-card ${activeSeriesUid === (ser.series_instance_uid || ser.series_id) ? 'is-active' : ''}`}
+                        onClick={() => handleSelectSeries(ser)}
+                      >
+                        <div className="series-card-thumb">
+                          {ser.slices?.[0]?.thumbnail_url ? (
+                            <img src={resolveApiUrl(ser.slices[0].thumbnail_url)} alt="Aperçu" />
+                          ) : (
+                            <Layers size={22} className="series-thumb-placeholder" />
+                          )}
+                        </div>
+                        <div className="series-card-body">
+                          <span className="series-card-desc">{ser.series_description || `Série ${ser.series_number || 1}`}</span>
+                          <span className="series-card-slices">{ser.slice_count || ser.slices?.length || 1} coupe(s)</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Metadata HUD Overlay */}
       {dicomInfo && !loading && !error && (
         <div className="dicom-hud">
           <div className="dicom-hud-top-left">
-            {dicomInfo.patient_name && <span>{dicomInfo.patient_name}</span>}
+            {isAnonymized ? (
+              <span className="dicom-hud-patient-anonymized">
+                <ShieldCheck size={13} />
+                [PATIENT ANONYMISÉ]
+              </span>
+            ) : (
+              dicomInfo.patient_name && <span>{dicomInfo.patient_name}</span>
+            )}
+            {isAnonymized ? (
+              <span className="dicom-hud-id">ID: ••••••••</span>
+            ) : (
+              dicomInfo.patient_id_dicom && <span className="dicom-hud-id">ID: {dicomInfo.patient_id_dicom}</span>
+            )}
             {dicomInfo.modality && (
               <span>
                 {dicomInfo.modality}
@@ -910,10 +1244,22 @@ export default function DicomViewer({
             {totalSlices > 1 && (
               <span className="dicom-hud-slice">Coupe: {currentSlice + 1} / {totalSlices}</span>
             )}
+            {currentVOI.windowWidth !== null && (
+              <span>
+                W: {currentVOI.windowWidth} C: {currentVOI.windowCenter}
+                {activeWLPreset && <span className="dicom-hud-preset-tag">{activeWLPreset}</span>}
+              </span>
+            )}
           </div>
           <div className="dicom-hud-top-right">
-            {dicomInfo.institution_name && <span>{dicomInfo.institution_name}</span>}
+            <span>{isAnonymized ? '[ÉTABLISSEMENT MASQUÉ]' : (dicomInfo.institution_name || '')}</span>
             {dicomInfo.study_date && <span>{dicomInfo.study_date}</span>}
+            {isAnonymized && (
+              <span className="dicom-hud-phi-flag">
+                <ShieldCheck size={12} />
+                PHI MASQUÉ
+              </span>
+            )}
             {isPresenter && <span className="dicom-hud-presenter-flag">● VOUS PRÉSENTEZ</span>}
             {isRemotePresenter && isFollowing && (
               <span className="dicom-hud-following-flag">● SUIVI DE {presenterName.toUpperCase()}</span>

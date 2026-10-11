@@ -8,10 +8,13 @@ export default function MainStageFileViewer({
   onClose,
   dicomPresenter,
   dicomSyncState,
+  dicomAnnotationSyncState,
   onBroadcastViewportSync,
   onBroadcastPresenterMode,
+  onBroadcastAnnotationSync,
   currentUserId,
   currentUserName,
+  conferenceId,
 }) {
   const [previewUrl, setPreviewUrl] = useState('')
   const [previewError, setPreviewError] = useState('')
@@ -80,10 +83,13 @@ export default function MainStageFileViewer({
           onClose={onClose}
           dicomPresenter={dicomPresenter}
           dicomSyncState={dicomSyncState}
+          dicomAnnotationSyncState={dicomAnnotationSyncState}
           onBroadcastViewportSync={onBroadcastViewportSync}
           onBroadcastPresenterMode={onBroadcastPresenterMode}
+          onBroadcastAnnotationSync={onBroadcastAnnotationSync}
           currentUserId={currentUserId}
           currentUserName={currentUserName}
+          conferenceId={conferenceId}
         />
       </div>
     )

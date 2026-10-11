@@ -18,6 +18,7 @@ export default function useWebRTC(
   onJoinRequested,
   onDicomViewportSync,
   onDicomPresenterMode,
+  onDicomAnnotationSync,
 ) {
   const [localStream, setLocalStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
@@ -219,6 +220,9 @@ export default function useWebRTC(
         case "dicom_presenter_mode":
           if (onDicomPresenterMode) onDicomPresenterMode(data);
           break;
+        case "dicom_annotation_sync":
+          if (onDicomAnnotationSync) onDicomAnnotationSync(data);
+          break;
         default:
           break;
       }
@@ -234,6 +238,7 @@ export default function useWebRTC(
       onNotesUpdate,
       onDicomViewportSync,
       onDicomPresenterMode,
+      onDicomAnnotationSync,
       userId,
     ],
   );
@@ -532,6 +537,21 @@ export default function useWebRTC(
     return false;
   }, []);
 
+  const sendDicomAnnotationSync = useCallback((attachmentId, action, annotationPayload = {}) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "dicom_annotation_sync",
+          attachment_id: attachmentId,
+          action: action,
+          ...annotationPayload,
+        }),
+      );
+      return true;
+    }
+    return false;
+  }, []);
+
   return {
     localStream,
     screenStream,
@@ -577,5 +597,6 @@ export default function useWebRTC(
     },
     sendDicomViewportSync,
     sendDicomPresenterMode,
+    sendDicomAnnotationSync,
   };
 }
