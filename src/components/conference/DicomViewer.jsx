@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Play,
   Pause,
+  Eraser,
+  Trash2,
 } from 'lucide-react'
 import { initCornerstone } from '../../lib/cornerstoneSetup'
 import * as cornerstone from '@cornerstonejs/core'
@@ -32,6 +34,7 @@ const TOOLS = [
   { name: 'Length', toolClass: 'LengthTool', icon: Ruler, label: 'Mesurer' },
   { name: 'Angle', toolClass: 'AngleTool', icon: RotateCcw, label: 'Angle' },
   { name: 'EllipticalROI', toolClass: 'EllipticalROITool', icon: Maximize2, label: 'ROI' },
+  { name: 'Eraser', toolClass: 'EraserTool', icon: Eraser, label: 'Gomme' },
 ]
 
 export default function DicomViewer({
@@ -61,6 +64,8 @@ export default function DicomViewer({
   const [currentSlice, setCurrentSlice] = useState(0)
   const [totalSlices, setTotalSlices] = useState(1)
   const [isPlayingCine, setIsPlayingCine] = useState(false)
+  const [annotationCount, setAnnotationCount] = useState(0)
+  const [selectedCount, setSelectedCount] = useState(0)
 
   // Real-time synchronization state (Phase 2)
   const [isPresenter, setIsPresenter] = useState(false)
@@ -85,18 +90,34 @@ export default function DicomViewer({
     isPresenterRef.current = isPresenter
   }, [isPresenter])
 
+  const onBroadcastViewportSyncRef = useRef(onBroadcastViewportSync)
+  useEffect(() => {
+    onBroadcastViewportSyncRef.current = onBroadcastViewportSync
+  }, [onBroadcastViewportSync])
+
+  const onBroadcastPresenterModeRef = useRef(onBroadcastPresenterMode)
+  useEffect(() => {
+    onBroadcastPresenterModeRef.current = onBroadcastPresenterMode
+  }, [onBroadcastPresenterMode])
+
+  const onViewportChangeRef = useRef(onViewportChange)
+  useEffect(() => {
+    onViewportChangeRef.current = onViewportChange
+  }, [onViewportChange])
+
   // Determine DICOM fetch URL
-  let dicomUrl = file?.dicom_url || file?.dicomUrl
+  let dicomUrl = file?.dicom_url || file?.dicomUrl || file?.url || file?.file
   if (!dicomUrl && fileId && fileId !== 'dicom-view') {
-    dicomUrl = `/api/conferences/dicom/${fileId}/`
+    const cleanId = String(fileId).replace('submission-', '').replace('meeting-', '')
+    dicomUrl = `/api/conferences/dicom/${cleanId}/`
   }
-  if (!dicomUrl) {
-    dicomUrl = file?.url || file?.file
+  if (dicomUrl && typeof dicomUrl === 'string' && dicomUrl.includes('/api/conferences/dicom/submission-')) {
+    dicomUrl = dicomUrl.replace('/api/conferences/dicom/submission-', '/api/conferences/dicom/')
   }
 
   // --- Broadcast helper ---
   const broadcastCurrentViewport = useCallback((viewport) => {
-    if (!viewport || !onBroadcastViewportSync) return
+    if (!viewport || !onBroadcastViewportSyncRef.current) return
 
     try {
       const camera = viewport.getCamera()
@@ -116,23 +137,28 @@ export default function DicomViewer({
         windowCenter: voiRange ? (voiRange.lower + (voiRange.upper - voiRange.lower) / 2) : undefined,
       }
 
-      onViewportChange?.(payload)
+      onViewportChangeRef.current?.(payload)
 
       const now = Date.now()
       if (now - lastBroadcastTimeRef.current > 50) {
         lastBroadcastTimeRef.current = now
-        onBroadcastViewportSync(fileId, payload)
+        onBroadcastViewportSyncRef.current(fileId, payload)
       } else {
         if (broadcastTimerRef.current) clearTimeout(broadcastTimerRef.current)
         broadcastTimerRef.current = setTimeout(() => {
           lastBroadcastTimeRef.current = Date.now()
-          onBroadcastViewportSync(fileId, payload)
+          onBroadcastViewportSyncRef.current?.(fileId, payload)
         }, 50)
       }
     } catch (e) {
       console.warn('Error reading viewport for broadcast:', e)
     }
-  }, [fileId, onBroadcastViewportSync, onViewportChange])
+  }, [fileId])
+
+  const broadcastCurrentViewportRef = useRef(broadcastCurrentViewport)
+  useEffect(() => {
+    broadcastCurrentViewportRef.current = broadcastCurrentViewport
+  }, [broadcastCurrentViewport])
 
   // --- Toggle Presenter Mode ---
   const handleTogglePresenter = useCallback(() => {
@@ -140,11 +166,16 @@ export default function DicomViewer({
     setIsPresenter(nextPresenterState)
     isPresenterRef.current = nextPresenterState
 
-    if (onBroadcastPresenterMode) {
-      onBroadcastPresenterMode(fileId, nextPresenterState, {
+    if (onBroadcastPresenterModeRef.current) {
+      onBroadcastPresenterModeRef.current(fileId, nextPresenterState, {
         name: fileName,
         modality: dicomInfo?.modality || '',
         study_description: dicomInfo?.study_description || '',
+        institution_name: dicomInfo?.institution_name || '',
+        dicom_url: dicomUrl,
+        url: file?.url || file?.file || '',
+        file_type: file?.file_type || file?.fileType || 'DICOM',
+        original_id: file?.originalId || fileId,
       })
     }
 
@@ -156,12 +187,18 @@ export default function DicomViewer({
         broadcastCurrentViewport(viewport)
       }
     }
-  }, [broadcastCurrentViewport, dicomInfo, fileId, fileName, isPresenter, onBroadcastPresenterMode])
+  }, [broadcastCurrentViewport, dicomInfo, dicomUrl, file, fileId, fileName, isPresenter])
 
   // --- Handle remote sync updates (Follower) ---
   useEffect(() => {
     if (isPresenter || !isFollowing || !dicomSyncState) return
-    if (String(dicomSyncState.attachmentId) !== String(fileId)) return
+
+    const syncAttachmentId = String(dicomSyncState.attachmentId || '')
+    const currentId = String(fileId || '')
+    const cleanSync = syncAttachmentId.replace('submission-', '').replace('meeting-', '')
+    const cleanCurrent = currentId.replace('submission-', '').replace('meeting-', '')
+    const cleanOriginal = String(file?.originalId || '').replace('submission-', '').replace('meeting-', '')
+    if (syncAttachmentId !== currentId && cleanSync !== cleanCurrent && cleanSync !== cleanOriginal) return
 
     const viewportId = `dicom-viewport-${fileId}`
     const viewport = renderingEngineRef.current?.getViewport(viewportId)
@@ -334,7 +371,7 @@ export default function DicomViewer({
           if (!isPresenterRef.current || isApplyingRemoteUpdateRef.current) return
           const currentVp = renderingEngineRef.current?.getViewport(viewportId)
           if (currentVp) {
-            broadcastCurrentViewport(currentVp)
+            broadcastCurrentViewportRef.current?.(currentVp)
           }
         }
 
@@ -347,13 +384,54 @@ export default function DicomViewer({
           }
           if (isPresenterRef.current && !isApplyingRemoteUpdateRef.current) {
             const currentVp = renderingEngineRef.current?.getViewport(viewportId)
-            if (currentVp) broadcastCurrentViewport(currentVp)
+            if (currentVp) broadcastCurrentViewportRef.current?.(currentVp)
+          }
+        }
+
+        const refreshAnnotationStats = () => {
+          try {
+            const all = cornerstoneTools.annotation.state.getAllAnnotations() || []
+            const selected = cornerstoneTools.annotation.selection.getAnnotationsSelected() || []
+            setAnnotationCount(all.length)
+            setSelectedCount(selected.length)
+          } catch (e) {}
+        }
+
+        const handleAnnotationRemoved = () => {
+          refreshAnnotationStats()
+          const currentVp = renderingEngineRef.current?.getViewport(viewportId)
+          if (currentVp) {
+            cornerstoneTools.utilities.triggerAnnotationRenderForViewportIds([viewportId])
+            currentVp.render()
           }
         }
 
         element.addEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, handleViewportChange)
         element.addEventListener(cornerstone.Enums.Events.VOI_MODIFIED, handleViewportChange)
         element.addEventListener(cornerstone.Enums.Events.STACK_NEW_IMAGE, handleNewImage)
+
+        cornerstone.eventTarget.addEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_ADDED,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.addEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_COMPLETED,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.addEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_MODIFIED,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.addEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_SELECTION_CHANGE,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.addEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_REMOVED,
+          handleAnnotationRemoved
+        )
+
+        refreshAnnotationStats()
 
         if (mounted) {
           setLoading(false)
@@ -373,8 +451,8 @@ export default function DicomViewer({
       mounted = false
 
       // If presenter, stop presentation on unmount
-      if (isPresenterRef.current && onBroadcastPresenterMode) {
-        onBroadcastPresenterMode(fileId, false, {})
+      if (isPresenterRef.current && onBroadcastPresenterModeRef.current) {
+        onBroadcastPresenterModeRef.current(fileId, false, {})
       }
 
       if (cineIntervalRef.current) {
@@ -384,6 +462,43 @@ export default function DicomViewer({
       if (broadcastTimerRef.current) {
         clearTimeout(broadcastTimerRef.current)
       }
+
+      const element = viewportRef.current
+      if (element) {
+        try {
+          element.removeEventListener(cornerstone.Enums.Events.CAMERA_MODIFIED, handleViewportChange)
+          element.removeEventListener(cornerstone.Enums.Events.VOI_MODIFIED, handleViewportChange)
+          element.removeEventListener(cornerstone.Enums.Events.STACK_NEW_IMAGE, handleNewImage)
+        } catch (e) {}
+      }
+
+      try {
+        cornerstone.eventTarget.removeEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_ADDED,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.removeEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_COMPLETED,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.removeEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_MODIFIED,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.removeEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_SELECTION_CHANGE,
+          refreshAnnotationStats
+        )
+        cornerstone.eventTarget.removeEventListener(
+          cornerstoneTools.Enums.Events.ANNOTATION_REMOVED,
+          handleAnnotationRemoved
+        )
+      } catch (e) {}
+
+      try {
+        cornerstoneTools.annotation.selection.deselectAnnotation()
+        cornerstoneTools.annotation.state.removeAllAnnotations()
+      } catch (e) {}
 
       try {
         cornerstoneTools.ToolGroupManager.destroyToolGroup(toolGroupId)
@@ -397,7 +512,7 @@ export default function DicomViewer({
         } catch (e) {}
       }
     }
-  }, [broadcastCurrentViewport, dicomUrl, fileId, onBroadcastPresenterMode])
+  }, [dicomUrl, fileId])
 
   // --- Tool Switching ---
   const handleToolChange = useCallback((toolName) => {
@@ -438,6 +553,10 @@ export default function DicomViewer({
   const handleSliceChange = useCallback(async (newIndex) => {
     const clamped = Math.max(0, Math.min(totalSlices - 1, newIndex))
     setCurrentSlice(clamped)
+    try {
+      cornerstoneTools.annotation.selection.deselectAnnotation()
+      setSelectedCount(0)
+    } catch (e) {}
     const viewportId = `dicom-viewport-${fileId}`
     const viewport = renderingEngineRef.current?.getViewport(viewportId)
     if (viewport) {
@@ -482,6 +601,92 @@ export default function DicomViewer({
       if (cineIntervalRef.current) clearInterval(cineIntervalRef.current)
     }
   }, [])
+
+  // --- Delete Selected Annotations ---
+  const handleDeleteSelected = useCallback(() => {
+    const selectedUIDs = cornerstoneTools.annotation.selection.getAnnotationsSelected() || []
+    if (selectedUIDs.length === 0) return
+
+    selectedUIDs.forEach((uid) => {
+      cornerstoneTools.annotation.selection.deselectAnnotation(uid)
+      cornerstoneTools.annotation.state.removeAnnotation(uid)
+    })
+
+    const viewportId = `dicom-viewport-${fileId}`
+    const vp = renderingEngineRef.current?.getViewport(viewportId)
+    if (vp) {
+      cornerstoneTools.utilities.triggerAnnotationRenderForViewportIds([viewportId])
+      vp.render()
+    }
+
+    try {
+      const all = cornerstoneTools.annotation.state.getAllAnnotations() || []
+      setAnnotationCount(all.length)
+      setSelectedCount(0)
+    } catch (e) {}
+  }, [fileId])
+
+  // --- Clear All Annotations ---
+  const handleClearAllAnnotations = useCallback(() => {
+    const all = cornerstoneTools.annotation.state.getAllAnnotations() || []
+    if (all.length === 0) return
+
+    if (window.confirm(`Supprimer toutes les mesures et annotations de cette imagerie (${all.length}) ?`)) {
+      cornerstoneTools.annotation.selection.deselectAnnotation()
+      cornerstoneTools.annotation.state.removeAllAnnotations()
+
+      const viewportId = `dicom-viewport-${fileId}`
+      const vp = renderingEngineRef.current?.getViewport(viewportId)
+      if (vp) {
+        cornerstoneTools.utilities.triggerAnnotationRenderForViewportIds([viewportId])
+        vp.render()
+      }
+
+      setAnnotationCount(0)
+      setSelectedCount(0)
+    }
+  }, [fileId])
+
+  // --- Keyboard Shortcuts (Delete, Backspace, Escape) ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const activeTag = document.activeElement?.tagName?.toLowerCase()
+        if (activeTag === 'input' || activeTag === 'textarea') return
+
+        const selectedUIDs = cornerstoneTools.annotation.selection.getAnnotationsSelected() || []
+        if (selectedUIDs.length > 0) {
+          e.preventDefault()
+          e.stopPropagation()
+          selectedUIDs.forEach((uid) => {
+            cornerstoneTools.annotation.selection.deselectAnnotation(uid)
+            cornerstoneTools.annotation.state.removeAnnotation(uid)
+          })
+
+          const viewportId = `dicom-viewport-${fileId}`
+          const vp = renderingEngineRef.current?.getViewport(viewportId)
+          if (vp) {
+            cornerstoneTools.utilities.triggerAnnotationRenderForViewportIds([viewportId])
+            vp.render()
+          }
+
+          try {
+            const all = cornerstoneTools.annotation.state.getAllAnnotations() || []
+            setAnnotationCount(all.length)
+            setSelectedCount(0)
+          } catch (err) {}
+        }
+      } else if (e.key === 'Escape') {
+        try {
+          cornerstoneTools.annotation.selection.deselectAnnotation()
+          setSelectedCount(0)
+        } catch (err) {}
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [fileId])
 
   return (
     <div className={`dicom-viewer-container ${isPresenter ? 'is-presenter-active' : ''}`}>
@@ -566,9 +771,9 @@ export default function DicomViewer({
         {TOOLS.map(({ name, icon: Icon, label }) => (
           <button
             key={name}
-            className={`dicom-tool-btn ${activeTool === name ? 'active' : ''}`}
+            className={`dicom-tool-btn ${activeTool === name ? 'active' : ''} ${name === 'Eraser' ? 'eraser-tool-btn' : ''}`}
             onClick={() => handleToolChange(name)}
-            title={label}
+            title={name === 'Eraser' ? "Gomme (cliquer sur une mesure ou annotation pour l'effacer)" : label}
           >
             <Icon size={17} />
             <span className="tool-label">{label}</span>
@@ -576,6 +781,33 @@ export default function DicomViewer({
         ))}
 
         <div className="dicom-toolbar-divider" />
+
+        {/* Delete selected annotation button (appears when an annotation is selected) */}
+        {selectedCount > 0 && (
+          <button
+            className="dicom-tool-btn danger-active-btn"
+            onClick={handleDeleteSelected}
+            title="Supprimer la sélection (Touche Suppr ou Retour arrière)"
+          >
+            <Trash2 size={17} />
+            <span className="tool-label">Supprimer</span>
+            <span className="dicom-kbd-shortcut">Suppr</span>
+          </button>
+        )}
+
+        {/* Clear all annotations button */}
+        <button
+          className={`dicom-tool-btn ${annotationCount === 0 ? 'is-disabled' : ''}`}
+          onClick={handleClearAllAnnotations}
+          disabled={annotationCount === 0}
+          title={annotationCount > 0 ? `Effacer toutes les mesures (${annotationCount})` : 'Aucune mesure à effacer'}
+        >
+          <Trash2 size={17} />
+          <span className="tool-label">Tout effacer</span>
+          {annotationCount > 0 && (
+            <span className="dicom-count-badge">{annotationCount}</span>
+          )}
+        </button>
 
         <button className="dicom-tool-btn" onClick={handleReset} title="Réinitialiser l'affichage">
           <RotateCcw size={17} />
@@ -631,7 +863,10 @@ export default function DicomViewer({
       </div>
 
       {/* Viewport */}
-      <div className="dicom-viewport-wrapper">
+      <div
+        className={`dicom-viewport-wrapper ${activeTool === 'Eraser' ? 'is-eraser-active' : ''}`}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {loading && (
           <div className="dicom-loading">
             <div className="loading-spinner" />
@@ -645,13 +880,20 @@ export default function DicomViewer({
         )}
         <div
           ref={viewportRef}
-          className="dicom-viewport"
+          className={`dicom-viewport ${activeTool === 'Eraser' ? 'cursor-eraser' : ''}`}
           style={{
             width: '100%',
             height: '100%',
             visibility: loading || error ? 'hidden' : 'visible',
           }}
         />
+
+        {activeTool === 'Eraser' && !loading && !error && (
+          <div className="dicom-eraser-hint">
+            <Eraser size={14} />
+            <span>Mode Gomme : cliquez sur une mesure pour l'effacer</span>
+          </div>
+        )}
       </div>
 
       {/* Metadata HUD Overlay */}

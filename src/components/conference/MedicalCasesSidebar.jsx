@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { ClipboardList, Upload, FileText, Image, Download, Eye, X, Save, Video, ChevronDown, ChevronUp, Gavel, CheckCircle, Loader } from 'lucide-react'
+import { ClipboardList, Upload, FileText, Image, Download, Eye, X, Save, Video, ChevronDown, ChevronUp, Gavel, CheckCircle, Loader, Scan } from 'lucide-react'
 import { downloadAttachment, getAttachmentBlobUrl } from '../../api/attachmentsApi'
 import { resolveApiUrl } from '../../api/config'
 import { getReportsBySubmission, upsertReport } from '../../api/reportsApi'
@@ -55,16 +55,22 @@ export default function MedicalCasesSidebar({
       fileUrl = fileUrl.substring(fileUrl.indexOf('/media/'))
     }
 
+    const resolvedUrl = fileUrl ? resolveApiUrl(fileUrl) : ''
+    const dicomUrl = attachment.dicom_url || (source === 'meeting' ? `/api/conferences/dicom/${attachment.id}/` : resolvedUrl)
+
     return {
       id: `${source}-${attachment.id}`,
-      name: attachment.original_filename || attachment.display_name || 'Attachment',
-      url: resolveApiUrl(fileUrl),
+      name: attachment.original_filename || attachment.file_name || attachment.display_name || 'Attachment',
+      url: resolvedUrl,
+      file: resolvedUrl,
       fileType: attachment.file_type || '',
       size: attachment.file_size || null,
       uploadedByName: attachment.uploaded_by_name || 'Unknown',
       source,
       originalId: attachment.id,
-      submissionId: attachment.submission_id || attachment.submission || attachment.submissionId || null
+      submissionId: attachment.submission_id || attachment.submission || attachment.submissionId || null,
+      dicom_url: dicomUrl,
+      dicom_metadata: attachment.dicom_metadata || null,
     }
   }
 
@@ -215,8 +221,24 @@ export default function MedicalCasesSidebar({
     e.target.value = ''
   }
 
-  const getFileIcon = (type) => {
-    const t = type?.toUpperCase() || ''
+  const getFileIcon = (fileOrType) => {
+    let t = ''
+    let n = ''
+    if (typeof fileOrType === 'object' && fileOrType !== null) {
+      t = (fileOrType.fileType || fileOrType.file_type || '').toUpperCase()
+      n = (fileOrType.name || fileOrType.file_name || fileOrType.original_filename || '').toLowerCase()
+    } else {
+      t = (fileOrType || '').toUpperCase()
+    }
+    if (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima')
+    ) {
+      return <Scan size={16} />
+    }
     if (t.startsWith('IMAGE/') || t === 'IMAGE') return <Image size={16} />
     if (t.startsWith('VIDEO/') || t === 'VIDEO') return <Video size={16} />
     return <FileText size={16} />
@@ -230,14 +252,39 @@ export default function MedicalCasesSidebar({
   }
 
   const isPreviewable = (file) => {
-    const t = file.fileType?.toUpperCase() || ''
-    return t.startsWith('IMAGE/') || t === 'IMAGE' || 
-           t.startsWith('VIDEO/') || t === 'VIDEO' || 
-           t === 'PDF' || t === 'APPLICATION/PDF'
+    if (!file) return false
+    const t = (file.fileType || file.file_type || '').toUpperCase()
+    const n = (file.name || file.original_filename || file.file_name || '').toLowerCase()
+    return (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima') ||
+      Boolean(file.dicom_url || file.dicomUrl) ||
+      t.startsWith('IMAGE/') ||
+      t === 'IMAGE' ||
+      t.startsWith('VIDEO/') ||
+      t === 'VIDEO' ||
+      t === 'PDF' ||
+      t === 'APPLICATION/PDF'
+    )
   }
     
   const previewType = (file) => {
-    const t = file.fileType?.toUpperCase() || ''
+    if (!file) return 'pdf'
+    const t = (file.fileType || file.file_type || '').toUpperCase()
+    const n = (file.name || file.original_filename || file.file_name || '').toLowerCase()
+    if (
+      t === 'DICOM' ||
+      t === 'APPLICATION/DICOM' ||
+      n.endsWith('.dcm') ||
+      n.endsWith('.dicom') ||
+      n.endsWith('.ima') ||
+      Boolean(file.dicom_url || file.dicomUrl)
+    ) {
+      return 'dicom'
+    }
     if (t.startsWith('IMAGE/') || t === 'IMAGE') return 'image'
     if (t.startsWith('VIDEO/') || t === 'VIDEO') return 'video'
     return 'pdf'
@@ -451,7 +498,7 @@ export default function MedicalCasesSidebar({
                           className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
                           onClick={() => isPreviewable(file) && onPreviewFile(file)}
                         >
-                          <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                          <div className="file-icon">{getFileIcon(file)}</div>
                           <div className="file-info">
                             <span className="file-name" title={file.name}>{file.name}</span>
                             <span className="file-meta">{file.uploadedByName}</span>
@@ -479,7 +526,7 @@ export default function MedicalCasesSidebar({
                           className={`file-item ${isPreviewable(file) ? 'clickable' : ''}`}
                           onClick={() => isPreviewable(file) && onPreviewFile(file)}
                         >
-                          <div className="file-icon">{getFileIcon(file.fileType)}</div>
+                          <div className="file-icon">{getFileIcon(file)}</div>
                           <div className="file-info">
                             <span className="file-name" title={file.name}>{file.name}</span>
                             <span className="file-meta">{formatFileSize(file.size)}</span>

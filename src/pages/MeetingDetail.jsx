@@ -7,10 +7,11 @@ import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
 import UserAvatar from '../components/UserAvatar'
-import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2, X, Download, Image as ImageIcon, Video as VideoIcon } from 'lucide-react'
+import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2, X, Download, Image as ImageIcon, Video as VideoIcon, Scan } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
 import MeetingSummary from '../components/MeetingSummary'
 import DoctorCaseSection from '../components/DoctorCaseSection'
+import DicomModal from '../components/conference/DicomModal'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
@@ -103,6 +104,7 @@ export default function MeetingDetail() {
   // Form detail panel state
   const [detailPanel, setDetailPanel] = useState({ open: false, loading: false, error: null, submission: null, form: null, attachments: [] })
   const [activeDetailId, setActiveDetailId] = useState(null)
+  const [selectedDicom, setSelectedDicom] = useState(null)
 
   // Grouped submissions by doctor
   const groupedSubmissions = useMemo(() => {
@@ -523,7 +525,8 @@ export default function MeetingDetail() {
                           <div key={file.id} className="attachment-card" style={{ padding: '0.85rem 1rem', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', overflow: 'hidden' }}>
                               <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', flexShrink: 0 }}>
-                                {file.file_type?.startsWith('image/') ? <ImageIcon size={18} /> :
+                                {file.file_type?.toUpperCase() === 'DICOM' || file.file_name?.toLowerCase().endsWith('.dcm') || file.file_name?.toLowerCase().endsWith('.dicom') ? <Scan size={18} /> :
+                                 file.file_type?.startsWith('image/') ? <ImageIcon size={18} /> :
                                  file.file_type?.startsWith('video/') ? <VideoIcon size={18} /> :
                                  <FileText size={18} />}
                               </div>
@@ -536,7 +539,21 @@ export default function MeetingDetail() {
                             </div>
                             <div style={{ display: 'flex', gap: '0.35rem' }}>
                               <button
-                                onClick={(e) => { e.preventDefault(); downloadAttachment(file.file, null) }}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  const isDicom = file.file_type?.toUpperCase() === 'DICOM' || file.file_name?.toLowerCase().endsWith('.dcm') || file.file_name?.toLowerCase().endsWith('.dicom') || file.file_name?.toLowerCase().endsWith('.ima')
+                                  if (isDicom) {
+                                    setSelectedDicom({
+                                      id: file.id,
+                                      name: file.file_name || 'DICOM',
+                                      file: file.file,
+                                      url: file.file,
+                                      file_type: 'DICOM',
+                                    })
+                                  } else {
+                                    downloadAttachment(file.file, null)
+                                  }
+                                }}
                                 style={{ color: '#2563eb', padding: '6px', background: 'none', border: 'none', cursor: 'pointer' }}
                                 title="Ouvrir"
                               >
@@ -599,6 +616,8 @@ export default function MeetingDetail() {
         </div>
       )}
       </div>
+
+      <DicomModal file={selectedDicom} onClose={() => setSelectedDicom(null)} />
     </div>
   )
 }

@@ -503,6 +503,35 @@ export default function useWebRTC(
     [cleanupPeers],
   );
 
+  const sendDicomViewportSync = useCallback((attachmentId, viewportState) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "dicom_viewport_sync",
+          attachment_id: attachmentId,
+          viewport_state: viewportState,
+        }),
+      );
+      return true;
+    }
+    return false;
+  }, []);
+
+  const sendDicomPresenterMode = useCallback((attachmentId, isPresenting, fileInfo = {}) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "dicom_presenter_mode",
+          attachment_id: attachmentId,
+          is_presenting: isPresenting,
+          file_info: fileInfo,
+        }),
+      );
+      return true;
+    }
+    return false;
+  }, []);
+
   return {
     localStream,
     screenStream,
@@ -546,32 +575,7 @@ export default function useWebRTC(
         wsRef.current.send(JSON.stringify({ type: "mute_participant", target_user_id: targetUserId }));
       }
     },
-    sendDicomViewportSync: (attachmentId, viewportState) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "dicom_viewport_sync",
-            attachment_id: attachmentId,
-            viewport_state: viewportState,
-          }),
-        );
-        return true;
-      }
-      return false;
-    },
-    sendDicomPresenterMode: (attachmentId, isPresenting, fileInfo = {}) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "dicom_presenter_mode",
-            attachment_id: attachmentId,
-            is_presenting: isPresenting,
-            file_info: fileInfo,
-          }),
-        );
-        return true;
-      }
-      return false;
-    },
+    sendDicomViewportSync,
+    sendDicomPresenterMode,
   };
 }

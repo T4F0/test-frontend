@@ -902,13 +902,19 @@ export default function VideoConferenceRoom() {
             <button
               className="btn-join-dicom-presentation"
               onClick={() => {
+                const targetDicomUrl = dicomPresenter.fileInfo?.dicom_url || (
+                  dicomPresenter.attachmentId
+                    ? `/api/conferences/dicom/${String(dicomPresenter.attachmentId).replace('submission-', '').replace('meeting-', '')}/`
+                    : null
+                )
                 setActivePreviewItem({
                   id: dicomPresenter.attachmentId,
-                  originalId: dicomPresenter.attachmentId,
+                  originalId: dicomPresenter.fileInfo?.original_id || dicomPresenter.attachmentId,
                   name: dicomPresenter.fileInfo?.name || 'Imagerie DICOM',
                   original_filename: dicomPresenter.fileInfo?.name || 'Imagerie DICOM',
                   file_type: 'DICOM',
-                  dicom_url: `/api/conferences/dicom/${dicomPresenter.attachmentId}/`,
+                  dicom_url: targetDicomUrl,
+                  url: dicomPresenter.fileInfo?.url || targetDicomUrl,
                   ...dicomPresenter.fileInfo,
                 })
                 setActiveFormDetail(null)

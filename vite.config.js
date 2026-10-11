@@ -22,6 +22,11 @@ export default defineConfig(({ mode, command }) => {
     plugins: [react()],
     envDir: rootDir,
     base: base,
+    resolve: {
+      alias: {
+        events: "events",
+      },
+    },
     server: {
       port: 3000,
       proxy: {

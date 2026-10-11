@@ -4,6 +4,7 @@ import { getAttachments, deleteAttachment, uploadAttachment, downloadAttachment 
 import { getSubmissions } from '../api/submissionsApi'
 import { formatDate } from '../lib/dateUtils'
 import { Download } from 'lucide-react'
+import DicomModal from '../components/conference/DicomModal'
 
 const FILE_TYPE_LABELS = { PDF: 'PDF', IMAGE: 'Image', VIDEO: 'Video', DICOM: 'DICOM' }
 
@@ -13,6 +14,7 @@ export default function AttachmentsList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [selectedDicom, setSelectedDicom] = useState(null)
   const abortControllerRef = useRef(null)
   const [searchParams] = useSearchParams()
   const filterSubmission = searchParams.get('submission') || ''
@@ -142,6 +144,26 @@ export default function AttachmentsList() {
     return url || ''
   }
 
+  const isDicomAttachment = (a) => {
+    const t = (a?.file_type || '').toUpperCase()
+    const n = (a?.file_name || '').toLowerCase()
+    return t === 'DICOM' || t === 'APPLICATION/DICOM' || n.endsWith('.dcm') || n.endsWith('.dicom') || n.endsWith('.ima')
+  }
+
+  const handleOpenAttachment = (a) => {
+    if (isDicomAttachment(a)) {
+      setSelectedDicom({
+        id: a.id,
+        name: a.file_name || 'DICOM',
+        file: getRelativeUrl(a.file),
+        url: getRelativeUrl(a.file),
+        file_type: 'DICOM',
+      })
+    } else {
+      downloadAttachment(getRelativeUrl(a.file), null)
+    }
+  }
+
   return (
     <div className="list-container">
       <div className="list-header">
@@ -221,7 +243,7 @@ export default function AttachmentsList() {
                       <>
                         <button 
                           className="btn-small btn-outline" 
-                          onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}
+                          onClick={() => handleOpenAttachment(a)}
                         >
                           Ouvrir
                         </button>
@@ -262,7 +284,7 @@ export default function AttachmentsList() {
               <div className="mobile-card-actions">
                 {a.file && (
                   <>
-                    <button className="btn-small btn-outline" onClick={() => downloadAttachment(getRelativeUrl(a.file), null)}>
+                    <button className="btn-small btn-outline" onClick={() => handleOpenAttachment(a)}>
                       Ouvrir
                     </button>
                     <button className="btn-small btn-secondary" onClick={() => downloadAttachment(getRelativeUrl(a.file), a.file_name)}>
@@ -278,6 +300,8 @@ export default function AttachmentsList() {
         </div>
         </>
       )}
+
+      <DicomModal file={selectedDicom} onClose={() => setSelectedDicom(null)} />
     </div>
   )
 }

@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { getSubmission } from '../api/submissionsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
-import { Download, FileText, ExternalLink, Video, Image, Edit } from 'lucide-react'
+import { Download, FileText, ExternalLink, Video, Image, Edit, Scan } from 'lucide-react'
+import DicomModal from '../components/conference/DicomModal'
 import { useAuth } from '../context/AuthContext'
 
 function formatValue(value) {
@@ -84,6 +85,7 @@ export default function FormSubmissionDetail() {
   const [form, setForm] = useState(null)
   const [submission, setSubmission] = useState(null)
   const [attachments, setAttachments] = useState([])
+  const [selectedDicom, setSelectedDicom] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { user } = useAuth()
@@ -205,7 +207,8 @@ export default function FormSubmissionDetail() {
                 <div key={file.id} className="attachment-card" style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
                     <div className={`file-type-icon ${file.file_type.toLowerCase()}`} style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0' }}>
-                      {file.file_type.startsWith('image/') ? <Image size={20} /> : 
+                      {file.file_type?.toUpperCase() === 'DICOM' || file.file_name?.toLowerCase().endsWith('.dcm') || file.file_name?.toLowerCase().endsWith('.dicom') ? <Scan size={20} /> :
+                       file.file_type.startsWith('image/') ? <Image size={20} /> : 
                        file.file_type.startsWith('video/') ? <Video size={20} /> : 
                        <FileText size={20} />}
                     </div>
@@ -220,7 +223,18 @@ export default function FormSubmissionDetail() {
                     <button 
                       onClick={(e) => {
                         e.preventDefault()
-                        downloadAttachment(file.file, null)
+                        const isDicom = file.file_type?.toUpperCase() === 'DICOM' || file.file_name?.toLowerCase().endsWith('.dcm') || file.file_name?.toLowerCase().endsWith('.dicom') || file.file_name?.toLowerCase().endsWith('.ima')
+                        if (isDicom) {
+                          setSelectedDicom({
+                            id: file.id,
+                            name: file.file_name || 'DICOM',
+                            file: file.file,
+                            url: file.file,
+                            file_type: 'DICOM',
+                          })
+                        } else {
+                          downloadAttachment(file.file, null)
+                        }
                       }}
                       className="btn-icon"
                       style={{ color: '#2563eb', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
@@ -246,6 +260,8 @@ export default function FormSubmissionDetail() {
           </section>
         )}
       </div>
+
+      <DicomModal file={selectedDicom} onClose={() => setSelectedDicom(null)} />
     </div>
   )
 }
