@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getPatients, deletePatient } from '../api/patientsApi'
 import { formatDate } from '../lib/dateUtils'
-import { Search, X } from 'lucide-react'
+import { Search, X, Users } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import PageTitle from '../components/PageTitle'
 
 export default function PatientsList() {
   const [patients, setPatients] = useState([])
@@ -103,7 +104,7 @@ export default function PatientsList() {
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>👥 {doctorFilter ? 'Patients du médecin' : user?.role === 'ADMIN' ? 'Patients' : 'Mes Patients'}</h1>
+        <PageTitle icon={Users}>{doctorFilter ? 'Patients du médecin' : user?.role === 'ADMIN' ? 'Patients' : 'Mes Patients'}</PageTitle>
         {user?.role !== 'COORDINATEUR' && (
           <button
             className="btn-primary"
@@ -218,7 +219,7 @@ export default function PatientsList() {
                       <td>{formatDate(patient.birth_date)}</td>
                       <td>
                         <span className="gender-badge">
-                          {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : '⚪ Autre'}
+                          {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : 'Autre'}
                         </span>
                       </td>
                       <td>{patient.anonymized_code || '-'}</td>
@@ -279,7 +280,7 @@ export default function PatientsList() {
                       </div>
                     </div>
                     <span className="gender-badge">
-                      {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : '⚪ Autre'}
+                      {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : 'Autre'}
                     </span>
                   </div>
                   <div className="mobile-card-body">

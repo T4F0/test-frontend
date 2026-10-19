@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, FileText, Trash2, ClipboardList } from 'lucide-react';
 import { formatDate } from '../lib/dateUtils';
+import StatusBadge from './StatusBadge';
 
 export default function MedicalCaseCard({ submission, onRemove, onViewDetails, activeDetailId, currentUserRole }) {
   const navigate = useNavigate();
@@ -11,15 +12,7 @@ export default function MedicalCaseCard({ submission, onRemove, onViewDetails, a
     <div className={`medical-case-card ${isActive ? 'medical-case-card--active' : ''}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>{submission.patient_name}</h4>
-        <span style={{
-          fontSize: '0.7rem',
-          padding: '2px 8px',
-          borderRadius: '999px',
-          backgroundColor: '#eff6ff',
-          color: '#1e40af',
-          fontWeight: 600,
-          textTransform: 'uppercase'
-        }}>{submission.status}</span>
+        <StatusBadge status={submission.status} />
       </div>
       <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>{submission.form_name}</p>
       <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>Soumis le {formatDate(submission.created_at)}</p>

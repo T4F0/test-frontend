@@ -1,6 +1,15 @@
 import React from 'react'
 import { X, FileText } from 'lucide-react'
 
+const STATUS_LABELS = {
+  DRAFT: 'Brouillon',
+  SUBMITTED: 'Soumis',
+  VALIDATED: 'Validé',
+  APPROVED: 'Approuvé',
+  REJECTED: 'Rejeté',
+  ARCHIVED: 'Archivé',
+}
+
 function formatFieldValue(value) {
   if (value === true) return 'Oui'
   if (value === false) return 'Non'
@@ -87,7 +96,7 @@ export default function MainStageFormDetails({ form, submission, attachments, on
           </div>
           <div className="submission-detail-meta-item">
             <span className="submission-detail-meta-label">Statut</span>
-            <span className="badge">{submission.status}</span>
+            <span className="badge">{STATUS_LABELS[submission.status] || submission.status}</span>
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
 import { Video, Calendar, Clock, Users, ArrowRight, Loader } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
+import PageTitle from '../components/PageTitle'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 
@@ -119,7 +120,7 @@ export default function MeetingsList() {
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>📅 Réunions RCP</h1>
+        <PageTitle icon={Calendar}>Réunions RCP</PageTitle>
         <div className="list-header-actions">
           <select
             value={filter}
@@ -203,13 +204,13 @@ export default function MeetingsList() {
                               id={`ask-join-${m.id}`}
                             >
                               <Video size={14} />
-                              {isLoading ? 'Envoi...' : isSent ? '⏳ En attente...' : 'Demander à rejoindre'}
+                              {isLoading ? 'Envoi...' : isSent ? 'En attente…' : 'Demander à rejoindre'}
                             </button>
                           )
                         }
 
                         // Standard join/start button
-                        const buttonText = isCoordinatorOrAdmin ? 'Démarrer' : 'Rejoindre'
+                        const buttonText = m.status === 'LIVE' || !isCoordinatorOrAdmin ? 'Rejoindre' : 'Démarrer'
                         let disableReason = ""
                         if (!isToday) {
                           disableReason = "La réunion n'est accessible que le jour prévu"
@@ -286,11 +287,11 @@ export default function MeetingsList() {
                             style={{ padding: '0.4rem 0.8rem' }}
                           >
                             <Video size={14} />
-                            {state === 'loading' ? 'Envoi...' : state === 'sent' ? '⏳ En attente' : 'Demander à rejoindre'}
+                            {state === 'loading' ? 'Envoi...' : state === 'sent' ? 'En attente…' : 'Demander à rejoindre'}
                           </button>
                         )
                       }
-                      const buttonText = isCoordinatorOrAdmin ? 'Démarrer' : 'Rejoindre'
+                      const buttonText = m.status === 'LIVE' || !isCoordinatorOrAdmin ? 'Rejoindre' : 'Démarrer'
                       let disableReason = !isToday ? "Pas accessible aujourd'hui" : (!isCoordinatorOrAdmin && m.status !== 'LIVE') ? "Pas encore commencé" : ""
                       return (
                         <button 

@@ -90,7 +90,7 @@ h1, h2, h3, h4, h5, h6 {
   flex-wrap: nowrap;
 }
 
-.navbar h1 {
+.navbar .brand-title {
   font-size: 1.25rem;
   margin: 0;
   font-weight: 700;
@@ -99,7 +99,7 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 0;
 }
 
-.navbar h1 a {
+.navbar .brand-title a {
   color: var(--primary);
   text-decoration: none;
   display: flex;
@@ -178,10 +178,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Progressive scaling to prevent overflow on medium screens */
 @media (min-width: 769px) and (max-width: 1440px) {
-  .navbar h1 {
+  .navbar .brand-title {
     font-size: 1.15rem;
   }
-  .navbar h1 a {
+  .navbar .brand-title a {
     gap: 0.4rem;
   }
   .navbar .container {
@@ -208,7 +208,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (min-width: 769px) and (max-width: 1240px) {
-  .navbar h1 {
+  .navbar .brand-title {
     font-size: 1.05rem;
   }
   .navbar .container {
@@ -238,7 +238,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (min-width: 769px) and (max-width: 1080px) {
-  .navbar h1 {
+  .navbar .brand-title {
     font-size: 1rem;
   }
   .navbar nav {
@@ -499,14 +499,14 @@ h1, h2, h3, h4, h5, h6 {
     gap: 0.5rem;
   }
 
-  .navbar h1 {
+  .navbar .brand-title {
     text-align: left;
     font-size: 1.05rem;
     margin: 0;
     flex-shrink: 0;
   }
 
-  .navbar h1 a {
+  .navbar .brand-title a {
     justify-content: flex-start;
     gap: 0.4rem;
   }
@@ -3663,4 +3663,54 @@ body.theme-medecin_expert .navbar {
   cursor: pointer;
   accent-color: var(--primary);
   margin: 0;
+}
+
+/* ===== Shared: page title, status pill, brand ===== */
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.page-title .page-title-icon {
+  flex: none;
+  color: var(--primary, currentColor);
+}
+
+.status-pill {
+  --pill-color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pill-color) 14%, white);
+  border: 1px solid color-mix(in srgb, var(--pill-color) 40%, white);
+  color: color-mix(in srgb, var(--pill-color) 75%, black);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* An element promoted to <h1> for document structure that must keep the look of an <h2> */
+.as-h2 {
+  font-size: 1.5em;
+  margin-block: 0.83em;
+}
+
+/* Inline text links need a comfortable hit area */
+.login-footer a {
+  display: inline-block;
+  padding: 0.3rem 0.1rem;
+}
+
+.pagination-bar__btn {
+  height: 36px;
+}
+
+/* Patient page: field labels were 11 px */
+.patient-detail-container .info-label,
+.patient-detail-container [class*="label"] {
+  font-size: max(12px, 0.75rem);
 }

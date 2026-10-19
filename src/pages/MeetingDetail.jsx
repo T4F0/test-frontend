@@ -12,6 +12,7 @@ import { formatDate, formatDateTime } from '../lib/dateUtils'
 import MeetingSummary from '../components/MeetingSummary'
 import DoctorCaseSection from '../components/DoctorCaseSection'
 import DicomModal from '../components/conference/DicomModal'
+import PageTitle from '../components/PageTitle'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
@@ -325,7 +326,7 @@ export default function MeetingDetail() {
   return (
     <div className="meeting-detail-container">
       <div className="detail-header">
-        <h1>📅 {meeting.title || 'Détails de la réunion RCP'}</h1>
+        <PageTitle icon={Calendar}>{meeting.title || 'Détails de la réunion RCP'}</PageTitle>
         <div className="detail-actions">
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
@@ -416,7 +417,7 @@ export default function MeetingDetail() {
           />
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ margin: 0 }}>📑 Dossiers à l'ordre du jour</h2>
+            <PageTitle as="h2" icon={ClipboardList} size={22}>Dossiers à l'ordre du jour</PageTitle>
             <button 
               onClick={() => setShowAddSubModal(true)}
               className="btn-small btn-primary btn-with-icon"

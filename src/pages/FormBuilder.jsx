@@ -21,7 +21,7 @@ import {
 } from '@dnd-kit/sortable'
 import { SortableItem } from '../components/SortableItem'
 import DecisionOptionsModal from '../components/DecisionOptionsModal'
-import { Gavel } from 'lucide-react'
+import { Gavel, Monitor } from 'lucide-react'
 
 export default function FormBuilder() {
   const { id } = useParams()
@@ -388,14 +388,14 @@ export default function FormBuilder() {
   return (
     <div className="form-builder">
       <div className="desktop-only-banner">
-        <span className="desktop-only-icon">🖥️</span>
+        <Monitor className="desktop-only-icon" size={28} aria-hidden="true" />
         <div>
           <strong>Éditeur de formulaire</strong>
           <p>La construction de formulaires avec glisser-déposer nécessite un ordinateur. Veuillez utiliser un appareil de bureau ou une tablette en mode paysage.</p>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <h2 style={{ margin: 0 }}>{isEdit ? 'Modifier le formulaire' : 'Créer un nouveau formulaire'}</h2>
+        <h1 className="as-h2" style={{ margin: 0 }}>{isEdit ? 'Modifier le formulaire' : 'Créer un nouveau formulaire'}</h1>
         {isEdit && form.id && (
           <button
             type="button"

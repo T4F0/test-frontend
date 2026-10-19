@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { forgotPassword } from '../api/authApi'
-import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { Mail, ArrowLeft, CheckCircle2, Activity } from 'lucide-react'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -27,7 +27,7 @@ export default function ForgotPassword() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>🏥 e-RCP Algerie</h1>
+        <h1><Activity size={26} aria-hidden="true" style={{ verticalAlign: '-4px', marginRight: 8 }} />e-RCP Algerie</h1>
         <p className="login-subtitle">Réinitialisation de mot de passe</p>
 
         {success ? (

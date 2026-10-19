@@ -1,5 +1,8 @@
 import { useEffect, useRef, useMemo } from 'react'
+import { Hand, MicOff, MonitorUp } from 'lucide-react'
 import { resolveApiUrl } from '../../api/config'
+import { avatarHue, initialsOf } from '../../lib/avatar'
+
 
 /**
  * Dynamic video grid layout for conference participants.
@@ -35,6 +38,9 @@ export default function VideoGrid({
     {
       id: currentUserId,
       label: 'Vous',
+      displayName: currentParticipant?.first_name
+        ? `${currentParticipant.first_name} ${currentParticipant.last_name || ''}`.trim()
+        : currentParticipant?.username || 'Vous',
       stream: localDisplayStream,
       isMuted,
       isCameraOff: screenSharer && String(screenSharer) === String(currentUserId) ? false : isCameraOff,
@@ -54,6 +60,7 @@ export default function VideoGrid({
       return {
         id: p.user_id,
         label: p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : p.username || 'Participant',
+        displayName: p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : p.username || 'Participant',
         stream: stream || null,
         role: p.role,
         userRole: p.user_role,
@@ -103,6 +110,10 @@ export default function VideoGrid({
                   <VideoTile
                     stream={tile.stream}
                     label={tile.label}
+          displayName={tile.displayName}
+          userId={tile.id}
+                    displayName={tile.displayName}
+                    userId={tile.id}
                     role={tile.role}
                     userRole={tile.userRole}
                     isMuted={tile.isMuted}
@@ -142,6 +153,8 @@ export default function VideoGrid({
           key={tile.id || 'local'}
           stream={tile.stream}
           label={tile.label}
+          displayName={tile.displayName}
+          userId={tile.id}
           role={tile.role}
           userRole={tile.userRole}
           isMuted={tile.isMuted}
@@ -156,7 +169,7 @@ export default function VideoGrid({
   )
 }
 
-function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRaised, isScreenSharer, profilePicture, variant }) {
+function VideoTile({ stream, label, displayName, userId, role, isMuted, isCameraOff, isLocal, handRaised, isScreenSharer, profilePicture, variant }) {
   const videoRef = useRef(null)
 
   useEffect(() => {
@@ -217,18 +230,24 @@ function VideoTile({ stream, label, role, isMuted, isCameraOff, isLocal, handRai
               }}
             />
           ) : (
-            <div className={`avatar-circle ${variant === 'filmstrip' ? 'avatar-sm' : ''}`}>
-              {(label || '?')[0].toUpperCase()}
+            <div
+              className={`avatar-circle ${variant === 'filmstrip' ? 'avatar-sm' : ''}`}
+              style={{ '--avatar-hue': avatarHue(userId ?? displayName ?? label) }}
+            >
+              {initialsOf(displayName || label)}
             </div>
           )}
         </div>
       )}
       <div className="video-overlay">
-        <span className="video-name">{label}{role === 'HOST' && <span className="host-badge">Hôte</span>}</span>
+        <span className="video-name" title={displayName || label}>
+          <span className="video-name-text">{label}</span>
+          {role === 'HOST' && <span className="host-badge">Hôte</span>}
+        </span>
         <div className="video-indicators">
-          {isMuted && <span className="indicator muted-indicator">🔇</span>}
-          {handRaised && <span className="indicator hand-indicator">✋</span>}
-          {isScreenSharer && <span className="indicator screen-indicator">🖥️</span>}
+          {handRaised && <span className="indicator hand-indicator" title="Main levée"><Hand size={14} /></span>}
+          {isScreenSharer && <span className="indicator screen-indicator" title="Partage d'écran"><MonitorUp size={14} /></span>}
+          {isMuted && <span className="indicator muted-indicator" title="Micro coupé"><MicOff size={14} /></span>}
         </div>
       </div>
     </div>

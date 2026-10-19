@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { removeUnauthorizedAccount } from '../api/authApi'
-import { Trash2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react'
+import { Trash2, CheckCircle2, XCircle, ArrowRight, Activity } from 'lucide-react'
 
 export default function RemoveAccount() {
   const { uidb64, token } = useParams()
@@ -38,7 +38,7 @@ export default function RemoveAccount() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>🏥 e-RCP Algerie</h1>
+        <h1><Activity size={26} aria-hidden="true" style={{ verticalAlign: '-4px', marginRight: 8 }} />e-RCP Algerie</h1>
         <p className="login-subtitle">Suppression du compte</p>
 
         {loading ? (

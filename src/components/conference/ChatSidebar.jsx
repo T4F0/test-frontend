@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { MessageSquare, Send } from 'lucide-react'
+import { MessageSquare, Send, X } from 'lucide-react'
 
 /**
  * Real-time chat sidebar for the conference.
@@ -35,11 +35,11 @@ export default function ChatSidebar({
           <MessageSquare size={18} />
           Chat
         </h3>
-        <button className="sidebar-close" onClick={onToggle}>×</button>
+        <button type="button" className="sidebar-close" onClick={onToggle} aria-label="Fermer le panneau"><X size={18} /></button>
       </div>
       <div className="sidebar-content chat-messages">
         {messages.length === 0 && (
-          <div className="chat-empty">Aucun message pour le moment. Commencez la conversation !</div>
+          <div className="chat-empty"><MessageSquare size={30} /><strong>Aucun message</strong><span>Commencez la conversation.</span></div>
         )}
         {messages.map((msg, i) => (
           <div
@@ -73,8 +73,8 @@ export default function ChatSidebar({
           placeholder="Tapez un message..."
           autoComplete="off"
         />
-        <button type="submit" disabled={!input.trim()} title="Envoyer">
-          <Send size={18} />
+        <button type="submit" disabled={!input.trim()} title="Envoyer" aria-label="Envoyer le message">
+          <Send size={19} />
         </button>
       </form>
     </div>

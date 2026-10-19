@@ -5,11 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import UserAvatar from '../components/UserAvatar'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 import { validatePhoneNumber } from '../lib/validators'
-import {
-  User, Mail, Phone, MapPin, Activity, Lock, Edit3, Save, X,
-  CheckCircle2, AlertCircle, Shield, ChevronRight, Building2, BadgeCheck, Camera, Trash2,
-  ZoomIn, ZoomOut, RotateCcw, Check
-} from 'lucide-react'
+import { User, Mail, Phone, MapPin, Activity, Lock, Edit3, Save, X, CheckCircle2, AlertCircle, Shield, ChevronRight, Building2, BadgeCheck, Camera, Trash2, ZoomIn, ZoomOut, RotateCcw, Check, Eye, EyeOff } from 'lucide-react'
 
 const ROLE_LABELS = {
   MEDECIN: 'Médecin traitant',
@@ -990,7 +986,7 @@ function PasswordField({ label, value, onChange, show, onToggle, placeholder, re
             padding: '0.25rem', fontSize: '0.8rem', fontWeight: 600
           }}
         >
-          {show ? '🙈' : '👁️'}
+          {show ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
         </button>
       </div>
     </div>

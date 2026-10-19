@@ -276,10 +276,10 @@ export default function FormSubmission() {
         ))}
 
         <div className="form-actions">
-          <button type="submit" disabled={submitting}>
+          <button type="submit" className="btn-primary" disabled={submitting}>
             {submitting ? 'Envoi en cours...' : (isEditing ? 'Mettre à jour' : 'Soumettre le formulaire')}
           </button>
-          <button type="button" onClick={() => navigate(-1)}>
+          <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
             Annuler
           </button>
         </div>

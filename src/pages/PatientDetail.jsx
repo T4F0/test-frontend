@@ -5,24 +5,13 @@ import { getSubmissionsByPatient, markSubmissionStatus, deleteSubmission } from 
 import { getReportsByPatient } from '../api/reportsApi'
 import { formatDate } from '../lib/dateUtils'
 import { useAuth } from '../context/AuthContext'
+import { SUBMISSION_STATUS_COLORS, SUBMISSION_STATUS_LABELS, SUBMISSION_STATUS_OPTIONS } from '../lib/labels'
+import { UserRound, Share2, ClipboardList, Scale, Stethoscope, Eye, Pencil, Paperclip, FileText, Trash2 } from 'lucide-react'
+import PageTitle from '../components/PageTitle'
 
-const STATUS_LABELS = {
-  NOUVEAU:      'Nouveau',
-  A_REDISCUTER: 'À rediscuter',
-  CLOTURE:      'Clôturé',
-}
-
-const STATUS_COLORS = {
-  NOUVEAU:      '#3b82f6', // bleu
-  A_REDISCUTER: '#f97316', // orange
-  CLOTURE:      '#6b7280', // gris
-}
-
-const ALL_STATUSES = [
-  { value: 'NOUVEAU',      label: 'Nouveau' },
-  { value: 'A_REDISCUTER', label: 'À rediscuter' },
-  { value: 'CLOTURE',      label: 'Clôturé' },
-]
+const STATUS_LABELS = SUBMISSION_STATUS_LABELS
+const STATUS_COLORS = SUBMISSION_STATUS_COLORS
+const ALL_STATUSES = SUBMISSION_STATUS_OPTIONS
 
 export default function PatientDetail() {
   const { id } = useParams()
@@ -219,7 +208,7 @@ export default function PatientDetail() {
   return (
     <div className="patient-detail-container">
       <div className="detail-header">
-        <h1>👤 Dossier Patient : {`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}</h1>
+        <PageTitle icon={UserRound}>Dossier patient : {`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}</PageTitle>
         <div className="detail-actions">
           {/* Partage du dossier commented out
           {canShare && (
@@ -268,7 +257,7 @@ export default function PatientDetail() {
               <label>Sexe</label>
               <p>
                 <span className="gender-badge">
-                  {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : '⚪ Autre'}
+                  {patient.gender === 'M' ? '♂ Homme' : patient.gender === 'F' ? '♀ Femme' : 'Autre'}
                 </span>
               </p>
             </div>
@@ -286,7 +275,7 @@ export default function PatientDetail() {
         {/* Partage du dossier section commented out
         <div className="detail-section share-section">
           <div className="share-header">
-            <h2>🤝 Partage du dossier</h2>
+            <PageTitle as="h2" icon={Share2} size={20}>Partage du dossier</PageTitle>
             {canShare && (
               <button className="btn-secondary" onClick={toggleSharePanel}>
                 {shareOpen ? 'Fermer' : 'Gérer le partage'}
@@ -428,7 +417,7 @@ export default function PatientDetail() {
 
         <div className="detail-section submissions-section">
           <div className="section-header-row">
-            <h2>📑 Dossiers RCP</h2>
+            <PageTitle as="h2" icon={ClipboardList} size={20}>Dossiers RCP</PageTitle>
             {user?.role !== 'COORDINATEUR' && (
               <button className="btn-primary" onClick={() => navigate('/cases/new', { state: { preselectPatientId: id } })}>
                 + Nouveau Dossier
@@ -473,7 +462,7 @@ export default function PatientDetail() {
                       </div>
                       <div className="submission-card-title">{sub.form_name}</div>
                       {sub.submitted_by_name && (
-                        <div className="submission-card-doctor">{sub.submitted_by_name}</div>
+                        <div className="submission-card-doctor"><Stethoscope size={14} aria-hidden="true" />{sub.submitted_by_name}</div>
                       )}
                     </div>
 
@@ -481,7 +470,7 @@ export default function PatientDetail() {
                     {subReports.length > 0 && expandedDecisions[sub.id] && (
                       <div className="rcp-decisions-section">
                         <div className="rcp-decisions-label">
-                          <span className="rcp-decisions-label-icon">⚖️</span>
+                          <Scale className="rcp-decisions-label-icon" size={14} aria-hidden="true" />
                           Décision{subReports.length > 1 ? 's' : ''} RCP
                         </div>
                         {subReports.map((report, idx) => (
@@ -500,7 +489,7 @@ export default function PatientDetail() {
                               <div className="rcp-decision-card-footer">
                                 {report.written_by_name && (
                                   <span className="rcp-decision-author">
-                                    🩺 {report.written_by_name}
+                                    <Stethoscope size={13} aria-hidden="true" /> {report.written_by_name}
                                   </span>
                                 )}
                                 <span className="rcp-decision-date">
@@ -524,21 +513,21 @@ export default function PatientDetail() {
                               onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}`)}
                               title="Voir les détails"
                             >
-                              👁️ Voir
+                              <Eye size={15} aria-hidden="true" /> Voir
                             </button>
                             <button
                               className="btn-small btn-secondary"
                               onClick={() => navigate(`/forms/${sub.form}/submissions/${sub.id}/edit`)}
                               title="Modifier la soumission"
                             >
-                              ✏️ Modifier
+                              <Pencil size={15} aria-hidden="true" /> Modifier
                             </button>
                             <button
                               className="btn-small btn-secondary"
                               onClick={() => navigate(`/attachments?submission=${sub.id}`)}
                               title="Gérer les pièces jointes"
                             >
-                              📎 Fichiers
+                              <Paperclip size={15} aria-hidden="true" /> Fichiers
                             </button>
                           </div>
 
@@ -570,7 +559,7 @@ export default function PatientDetail() {
                                 onClick={() => toggleDecisions(sub.id)}
                                 title={expandedDecisions[sub.id] ? "Masquer les décisions" : "Voir les décisions"}
                               >
-                                ⚖️ {expandedDecisions[sub.id] ? 'Masquer déc.' : 'Voir déc.'}
+                                <Scale size={15} aria-hidden="true" /> {expandedDecisions[sub.id] ? 'Masquer la décision' : 'Voir la décision'}
                               </button>
                             )}
                             <button
@@ -578,7 +567,7 @@ export default function PatientDetail() {
                               onClick={() => navigate(`/reports?submission=${sub.id}`)}
                               title="Voir le rapport RCP"
                             >
-                              📑 Rapport RCP
+                              <FileText size={15} aria-hidden="true" /> Rapport RCP
                             </button>
                             {(user?.role === 'ADMIN' || user?.role === 'MEDECIN') && (
                               <button
@@ -586,7 +575,7 @@ export default function PatientDetail() {
                                 onClick={() => handleDeleteSubmission(sub.id)}
                                 title="Supprimer le dossier"
                               >
-                                🗑️ Supprimer
+                                <Trash2 size={15} aria-hidden="true" /> Supprimer
                               </button>
                             )}
                           </div>

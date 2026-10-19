@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { resetPasswordConfirm } from '../api/authApi'
-import { Lock, CheckCircle2, ArrowRight } from 'lucide-react'
+import { Lock, CheckCircle2, ArrowRight, Activity } from 'lucide-react'
 
 export default function ResetPasswordConfirm() {
   const { uidb64, token } = useParams()
@@ -42,7 +42,7 @@ export default function ResetPasswordConfirm() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>🏥 e-RCP Algerie</h1>
+        <h1><Activity size={26} aria-hidden="true" style={{ verticalAlign: '-4px', marginRight: 8 }} />e-RCP Algerie</h1>
         <p className="login-subtitle">Définir un nouveau mot de passe</p>
 
         {success ? (

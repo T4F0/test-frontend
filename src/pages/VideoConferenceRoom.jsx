@@ -23,16 +23,25 @@ import ConferenceControls from '../components/conference/ConferenceControls'
 import ParticipantList from '../components/conference/ParticipantList'
 import ChatSidebar from '../components/conference/ChatSidebar'
 import MedicalCasesSidebar from '../components/conference/MedicalCasesSidebar'
+import AdmissionsSidebar from '../components/conference/AdmissionsSidebar'
 import MainStageFileViewer from '../components/conference/MainStageFileViewer'
 import MainStageFormDetails from '../components/conference/MainStageFormDetails'
 import AttachmentsStrip from '../components/conference/AttachmentsStrip'
 import { getSubmission } from '../api/submissionsApi'
 import { getForm } from '../api/formsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
-import { Users, MessageSquare, ClipboardList, Clock, UserCheck, X, Check, XCircle } from 'lucide-react'
+import { Users, MessageSquare, ClipboardList, Clock, UserCheck, X, Bell } from 'lucide-react'
 import { dicomEndpointFor } from '../lib/dicomIds'
 import '../conference.css'
+import '../conference-ui.css'
 
+
+const CONFERENCE_STATUS_LABELS = {
+  SCHEDULED: 'Planifiée',
+  ACTIVE: 'En cours',
+  ENDED: 'Terminée',
+  CANCELLED: 'Annulée',
+}
 
 export default function VideoConferenceRoom() {
   const { roomId } = useParams()
@@ -45,12 +54,19 @@ export default function VideoConferenceRoom() {
   const [chatMessages, setChatMessages] = useState([])
   const [showParticipants, setShowParticipants] = useState(false)
   const [showChat, setShowChat] = useState(false)
+  // Number of chat messages the user has already seen (everything up to here is read)
+  const [chatReadCount, setChatReadCount] = useState(0)
   const [showCases, setShowCases] = useState(false)
   const [activePreviewItem, setActivePreviewItem] = useState(null)
   // Participants stay visible in a floating strip while a file or dossier fills the stage
-  const [pipCollapsed, setPipCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 900
-  )
+  const [pipCollapsed, setPipCollapsed] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('conference.pipCollapsed')
+      return saved === null ? true : saved === '1'
+    } catch (e) {
+      return true
+    }
+  })
   const [hasConnectedOnce, setHasConnectedOnce] = useState(false)
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -744,7 +760,16 @@ export default function VideoConferenceRoom() {
     return `${m}:${String(s).padStart(2, '0')}`
   }
 
-  const unreadCount = chatMessages.filter((m) => m.message_type !== 'SYSTEM' && !showChat).length
+  // While the chat panel is open every message is being seen
+  useEffect(() => {
+    if (showChat) setChatReadCount(chatMessages.length)
+  }, [showChat, chatMessages.length])
+
+  const unreadCount = showChat
+    ? 0
+    : chatMessages
+        .slice(chatReadCount)
+        .filter((m) => m.message_type !== 'SYSTEM' && String(m.sender_user_id) !== String(user?.id)).length
   const raisedHands = participants.filter((p) => p.hand_raised)
 
   if (loading) {
@@ -824,7 +849,7 @@ export default function VideoConferenceRoom() {
           <h2>{conference?.meeting_title || 'Rejoindre la conférence'}</h2>
           <p className="lobby-room">Salle : <strong>{roomId}</strong></p>
           <p className="lobby-status">
-            Statut : <span className={`status-${conference?.status?.toLowerCase()}`}>{conference?.status}</span>
+            Statut : <span className={`status-${conference?.status?.toLowerCase()}`}>{CONFERENCE_STATUS_LABELS[conference?.status] || conference?.status}</span>
           </p>
           <div className="lobby-participants">
             <Users size={16} />
@@ -852,17 +877,15 @@ export default function VideoConferenceRoom() {
         <div
           className={`join-request-toast ${isToastLeaving ? 'leaving' : ''}`}
           id="join-request-toast"
+          role="status"
         >
-          <div style={{ fontSize: '1.5rem' }}>🔔</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.9rem' }}>Demande d'accès</div>
-            <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{joinToast.message}</div>
+          <div className="toast-icon"><Bell size={20} /></div>
+          <div className="toast-body">
+            <strong>Demande d'accès</strong>
+            <span>{joinToast.message}</span>
           </div>
-          <button
-            onClick={dismissToast}
-            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem' }}
-          >
-            <X size={16} />
+          <button type="button" className="toast-close" onClick={dismissToast} aria-label="Fermer la notification">
+            <X size={18} />
           </button>
         </div>
       )}
@@ -873,8 +896,10 @@ export default function VideoConferenceRoom() {
         </div>
         <div className="header-center">
           {conference?.started_at && (
-            <div className="meeting-timer">
-              <Clock size={16} />
+            <div className="meeting-timer" title="Durée de la réunion">
+              <span className="live-dot" aria-hidden="true" />
+              <span className="live-text">En cours</span>
+              <Clock size={15} />
               <span>{formatTime(elapsedTime)}</span>
             </div>
           )}
@@ -884,24 +909,30 @@ export default function VideoConferenceRoom() {
             className={`toolbar-btn ${showParticipants ? 'active' : ''}`}
             onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); setShowCases(false); setShowAdmissions(false); }}
             title="Participants"
+            aria-pressed={showParticipants}
           >
-            <Users size={18} />
+            <Users size={19} />
+            <span className="toolbar-label">Participants</span>
             <span className="toolbar-count">{participants.length}</span>
           </button>
           <button
             className={`toolbar-btn ${showChat ? 'active' : ''}`}
             onClick={() => { setShowChat(!showChat); setShowParticipants(false); setShowCases(false); setShowAdmissions(false); }}
             title="Chat"
+            aria-pressed={showChat}
           >
-            <MessageSquare size={18} />
-            {!!unreadCount && <span className="toolbar-count">{unreadCount}</span>}
+            <MessageSquare size={19} />
+            <span className="toolbar-label">Chat</span>
+            {!!unreadCount && <span className="toolbar-count is-alert">{unreadCount}</span>}
           </button>
           <button
             className={`toolbar-btn ${showCases ? 'active' : ''}`}
             onClick={() => { setShowCases(!showCases); setShowParticipants(false); setShowChat(false); setShowAdmissions(false); }}
             title="Dossiers Médicaux"
+            aria-pressed={showCases}
           >
-            <ClipboardList size={18} />
+            <ClipboardList size={19} />
+            <span className="toolbar-label">Dossiers</span>
           </button>
           {isHost && (
             <button
@@ -911,9 +942,10 @@ export default function VideoConferenceRoom() {
               id="admissions-btn"
               style={{ position: 'relative' }}
             >
-              <UserCheck size={18} />
+              <UserCheck size={19} />
+              <span className="toolbar-label">Admissions</span>
               {joinRequests.length > 0 && (
-                <span className="toolbar-count" style={{ background: '#ef4444' }}>{joinRequests.length}</span>
+                <span className="toolbar-count is-alert">{joinRequests.length}</span>
               )}
             </button>
           )}
@@ -1016,7 +1048,11 @@ export default function VideoConferenceRoom() {
               <button
                 type="button"
                 className="pip-toggle"
-                onClick={() => setPipCollapsed((v) => !v)}
+                onClick={() => {
+                  const next = !pipCollapsed
+                  setPipCollapsed(next)
+                  try { window.localStorage.setItem('conference.pipCollapsed', next ? '1' : '0') } catch (e) {}
+                }}
                 aria-expanded={!pipCollapsed}
                 title={pipCollapsed ? 'Afficher les participants' : 'Réduire la vidéo'}
               >
@@ -1100,132 +1136,12 @@ export default function VideoConferenceRoom() {
 
         {/* Host Admissions Sidebar */}
         {isHost && showAdmissions && (
-          <div
-            className="sidebar-panel"
-            style={{
-              width: 320,
-              height: '100%',
-              maxHeight: '100%',
-              background: '#0f172a',
-              borderLeft: '1px solid rgba(59,130,246,0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-            id="admissions-sidebar"
-          >
-            <div style={{
-              padding: '1rem 1.25rem',
-              borderBottom: '1px solid rgba(59,130,246,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <UserCheck size={18} color="#60a5fa" />
-                <strong style={{ color: '#e2e8f0' }}>Demandes d'accès</strong>
-                {joinRequests.length > 0 && (
-                  <span style={{
-                    background: '#ef4444',
-                    color: '#fff',
-                    borderRadius: '10px',
-                    padding: '0 6px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}>{joinRequests.length}</span>
-                )}
-              </div>
-              <button
-                onClick={() => setShowAdmissions(false)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="sidebar-content" style={{ padding: '0.75rem' }}>
-              {joinRequests.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem 0', fontSize: '0.9rem' }}>
-                  Aucune demande en attente
-                </div>
-              ) : (
-                joinRequests.map(req => (
-                  <div
-                    key={req.id}
-                    style={{
-                      background: 'rgba(30,58,138,0.3)',
-                      border: '1px solid rgba(59,130,246,0.2)',
-                      borderRadius: '10px',
-                      padding: '0.875rem',
-                      marginBottom: '0.625rem',
-                    }}
-                    id={`join-req-${req.id}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
-                      <div style={{
-                        width: 36, height: 36,
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 700, color: '#fff', fontSize: '0.9rem', flexShrink: 0,
-                      }}>
-                        {req.user_name?.[0]?.toUpperCase() || '?'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '0.875rem', truncate: true }}>
-                          {req.user_name}
-                        </div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{req.user_role}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        onClick={() => handleAcceptJoinRequest(req.id)}
-                        style={{
-                          flex: 1,
-                          background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                          border: 'none',
-                          borderRadius: '8px',
-                          color: '#fff',
-                          padding: '0.5rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.35rem',
-                          fontWeight: 600,
-                          fontSize: '0.8rem',
-                        }}
-                        id={`accept-req-${req.id}`}
-                      >
-                        <Check size={14} /> Accepter
-                      </button>
-                      <button
-                        onClick={() => handleRejectJoinRequest(req.id)}
-                        style={{
-                          flex: 1,
-                          background: 'rgba(239,68,68,0.2)',
-                          border: '1px solid rgba(239,68,68,0.4)',
-                          borderRadius: '8px',
-                          color: '#f87171',
-                          padding: '0.5rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.35rem',
-                          fontWeight: 600,
-                          fontSize: '0.8rem',
-                        }}
-                        id={`reject-req-${req.id}`}
-                      >
-                        <XCircle size={14} /> Refuser
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <AdmissionsSidebar
+            requests={joinRequests}
+            onAccept={handleAcceptJoinRequest}
+            onReject={handleRejectJoinRequest}
+            onClose={() => setShowAdmissions(false)}
+          />
         )}
 
       </div>

@@ -10,11 +10,7 @@ import {
   deleteDecisionOption,
   reorderDecisionOptions,
 } from '../api/decisionOptionsApi'
-import {
-  Settings, Upload, Trash2, Users, Plus, X, ChevronDown,
-  ChevronUp, Check, Image as ImageIcon, ToggleLeft, ToggleRight,
-  GripVertical, Gavel, ArrowUp, ArrowDown, Pencil,
-} from 'lucide-react'
+import { Settings, Upload, Trash2, Users, Plus, X, ChevronDown, ChevronUp, Check, Image as ImageIcon, ToggleLeft, ToggleRight, GripVertical, Gavel, ArrowUp, ArrowDown, Pencil, Monitor } from 'lucide-react'
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -786,7 +782,7 @@ function DecisionOptionsSection({ service }) {
               </form>
 
               <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                💡 Utilisez les flèches pour réordonner les propositions. Les options désactivées restent visibles dans les anciens comptes-rendus mais ne sont plus proposées aux coordinateurs.
+                Astuce : utilisez les flèches pour réordonner les propositions. Les options désactivées restent visibles dans les anciens comptes-rendus mais ne sont plus proposées aux coordinateurs.
               </div>
             </>
           )}
@@ -840,7 +836,7 @@ export default function ServiceSettings() {
   return (
     <>
       <div className="desktop-only-banner">
-        <span className="desktop-only-icon">🖥️</span>
+        <Monitor className="desktop-only-icon" size={28} aria-hidden="true" />
         <div>
           <strong>Paramètres</strong>
           <p>La gestion des paramètres nécessite un ordinateur. Veuillez utiliser un appareil de bureau.</p>
@@ -902,9 +898,9 @@ export default function ServiceSettings() {
                 {initials(selectedService.name) || '?'}
               </div>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>
+                <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>
                   {selectedService.name}
-                </h2>
+                </h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '3px' }}>
                   <code style={{ fontSize: '0.78rem', color: '#64748b' }}>{selectedService.slug}</code>
                   <span style={{

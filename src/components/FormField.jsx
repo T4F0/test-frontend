@@ -7,28 +7,33 @@ export default function FormField({ field, value, onChange }) {
     required: field.required,
   }
 
+  const isSingleCheckbox =
+    field.field_type === 'checkbox' && (!field.options || field.options.length === 0)
+
   return (
     <div className="form-field">
-      <label htmlFor={baseProps.id} style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', color: 'var(--gray-900)' }}>
-        {field.name}
-        {field.required && <span className="required">*</span>}
-        {field.show_rdv && (
-          <span 
-            title="Champ Report"
-            style={{ 
-              marginLeft: '8px', 
-              fontSize: '0.75em', 
-              backgroundColor: '#e0f2fe', 
-              color: '#0284c7', 
-              padding: '2px 6px', 
-              borderRadius: '12px',
-              fontWeight: '500',
-              border: '1px solid #bae6fd'
-            }}>
-            📅 Champ Report
-          </span>
-        )}
-      </label>
+      {!isSingleCheckbox && (
+        <label htmlFor={baseProps.id} style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', color: 'var(--gray-900)' }}>
+          {field.name}
+          {field.required && <span className="required">*</span>}
+          {field.show_rdv && (
+            <span 
+              title="Champ Report"
+              style={{ 
+                marginLeft: '8px', 
+                fontSize: '0.75em', 
+                backgroundColor: '#e0f2fe', 
+                color: '#0284c7', 
+                padding: '2px 6px', 
+                borderRadius: '12px',
+                fontWeight: '500',
+                border: '1px solid #bae6fd'
+              }}>
+              Champ report
+            </span>
+          )}
+        </label>
+      )}
 
       {field.field_type === 'text' && (
         <input type="text" {...baseProps} placeholder={field.placeholder} />
@@ -61,7 +66,10 @@ export default function FormField({ field, value, onChange }) {
                 onChange={(e) => onChange(e.target.checked)}
                 required={field.required}
               />
-              <span className="checkbox-label" style={{ fontSize: '0.725rem' }}>{field.name}</span>
+              <span className="checkbox-label" style={{ fontSize: '0.725rem' }}>
+                {field.name}
+                {field.required && <span className="required"> *</span>}
+              </span>
             </label>
           ) : (
             <div className="checkbox-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>

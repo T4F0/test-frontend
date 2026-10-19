@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { register, getPublicServices } from '../api/authApi'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 import { validatePhoneNumber } from '../lib/validators'
+import { Activity } from 'lucide-react'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -71,7 +72,7 @@ export default function Register() {
     return (
       <div className="login-container">
         <div className="login-card" style={{ textAlign: 'center' }}>
-          <h1>🏥 Inscription envoyée</h1>
+          <h1><Activity size={26} aria-hidden="true" style={{ verticalAlign: '-4px', marginRight: 8 }} />Inscription envoyée</h1>
           <p style={{ marginTop: '1rem', color: '#666' }}>
             Votre demande d'inscription a été soumise avec succès à l'administrateur. 
             Vous serez notifié(e) une fois votre compte approuvé.
@@ -91,7 +92,7 @@ export default function Register() {
   return (
     <div className="login-container">
       <div className="login-card" style={{ maxWidth: '500px' }} data-nosnippet="">
-        <h1>🏥 Inscription Médecin</h1>
+        <h1><Activity size={26} aria-hidden="true" style={{ verticalAlign: '-4px', marginRight: 8 }} />Inscription Médecin</h1>
         <p className="login-subtitle">Rejoindre la plateforme de formulaires médicaux</p>
 
         <form onSubmit={handleSubmit} className="login-form">

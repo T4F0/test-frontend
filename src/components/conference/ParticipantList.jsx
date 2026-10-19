@@ -1,5 +1,7 @@
-import { Users, Crown, MicOff, UserMinus, Hand } from 'lucide-react'
+import { Users, Crown, MicOff, UserMinus, Hand, X } from 'lucide-react'
 import { resolveApiUrl } from '../../api/config'
+import { avatarHue } from '../../lib/avatar'
+
 
 /**
  * Collapsible participant list sidebar.
@@ -24,13 +26,13 @@ export default function ParticipantList({
           <Users size={18} />
           Participants ({activeParticipants.length})
         </h3>
-        <button className="sidebar-close" onClick={onToggle}>×</button>
+        <button type="button" className="sidebar-close" onClick={onToggle} aria-label="Fermer le panneau"><X size={18} /></button>
       </div>
       <div className="sidebar-content">
         <ul className="participant-list">
           {participants.map((p) => (
             <li key={p.user_id} className={`participant-item ${p.is_active === false ? 'offline' : ''}`}>
-              <div className="participant-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="participant-avatar" style={{ '--avatar-hue': avatarHue(p.user_id) }}>
                 {p.profile_picture ? (
                   <img
                     src={resolveApiUrl(p.profile_picture)}
@@ -38,7 +40,7 @@ export default function ParticipantList({
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 ) : (
-                  (p.first_name || p.username || '?')[0].toUpperCase()
+                  `${(p.first_name || p.username || '?')[0]}${(p.last_name || '')[0] || ''}`.toUpperCase()
                 )}
               </div>
               <div className="participant-info">

@@ -1,6 +1,8 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
+import { titleForPath } from './lib/labels'
 import RouteGuard from './components/RouteGuard'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -54,6 +56,12 @@ function HomeRedirect() {
 
 function AppRoutes() {
   const { loading, authenticated } = useAuth()
+  const location = useLocation()
+
+  // Tab title follows the page, so tabs, history and screen readers can tell pages apart
+  useEffect(() => {
+    document.title = titleForPath(location.pathname)
+  }, [location.pathname])
 
   if (loading) {
     return <div className="loading">Chargement...</div>

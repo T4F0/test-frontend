@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getAttachments, deleteAttachment, uploadAttachment, downloadAttachment } from '../api/attachmentsApi'
 import { getSubmissions } from '../api/submissionsApi'
 import { formatDate } from '../lib/dateUtils'
-import { Download } from 'lucide-react'
+import { Download, Paperclip } from 'lucide-react'
 import DicomModal from '../components/conference/DicomModal'
+import PageTitle from '../components/PageTitle'
 
 const FILE_TYPE_LABELS = { PDF: 'PDF', IMAGE: 'Image', VIDEO: 'Video', DICOM: 'DICOM' }
 
@@ -167,7 +168,7 @@ export default function AttachmentsList() {
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>📎 Pièces jointes</h1>
+        <PageTitle icon={Paperclip}>Pièces jointes</PageTitle>
         <div className="list-header-actions">
           <select
             value={filterSubmission}

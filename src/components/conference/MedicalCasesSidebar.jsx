@@ -363,19 +363,8 @@ export default function MedicalCasesSidebar({
                       e.stopPropagation()
                       onShowFormDetails && onShowFormDetails(submission)
                     }}
-                    style={{
-                      width: '100%',
-                      marginBottom: '0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      paddingTop: '0.5rem',
-                      paddingBottom: '0.5rem',
-                      backgroundColor: activeFormDetailId === submission.id ? 'var(--secondary)' : ''
-                    }}
                   >
-                    <ClipboardList size={14} />
+                    <ClipboardList size={16} />
                     {activeFormDetailId === submission.id ? 'Masquer les détails' : 'Détails du formulaire'}
                   </button>
 

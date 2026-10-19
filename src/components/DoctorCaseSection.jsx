@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import MedicalCaseCard from './MedicalCaseCard';
+import { Stethoscope } from 'lucide-react'
 
 export default function DoctorCaseSection({ doctorName, hospital, cases, onRemoveCase, onViewDetails, activeDetailId, currentUserRole }) {
   const [isOpen, setIsOpen] = useState(true);
@@ -14,7 +15,6 @@ export default function DoctorCaseSection({ doctorName, hospital, cases, onRemov
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '1rem 1.5rem',
           backgroundColor: 'white',
           border: 'none',
           borderBottom: isOpen ? '1px solid #e2e8f0' : 'none',
@@ -24,7 +24,7 @@ export default function DoctorCaseSection({ doctorName, hospital, cases, onRemov
         }}
       >
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>👨‍⚕️ {doctorName}</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}><Stethoscope size={18} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 6 }} />{doctorName}</h3>
           <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>{hospital} • {cases.length} dossier{cases.length > 1 ? 's' : ''}</p>
         </div>
         {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}

@@ -9,18 +9,10 @@ import SearchableSelect from '../components/SearchableSelect'
 import UserAvatar from '../components/UserAvatar'
 import { formatDate } from '../lib/dateUtils'
 import { Users } from 'lucide-react'
+import { SUBMISSION_STATUS_COLORS as SHARED_STATUS_COLORS, SUBMISSION_STATUS_LABELS as SHARED_STATUS_LABELS } from '../lib/labels'
 
-// Status display config for the 3 new statuses
-const SUBMISSION_STATUS_LABELS = {
-  NOUVEAU:      'Nouveau',
-  A_REDISCUTER: 'À rediscuter',
-  CLOTURE:      'Clôturé',
-}
-const SUBMISSION_STATUS_COLORS = {
-  NOUVEAU:      '#3b82f6',
-  A_REDISCUTER: '#f97316',
-  CLOTURE:      '#6b7280',
-}
+const SUBMISSION_STATUS_LABELS = SHARED_STATUS_LABELS
+const SUBMISSION_STATUS_COLORS = SHARED_STATUS_COLORS
 
 export default function MeetingForm() {
   const { id } = useParams()
@@ -395,7 +387,7 @@ export default function MeetingForm() {
 
   return (
     <div className="form-details">
-      <h2>{isEdit ? 'Modifier la réunion' : 'Nouvelle réunion'}</h2>
+      <h1 className="as-h2">{isEdit ? 'Modifier la réunion' : 'Nouvelle réunion'}</h1>
       {error && <div className="error">{error}</div>}
       {infoMessage && (
         <div style={{

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { login, getCurrentUser } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Activity } from 'lucide-react'
 
 export default function Login() {
 
@@ -35,7 +35,7 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-card" data-nosnippet="">
-        <h1>🏥 e-RCP Algerie</h1>
+        <h1><Activity size={26} aria-hidden="true" style={{ verticalAlign: '-4px', marginRight: 8 }} />e-RCP Algerie</h1>
         <p className="login-subtitle">Portail de coordination des RCP</p>
 
         <form onSubmit={handleSubmit} className="login-form">
@@ -80,7 +80,9 @@ export default function Login() {
                   border: 'none',
                   color: '#64748b',
                   cursor: 'pointer',
-                  padding: 0,
+                  padding: '0 0.35rem',
+                  minWidth: 40,
+                  minHeight: 40,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'

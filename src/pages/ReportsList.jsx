@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getReports, downloadReportPdf, downloadReportDocx, fetchReportPdfBlob } from '../api/reportsApi'
 import { getMeetings } from '../api/meetingsApi'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, FileText } from 'lucide-react'
+import PageTitle from '../components/PageTitle'
 
 export default function ReportsList() {
   const [reports, setReports] = useState([])
@@ -138,7 +139,7 @@ export default function ReportsList() {
   return (
     <div className="list-container">
       <div className="list-header">
-        <h1>📑 Rapports RCP</h1>
+        <PageTitle icon={FileText}>Rapports RCP</PageTitle>
       </div>
       {error && <div className="error">{error}</div>}
 
@@ -198,7 +199,7 @@ export default function ReportsList() {
             {meetings.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name || `Réunion du ${new Date(m.scheduled_date).toLocaleDateString('fr-FR')}`}
-                {m.status === 'LIVE' ? ' 🔴' : m.status === 'PLANNED' ? ' 📅' : ' ✅'}
+                {m.status === 'LIVE' ? ' · en cours' : m.status === 'PLANNED' ? ' · planifiée' : ' · terminée'}
               </option>
             ))}
           </select>

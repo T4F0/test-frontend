@@ -141,12 +141,12 @@ export default function Layout() {
     <div className="layout">
       <header className="navbar">
         <div className="container">
-          <h1>
+          <div className="brand-title">
             <Link to={homePath}>
               <Activity className="brand-icon" size={28} />
               Plateforme RCP
             </Link>
-          </h1>
+          </div>
 
           <button
             className="hamburger-btn"

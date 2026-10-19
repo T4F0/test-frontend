@@ -1218,10 +1218,6 @@
   gap: 0.4rem;
 }
 
-.patient-detail-container .submission-card-doctor::before {
-  content: '🩺';
-  font-size: 13px;
-}
 
 .patient-detail-container .rcp-decisions-section {
   margin-top: 0.75rem;
@@ -1430,4 +1426,35 @@
   .patient-detail-container .submission-card-actions-right {
     width: auto;
   }
+}
+
+
+/* Patient page: action buttons readable at a glance (were 9-10 px uppercase) */
+.patient-detail-container .submission-card-actions button,
+.patient-detail-container .submission-card-actions-right .btn-outline,
+.patient-detail-container .submission-card-actions-right .btn-danger {
+  min-height: 36px;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  gap: 0.4rem;
+}
+
+.patient-detail-container .submission-card-actions-left,
+.patient-detail-container .submission-card-actions-right {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.patient-detail-container .submission-card-actions {
+  gap: 0.75rem;
+}
+
+.patient-detail-container .submission-status-select {
+  min-height: 36px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
 }

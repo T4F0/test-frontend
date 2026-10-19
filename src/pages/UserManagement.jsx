@@ -266,7 +266,7 @@ export default function UserManagement() {
   return (
     <div className="users-management">
       <div className="users-header">
-        <h2>{isCoordinateur ? 'Gestion des médecins' : 'Gestion des utilisateurs'}</h2>
+        <h1 className="as-h2">{isCoordinateur ? 'Gestion des médecins' : 'Gestion des utilisateurs'}</h1>
         <button onClick={() => navigate('/users/new')} className="btn-primary">
           + Ajouter un {isCoordinateur ? 'médecin' : 'utilisateur'}
         </button>
@@ -515,7 +515,7 @@ export default function UserManagement() {
                           style={{ marginRight: '5px' }}
                           title="Voir les patients de ce médecin"
                         >
-                          👥 Voir patients
+                          <Users size={15} aria-hidden="true" /> Voir patients
                         </button>
                       )}
                       <button 
@@ -565,7 +565,7 @@ export default function UserManagement() {
                   <div className="mobile-card-actions">
                     {user.role === 'MEDECIN' && (
                       <button className="btn-small btn-info" onClick={(e) => { e.stopPropagation(); navigate(`/patients?doctor=${user.id}`); }}>
-                        👥 Patients
+                        <Users size={15} aria-hidden="true" /> Patients
                       </button>
                     )}
                     <button className="btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/users/${user.id}/edit`); }}>
