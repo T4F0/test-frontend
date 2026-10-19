@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Paperclip, Upload, FileText, Image, Download, Eye, X, Save, Video, Scan } from 'lucide-react'
 import { downloadAttachment, getAttachmentBlobUrl } from '../../api/attachmentsApi'
 import { resolveApiUrl } from '../../api/config'
-import DicomViewer from './DicomViewer'
+import DicomViewer from './LazyDicomViewer'
 
 /**
  * File sharing panel for conference attachments.

@@ -109,7 +109,8 @@
   display: none;
 }
 
-@media (min-width: 1024px) {
+/* Labels follow the width of the viewer itself, not the window (the conference sidebar shrinks it) */
+@container dicomviewer (min-width: 1180px) {
   .tool-label {
     display: inline;
   }
@@ -893,3 +894,645 @@
   color: #94a3b8;
 }
 
+/* =========================================================
+   In-visualization Arrow Annotation Modal
+   ========================================================= */
+.dicom-arrow-naming-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  animation: dicomFadeIn 0.15s ease-out;
+}
+
+@keyframes dicomFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dicomScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.dicom-arrow-naming-modal {
+  width: 90%;
+  max-width: 440px;
+  background: #0f172a;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 25px rgba(59, 130, 246, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dicomScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dicom-arrow-naming-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dicom-arrow-naming-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.dicom-arrow-icon {
+  color: #38bdf8;
+}
+
+.dicom-arrow-naming-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.dicom-arrow-naming-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dicom-arrow-naming-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dicom-arrow-naming-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dicom-arrow-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.dicom-arrow-naming-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.dicom-arrow-naming-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+  background: #1e293b;
+}
+
+.dicom-arrow-naming-input::placeholder {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.dicom-arrow-quick-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.dicom-arrow-quick-title {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.dicom-arrow-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dicom-arrow-chip {
+  padding: 5px 10px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.dicom-arrow-chip:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.dicom-arrow-chip.is-active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #fff;
+}
+
+.dicom-arrow-naming-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px;
+  background: rgba(15, 23, 42, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dicom-arrow-btn-cancel {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dicom-arrow-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.dicom-arrow-btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #0284c7;
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+}
+
+.dicom-arrow-btn-confirm:hover {
+  background: #0369a1;
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45);
+}
+
+
+
+/* =========================================================
+   Viewer UX pass: layout, toolbar groups, thumbnails, a11y
+   ========================================================= */
+
+.dicom-viewer-container {
+  container-type: inline-size;
+  container-name: dicomviewer;
+}
+
+.dicom-viewer-container .btn-close-viewer {
+  background: none;
+  color: #9ca3af;
+}
+
+.dicom-viewer-container .btn-close-viewer:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* The viewport used to have no sized parent: give it one */
+.dicom-viewport-wrapper {
+  display: flex;
+  overflow: hidden;
+}
+
+.dicom-viewport-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dicom-viewport-main .dicom-viewport {
+  position: absolute;
+  inset: 0;
+}
+
+/* HUD now lives inside the viewport instead of a hard-coded 80px offset */
+.dicom-viewport-main .dicom-hud {
+  top: 0;
+}
+
+/* Toolbar groups */
+.dicom-toolbar {
+  gap: 6px 4px;
+}
+
+.dicom-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dicom-help-btn {
+  margin-left: auto;
+}
+
+.dicom-tool-btn[aria-pressed='true'] {
+  color: #60a5fa;
+}
+
+.dicom-tool-btn.danger-active-btn {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.dicom-cine-speed {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 3px 4px;
+}
+
+.dicom-slice-slider {
+  width: clamp(80px, 14vw, 180px);
+  height: 20px;
+}
+
+/* Keyboard focus */
+.dicom-viewer-container button:focus-visible,
+.dicom-viewer-container select:focus-visible,
+.dicom-viewer-container input:focus-visible,
+.dicom-thumbnail-panel:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 1px;
+}
+
+/* Loading / error */
+.dicom-load-bar {
+  width: min(280px, 60%);
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.dicom-load-bar > div {
+  height: 100%;
+  background: #60a5fa;
+  transition: width 0.2s ease;
+}
+
+.dicom-error {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dicom-error-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Thumbnail panel (previously unstyled) */
+.dicom-thumbnail-panel {
+  flex: none;
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #05080f;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.dicom-thumbnail-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(5, 8, 15, 0.96);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dicom-thumbnail-count {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+}
+
+.dicom-thumbnail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.dicom-thumb-item {
+  position: relative;
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dicom-thumb-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dicom-thumb-item.is-active {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.dicom-thumb-canvas-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #000;
+}
+
+.dicom-thumb-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dicom-thumb-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #0b1120 25%, #17213a 50%, #0b1120 75%);
+  background-size: 200% 100%;
+  animation: dicom-shimmer 1.2s linear infinite;
+}
+
+.dicom-thumb-canvas[data-loaded='true'] + .dicom-thumb-skeleton {
+  display: none;
+}
+
+.dicom-thumb-label {
+  display: block;
+  margin-top: 2px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dicom-thumb-item.is-active .dicom-thumb-label {
+  color: #bfdbfe;
+  font-weight: 600;
+}
+
+@keyframes dicom-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@container dicomviewer (max-width: 720px) {
+  .dicom-thumbnail-panel {
+    width: 92px;
+  }
+}
+
+/* Keyboard shortcuts help */
+.dicom-shortcuts-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.dicom-shortcuts-card {
+  width: min(460px, 92%);
+  max-height: 88%;
+  overflow-y: auto;
+  background: #0b1120;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+.dicom-shortcuts-list {
+  margin: 0;
+  padding: 8px 16px 16px;
+}
+
+.dicom-shortcuts-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+}
+
+.dicom-shortcuts-row dt {
+  flex: none;
+  min-width: 150px;
+}
+
+.dicom-shortcuts-row dd {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+/* Fullscreen modal window (moved out of inline styles) */
+.dicom-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(6px);
+}
+
+.dicom-modal-window {
+  display: flex;
+  flex-direction: column;
+  width: 95vw;
+  height: 90vh;
+  max-width: 1400px;
+  overflow: hidden;
+  background: #0b1120;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .dicom-modal-backdrop {
+    padding: 0;
+  }
+  .dicom-modal-window {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    border-radius: 0;
+  }
+}
+
+/* Touch devices: comfortable hit targets */
+@media (pointer: coarse) {
+  .dicom-tool-btn,
+  .dicom-slice-btn {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dicom-viewer-container *,
+  .dicom-modal-window,
+  .dicom-series-drawer,
+  .dicom-arrow-naming-backdrop {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Collaboration UX */
+.dicom-notice {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: 90%;
+  padding: 6px 16px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  border-radius: 999px;
+  color: #dbeafe;
+  font-size: 12px;
+  pointer-events: none;
+  animation: dicomFadeIn 0.2s ease-out;
+}
+
+.dicom-remote-pointer {
+  position: absolute;
+  z-index: 25;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.55);
+  border: 2px solid #fecaca;
+  box-shadow: 0 0 12px 3px rgba(239, 68, 68, 0.7);
+  pointer-events: none;
+  transition: left 0.05s linear, top 0.05s linear;
+}
+
+.btn-pointer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-pointer-toggle.is-on {
+  background: rgba(239, 68, 68, 0.6);
+  color: #fff;
+}
+
+.dicom-warn-text {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dicom-hud-author {
+  font-weight: 600;
+}
+
+.btn-follow-toggle.paused {
+  animation: pulse-red 1.5s infinite;
+}
+
+.dicom-suspense-fallback {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 200px;
+  background: #000;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.dicom-suspense-fallback .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}

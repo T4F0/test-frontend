@@ -384,13 +384,16 @@
 
 .video-area {
   flex: 1;
+  min-width: 0;
   padding: 0.75rem;
   transition: all 0.3s ease;
   position: relative;
+  overflow: hidden;
 }
 
 .video-area.with-sidebar {
   flex: 1;
+  min-width: 0;
 }
 
 /* --- Video Grid (Gallery Mode) --- */
@@ -2698,3 +2701,75 @@
 }
 
 
+
+
+/* Floating participant strip while a file / dossier fills the stage */
+.pip-video-container {
+  width: min(320px, 42%);
+  height: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 45;
+}
+
+.pip-video-container.is-collapsed {
+  width: auto;
+  border-width: 1px;
+  border-radius: 999px;
+}
+
+.pip-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: stretch;
+  padding: 6px 12px;
+  background: rgba(15, 23, 42, 0.92);
+  border: none;
+  color: #cbd5e1;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pip-toggle:hover {
+  color: #fff;
+}
+
+.pip-toggle:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+.pip-video-body {
+  height: 220px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Connection lost banner */
+.ws-status-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90%;
+  padding: 6px 14px;
+  background: rgba(120, 53, 15, 0.95);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 999px;
+  color: #fde68a;
+  font-size: 12px;
+}
+
+.ws-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fbbf24;
+  animation: pulse-red 1.5s infinite;
+}

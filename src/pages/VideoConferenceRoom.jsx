@@ -30,6 +30,7 @@ import { getSubmission } from '../api/submissionsApi'
 import { getForm } from '../api/formsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { Users, MessageSquare, ClipboardList, Clock, UserCheck, X, Check, XCircle } from 'lucide-react'
+import { dicomEndpointFor } from '../lib/dicomIds'
 import '../conference.css'
 
 
@@ -46,6 +47,11 @@ export default function VideoConferenceRoom() {
   const [showChat, setShowChat] = useState(false)
   const [showCases, setShowCases] = useState(false)
   const [activePreviewItem, setActivePreviewItem] = useState(null)
+  // Participants stay visible in a floating strip while a file or dossier fills the stage
+  const [pipCollapsed, setPipCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 900
+  )
+  const [hasConnectedOnce, setHasConnectedOnce] = useState(false)
   const [isHost, setIsHost] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const abortControllerRef = useRef(null)
@@ -301,6 +307,7 @@ export default function VideoConferenceRoom() {
     participants,
     isMuted,
     isCameraOff,
+    isConnected,
     isScreenSharing,
     screenSharer,
     isHandRaised,
@@ -335,6 +342,17 @@ export default function VideoConferenceRoom() {
 
   // Keep the ref in sync so handleJoinAccepted can call it without a circular dep
   reconnectAsParticipantRef.current = reconnectAsParticipant
+
+  useEffect(() => {
+    if (isConnected) setHasConnectedOnce(true)
+  }, [isConnected])
+
+  // If the presenter leaves (tab closed, connection lost) no "stop" message is ever sent: drop the stale session
+  useEffect(() => {
+    if (!dicomPresenter || participants.length === 0) return
+    const stillHere = participants.some((p) => String(p.user_id) === String(dicomPresenter.userId))
+    if (!stillHere) setDicomPresenter(null)
+  }, [participants, dicomPresenter])
 
 
   useEffect(() => {
@@ -825,7 +843,7 @@ export default function VideoConferenceRoom() {
       </div>
     )
   }
-
+  const isSidebarOpen = Boolean(showParticipants || showChat || showCases || showAdmissions)
 
   return (
     <div className={`conference-room ${isFullscreen ? 'fullscreen-active' : ''}`} ref={conferenceRef}>
@@ -903,6 +921,12 @@ export default function VideoConferenceRoom() {
       </div>
 
       <div className="conference-body">
+        {hasConnectedOnce && !isConnected && (
+          <div className="ws-status-banner" role="status">
+            <span className="ws-status-dot" />
+            Connexion perdue. Reconnexion en cours… rechargez la page si le problème persiste.
+          </div>
+        )}
         {/* DICOM Live Presentation Invitation Banner */}
         {dicomPresenter && String(dicomPresenter.userId) !== String(user?.id) && (
           (!activePreviewItem || String(activePreviewItem.id || activePreviewItem.originalId) !== String(dicomPresenter.attachmentId))
@@ -920,7 +944,7 @@ export default function VideoConferenceRoom() {
               onClick={() => {
                 const targetDicomUrl = dicomPresenter.fileInfo?.dicom_url || (
                   dicomPresenter.attachmentId
-                    ? `/api/conferences/dicom/${String(dicomPresenter.attachmentId).replace('submission-', '').replace('meeting-', '')}/`
+                    ? dicomEndpointFor(dicomPresenter.attachmentId)
                     : null
                 )
                 setActivePreviewItem({
@@ -940,7 +964,7 @@ export default function VideoConferenceRoom() {
             </button>
           </div>
         )}
-        <div className={`video-area ${showParticipants || showChat || showCases ? 'with-sidebar' : ''} ${(activePreviewItem || activeFormDetail) ? 'has-preview' : ''}`}>
+        <div className={`video-area ${isSidebarOpen ? 'with-sidebar' : ''} ${(activePreviewItem || activeFormDetail) ? 'has-preview' : ''}`}>
           {activeFormDetail && (
             <div className="main-stage-form-wrapper" style={{ flex: 1, height: '100%', overflowY: 'auto', background: '#0f172a', borderRadius: '12px', display: 'flex', flexDirection: 'column', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
               {formDetailLoading && (
@@ -984,7 +1008,37 @@ export default function VideoConferenceRoom() {
               currentUserId={user?.id}
               currentUserName={user?.first_name ? `${user.first_name} ${user.last_name}`.trim() : user?.username}
               conferenceId={conference?.id}
+              isSidebarOpen={isSidebarOpen}
             />
+          )}
+          {(activePreviewItem || activeFormDetail) && (
+            <div className={`pip-video-container ${pipCollapsed ? 'is-collapsed' : ''}`}>
+              <button
+                type="button"
+                className="pip-toggle"
+                onClick={() => setPipCollapsed((v) => !v)}
+                aria-expanded={!pipCollapsed}
+                title={pipCollapsed ? 'Afficher les participants' : 'Réduire la vidéo'}
+              >
+                <Users size={14} />
+                <span>{pipCollapsed ? `Vidéo (${participants.length})` : 'Réduire'}</span>
+              </button>
+              {!pipCollapsed && (
+                <div className="pip-video-body">
+                  <VideoGrid
+                    localStream={localStream}
+                    screenStream={screenStream}
+                    remoteStreams={remoteStreams}
+                    participants={participants}
+                    currentUserId={user?.id}
+                    isCameraOff={isCameraOff}
+                    isMuted={isMuted}
+                    screenSharer={screenSharer}
+                    localProfilePicture={user?.profile_picture}
+                  />
+                </div>
+              )}
+            </div>
           )}
           {/* Video grid — hidden when a dossier or file viewer is active */}
           {!activePreviewItem && !activeFormDetail && (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { getAttachmentBlobUrl } from '../../api/attachmentsApi'
-import DicomViewer from './DicomViewer'
+import DicomViewer from './LazyDicomViewer'
 
 export default function MainStageFileViewer({
   file,
@@ -15,6 +15,7 @@ export default function MainStageFileViewer({
   currentUserId,
   currentUserName,
   conferenceId,
+  isSidebarOpen,
 }) {
   const [previewUrl, setPreviewUrl] = useState('')
   const [previewError, setPreviewError] = useState('')
@@ -90,6 +91,7 @@ export default function MainStageFileViewer({
           currentUserId={currentUserId}
           currentUserName={currentUserName}
           conferenceId={conferenceId}
+          isSidebarOpen={isSidebarOpen}
         />
       </div>
     )
