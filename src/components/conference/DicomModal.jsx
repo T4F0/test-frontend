@@ -6,7 +6,7 @@ export default function DicomModal({ file, onClose }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) {
+      if (e.key === 'Escape') {
         onClose?.()
       }
     }

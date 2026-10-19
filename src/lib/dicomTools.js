@@ -1,4 +1,4 @@
-import { ZoomIn, Move, Ruler, RotateCcw, Sun, Maximize2, Square, ArrowUpRight, Eraser } from 'lucide-react'
+import { Contrast, Hand, Search, Ruler, TriangleRight, Circle, RectangleHorizontal, ArrowUpRight, Eraser } from 'lucide-react'
 import * as cornerstoneTools from '@cornerstonejs/tools'
 
 export const WL_PRESETS = [
@@ -11,13 +11,13 @@ export const WL_PRESETS = [
 ]
 
 export const TOOLS = [
-  { name: 'WindowLevel', toolClass: 'WindowLevelTool', icon: Sun, label: 'Contraste (W/L)', group: 'view', key: 'w' },
-  { name: 'Pan', toolClass: 'PanTool', icon: Move, label: 'Déplacer', group: 'view', key: 'p' },
-  { name: 'Zoom', toolClass: 'ZoomTool', icon: ZoomIn, label: 'Zoomer', group: 'view', key: 'z' },
+  { name: 'WindowLevel', toolClass: 'WindowLevelTool', icon: Contrast, label: 'Contraste', group: 'view', key: 'w' },
+  { name: 'Pan', toolClass: 'PanTool', icon: Hand, label: 'Déplacer', group: 'view', key: 'p' },
+  { name: 'Zoom', toolClass: 'ZoomTool', icon: Search, label: 'Zoomer', group: 'view', key: 'z' },
   { name: 'Length', toolClass: 'LengthTool', icon: Ruler, label: 'Mesurer', group: 'measure', key: 'l' },
-  { name: 'Angle', toolClass: 'AngleTool', icon: RotateCcw, label: 'Angle', group: 'measure', key: 'a' },
-  { name: 'EllipticalROI', toolClass: 'EllipticalROITool', icon: Maximize2, label: 'ROI Ellipse', group: 'measure', key: 'o' },
-  { name: 'RectangleROI', toolClass: 'RectangleROITool', icon: Square, label: 'ROI Rectangle', group: 'measure', key: 'b' },
+  { name: 'Angle', toolClass: 'AngleTool', icon: TriangleRight, label: 'Angle', group: 'measure', key: 'a' },
+  { name: 'EllipticalROI', toolClass: 'EllipticalROITool', icon: Circle, label: 'Ellipse', group: 'measure', key: 'o' },
+  { name: 'RectangleROI', toolClass: 'RectangleROITool', icon: RectangleHorizontal, label: 'Rectangle', group: 'measure', key: 'b' },
   { name: 'ArrowAnnotate', toolClass: 'ArrowAnnotateTool', icon: ArrowUpRight, label: 'Flèche', group: 'annotate', key: 'f' },
   { name: 'Eraser', toolClass: 'EraserTool', icon: Eraser, label: 'Gomme', group: 'annotate', key: 'e' },
 ]
@@ -39,6 +39,7 @@ export const SHORTCUTS = [
   ['Espace', 'Lecture / pause (ciné)'],
   ['R / Double-clic', 'Réinitialiser l’affichage'],
   ['Clic droit + glisser / Ctrl + molette', 'Zoom'],
+  ['Maj + glisser', 'Nouvelle forme même sur une existante'],
   ['Suppr', 'Supprimer la sélection'],
   ['Échap', 'Désélectionner / fermer'],
   ['?', 'Afficher cette aide'],
@@ -50,7 +51,8 @@ export function applyToolBindings(toolGroup, activeName) {
   const { MouseBindings, KeyboardBindings } = cornerstoneTools.Enums
   TOOLS.forEach(({ name }) => {
     try {
-      toolGroup.setToolPassive(name)
+      // Cornerstone only drops the plain primary binding by default: stale modifier bindings would keep the tool active
+      toolGroup.setToolPassive(name, { removeAllBindings: true })
     } catch (e) {}
   })
 
@@ -63,7 +65,13 @@ export function applyToolBindings(toolGroup, activeName) {
     if (activeName === 'Zoom') {
       toolGroup.setToolActive('Zoom', { bindings: [{ mouseButton: MouseBindings.Primary }, ...zoomBindings] })
     } else {
-      toolGroup.setToolActive(activeName, { bindings: [{ mouseButton: MouseBindings.Primary }] })
+      // Shift + drag runs the same tool; the ROI guards use it to start a new shape over an existing one
+      toolGroup.setToolActive(activeName, {
+        bindings: [
+          { mouseButton: MouseBindings.Primary },
+          { mouseButton: MouseBindings.Primary, modifierKey: KeyboardBindings.Shift },
+        ],
+      })
       toolGroup.setToolActive('Zoom', { bindings: zoomBindings })
     }
   } catch (e) {}

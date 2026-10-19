@@ -2,6 +2,24 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import SimplePeer from "simple-peer/simplepeer.min.js";
 import { getToken } from "../api/authApi";
 import { RTC_ICE_SERVERS, WS_BASE_URL } from "../api/config";
+import {
+  AUDIO_BPS,
+  SCREEN_BPS,
+  applySenderPlan,
+  audioConstraints,
+  createPlaceholderVideo,
+  getSender,
+  nextLevel,
+  planVideoQuality,
+  sampleStats,
+  tuneOpusSdp,
+  videoConstraints,
+} from "../lib/rtcQuality";
+
+const QUALITY_POLL_MS = 4000;
+const RECONNECT_MAX_ATTEMPTS = 8;
+// Close codes the server uses for "do not come back" (unauthenticated / forbidden / bad request)
+const FATAL_CLOSE_CODES = [4400, 4401, 4403];
 
 /**
  * Custom hook for managing WebRTC peer connections and WebSocket signaling.
@@ -29,6 +47,8 @@ export default function useWebRTC(
   const [isCameraOff, setIsCameraOff] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenSharer, setScreenSharer] = useState(null);
+  const [peerQuality, setPeerQuality] = useState({});
+  const [lowData, setLowDataState] = useState(false);
 
   const wsRef = useRef(null);
   const peersRef = useRef({});
@@ -37,7 +57,15 @@ export default function useWebRTC(
   const handleSignalingMessageRef = useRef(null);
   const isLobbyConnectionRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
-  const reconnectMaxAttempts = 5;
+  const reconnectTimerRef = useRef(null);
+  const intentionalCloseRef = useRef(false);
+  const qualityRef = useRef({}); // peerId -> { level, goodStreak, prev }
+  const lowDataRef = useRef(false);
+  const screenTrackRef = useRef(null);
+  const screenStreamRef = useRef(null);
+  const connectedPeersRef = useRef(new Set());
+  const sendStreamRef = useRef(null); // what peers receive: microphone + (camera | screen | placeholder)
+  const placeholderRef = useRef(null);
 
   const cleanupPeers = useCallback(() => {
     Object.values(peersRef.current).forEach((p) => {
@@ -48,8 +76,51 @@ export default function useWebRTC(
       }
     });
     peersRef.current = {};
+    connectedPeersRef.current = new Set();
+    qualityRef.current = {};
     setRemoteStreams({});
+    setPeerQuality({});
   }, []);
+
+  // ---- Adaptive quality -------------------------------------------------------------------------
+
+  const remoteCount = () => Math.max(1, connectedPeersRef.current.size);
+
+  const applyPeerPlan = useCallback(async (peerId) => {
+    const peer = peersRef.current[peerId];
+    if (!peer || peer.destroyed) return;
+    const level = qualityRef.current[peerId]?.level ?? 0;
+    if (screenTrackRef.current) {
+      // Screen content: keep it sharp, spend frames sparingly
+      await applySenderPlan(peer, "video", {
+        maxBitrate: SCREEN_BPS,
+        maxFramerate: 15,
+        scaleResolutionDownBy: 1,
+        degradationPreference: "maintain-resolution",
+      });
+    } else {
+      await applySenderPlan(peer, "video", planVideoQuality(remoteCount(), level, lowDataRef.current));
+    }
+    await applySenderPlan(peer, "audio", { maxBitrate: AUDIO_BPS });
+  }, []);
+
+  const applyAllPlans = useCallback(() => {
+    Object.keys(peersRef.current).forEach((peerId) => applyPeerPlan(peerId));
+    // Capture only as many pixels as the busiest outgoing stream will keep
+    const camera = localStreamRef.current?.getVideoTracks()[0];
+    if (camera && camera.readyState === "live") {
+      camera.applyConstraints(videoConstraints(remoteCount(), lowDataRef.current)).catch(() => {});
+    }
+  }, [applyPeerPlan]);
+
+  const setLowData = useCallback(
+    (value) => {
+      lowDataRef.current = Boolean(value);
+      setLowDataState(Boolean(value));
+      applyAllPlans();
+    },
+    [applyAllPlans],
+  );
 
   const createPeer = useCallback((peerId, initiator) => {
     if (peersRef.current[peerId]) return;
@@ -60,9 +131,33 @@ export default function useWebRTC(
       initiator,
       stream: localStreamRef.current || undefined,
       trickle: true,
+      sdpTransform: tuneOpusSdp,
       config: {
         iceServers: RTC_ICE_SERVERS,
+        iceCandidatePoolSize: 2,
+        bundlePolicy: "max-bundle",
       },
+    });
+
+    peer.on("connect", () => {
+      connectedPeersRef.current.add(peerId);
+      qualityRef.current[peerId] = qualityRef.current[peerId] || { level: 0, goodStreak: 0, prev: null };
+      // The number of peers we upload to just changed: re-plan everyone
+      applyAllPlans();
+    });
+
+    // A failed ICE connection never recovers by itself: rebuild it (the lower id initiates, avoiding glare)
+    peer.on("iceStateChange", (state) => {
+      if (state !== "failed" || intentionalCloseRef.current) return;
+      console.warn(`WebRTC: ICE failed with ${peerId}, rebuilding the connection`);
+      try {
+        peer.destroy();
+      } catch (e) {}
+      setTimeout(() => {
+        if (!peersRef.current[peerId] && wsRef.current?.readyState === WebSocket.OPEN) {
+          createPeer(peerId, String(userId) < String(peerId));
+        }
+      }, 1000 + Math.random() * 1000);
     });
 
     peer.on("signal", (signalData) => {
@@ -97,7 +192,17 @@ export default function useWebRTC(
     });
 
     peer.on("close", () => {
-      delete peersRef.current[peerId];
+      if (peersRef.current[peerId] === peer) delete peersRef.current[peerId];
+      connectedPeersRef.current.delete(peerId);
+      delete qualityRef.current[peerId];
+      setPeerQuality((prev) => {
+        if (!(peerId in prev)) return prev;
+        const next = { ...prev };
+        delete next[peerId];
+        return next;
+      });
+      // Fewer peers to upload to: give the rest more bandwidth
+      setTimeout(applyAllPlans, 0);
       setRemoteStreams((prev) => {
         const next = { ...prev };
         delete next[peerId];
@@ -106,7 +211,7 @@ export default function useWebRTC(
     });
 
     peersRef.current[peerId] = peer;
-  }, []);
+  }, [applyAllPlans, userId]);
 
   const handleSignalingMessage = useCallback(
     (data) => {
@@ -194,6 +299,7 @@ export default function useWebRTC(
             onNotesUpdate(data.notes);
           break;
         case "conference_ended":
+          intentionalCloseRef.current = true;
           if (onConferenceEnded) onConferenceEnded();
           break;
         // ---- Ask-to-Join events ----
@@ -254,23 +360,16 @@ export default function useWebRTC(
       if (!lobbyMode) {
         if (!localStreamRef.current) {
           try {
-            console.log("WebRTC: Requesting Camera/Mic access...");
+            console.log("WebRTC: Requesting microphone access...");
+            // Audio only at join: the camera is opened when the user turns it on (see toggleCamera),
+            // so the hardware, its light and its encoder stay idle until needed.
             const stream = await navigator.mediaDevices.getUserMedia({
-              video: true,
-              audio: true,
+              audio: audioConstraints(),
+              video: false,
             });
-            console.log("WebRTC: Media access GRANTED", {
-              videoTracks: stream.getVideoTracks().length,
-              audioTracks: stream.getAudioTracks().length,
-            });
-
-            // Mute and Turn off camera by default
-            stream.getAudioTracks().forEach((t) => (t.enabled = false));
-            stream.getVideoTracks().forEach((t) => (t.enabled = false));
-
+            stream.getAudioTracks().forEach((t) => (t.enabled = false)); // muted by default
             setLocalStream(stream);
             localStreamRef.current = stream;
-            currentVideoTrackRef.current = stream.getVideoTracks()[0] || null;
 
             // Add stream to any existing peers that were created before media was ready
             Object.values(peersRef.current).forEach((peer) => {
@@ -282,18 +381,18 @@ export default function useWebRTC(
             });
           } catch (e) {
             console.error("WebRTC: Media access failed", e);
-            if (e.name === "NotReadableError" || e.message.includes("in use")) {
+            // Joining without a microphone is still useful (chat, viewer, camera): do not block the room
+            const empty = new MediaStream();
+            localStreamRef.current = empty;
+            setLocalStream(empty);
+            if (e.name === "NotReadableError" || e.message?.includes("in use")) {
               alert(
                 `Camera/Microphone is already in use by another application.\n\n1. Close other apps like Teams, Zoom, or Chrome.\n2. Ensure no other instances of this app are running.\n3. Restart the app.`,
               );
             } else if (e.name === "NotAllowedError") {
-              alert(
-                "Permission denied. please check your Windows Privacy settings.",
-              );
-            } else {
-              alert(
-                `Failed to access camera/microphone: ${e.message}\n\nPlease ensure hardware is connected.`,
-              );
+              alert("Permission refusée pour le micro. Vérifiez les autorisations du navigateur ou du système.");
+            } else if (e.name !== "NotFoundError") {
+              alert(`Impossible d'accéder au micro : ${e.message}`);
             }
           }
         }
@@ -328,6 +427,8 @@ export default function useWebRTC(
         let opened = false;
         ws.onopen = () => {
           opened = true;
+          reconnectAttemptsRef.current = 0;
+          intentionalCloseRef.current = false;
           console.log(`WS: Connected to signaling server (lobby=${lobbyMode})`);
           setIsConnected(true);
           if (!isLobbyConnectionRef.current && ws.readyState === WebSocket.OPEN) {
@@ -358,13 +459,19 @@ export default function useWebRTC(
           }
           if (!lobbyMode) {
             cleanupPeers();
-            if (e.code === 1011 && reconnectAttemptsRef.current < reconnectMaxAttempts) {
-              const delay = Math.min(2000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+            const retry =
+              !intentionalCloseRef.current &&
+              !FATAL_CLOSE_CODES.includes(e.code) &&
+              reconnectAttemptsRef.current < RECONNECT_MAX_ATTEMPTS;
+            if (retry) {
+              // Any unexpected drop (network change, sleep, proxy timeout) is retried, with jittered backoff
+              const delay =
+                Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000) + Math.random() * 500;
               reconnectAttemptsRef.current += 1;
-              console.log(`WS: Unexpected close (1011), reconnect #${reconnectAttemptsRef.current} in ${delay}ms`);
-              setTimeout(() => connect({ lobbyMode: false }), delay);
-            } else if (e.code === 1011) {
-              console.warn("WS: Max reconnect attempts reached, giving up");
+              console.log(`WS: Unexpected close (${e.code}), reconnect #${reconnectAttemptsRef.current} in ${Math.round(delay)}ms`);
+              reconnectTimerRef.current = setTimeout(() => connect({ lobbyMode: false }), delay);
+            } else if (!intentionalCloseRef.current) {
+              console.warn("WS: giving up reconnecting");
               reconnectAttemptsRef.current = 0;
             }
           }
@@ -393,26 +500,28 @@ export default function useWebRTC(
     await connect({ lobbyMode: false });
   }, [connect]);
 
-  const replaceOutgoingVideoTrack = useCallback((nextTrack) => {
-    const prevTrack = currentVideoTrackRef.current;
-    Object.values(peersRef.current).forEach((p) => {
-      if (p.destroyed) return;
-      try {
-        if (prevTrack && typeof p.replaceTrack === "function") {
-          p.replaceTrack(
-            prevTrack,
-            nextTrack,
-            localStreamRef.current || undefined,
-          );
-        } else if (typeof p.addTrack === "function") {
-          p.addTrack(nextTrack, localStreamRef.current || undefined);
+  // Point every peer's video sender at `nextTrack` (or at nothing). replaceTrack needs no renegotiation;
+  // a peer that has never carried video gets the track added, which renegotiates once.
+  const replaceOutgoingVideoTrack = useCallback(
+    (nextTrack) => {
+      Object.values(peersRef.current).forEach((p) => {
+        if (p.destroyed) return;
+        try {
+          const sender = getSender(p, "video");
+          if (sender) {
+            sender.replaceTrack(nextTrack).catch(() => {});
+          } else if (nextTrack && typeof p.addTrack === "function") {
+            p.addTrack(nextTrack, localStreamRef.current || undefined);
+          }
+        } catch (e) {
+          console.warn("WebRTC: Track replacement error", e);
         }
-      } catch (e) {
-        console.warn("WebRTC: Track replacement error", e);
-      }
-    });
-    currentVideoTrackRef.current = nextTrack;
-  }, []);
+      });
+      currentVideoTrackRef.current = nextTrack;
+      setTimeout(applyAllPlans, 200);
+    },
+    [applyAllPlans],
+  );
 
   const broadcastMediaState = useCallback((muted, cameraOff) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -445,67 +554,153 @@ export default function useWebRTC(
     }
   }, [broadcastMediaState, isCameraOff, isMuted]);
 
-  const toggleCamera = useCallback(() => {
-    console.log("WebRTC: toggleCamera clicked", {
-      hasStream: !!localStreamRef.current,
-    });
-    if (localStreamRef.current) {
-      const state = !isCameraOff;
-      console.log(`WebRTC: Setting Camera enabled to ${!state}`);
-      localStreamRef.current
-        .getVideoTracks()
-        .forEach((t) => (t.enabled = !state));
-      setIsCameraOff(state);
-      broadcastMediaState(isMuted, state);
-    } else {
-      alert(
-        "Camera stream not available. Please ensure your camera is connected.",
-      );
+  const cameraBusyRef = useRef(false);
+
+  // The camera is opened when turned on and released when turned off, instead of capturing all the time.
+  const toggleCamera = useCallback(async () => {
+    if (!localStreamRef.current) {
+      alert("Flux local indisponible. Vérifiez que votre matériel est connecté.");
+      return;
     }
-  }, [broadcastMediaState, isCameraOff, isMuted]);
+    if (cameraBusyRef.current) return;
+    cameraBusyRef.current = true;
+    try {
+      if (isCameraOff) {
+        const media = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints(remoteCount(), lowDataRef.current),
+          audio: false,
+        });
+        const track = media.getVideoTracks()[0];
+        localStreamRef.current.getVideoTracks().forEach((t) => {
+          localStreamRef.current.removeTrack(t);
+          t.stop();
+        });
+        localStreamRef.current.addTrack(track);
+        setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+        if (!screenTrackRef.current) replaceOutgoingVideoTrack(track);
+        else currentVideoTrackRef.current = track;
+        setIsCameraOff(false);
+        broadcastMediaState(isMuted, false);
+      } else {
+        localStreamRef.current.getVideoTracks().forEach((t) => {
+          localStreamRef.current.removeTrack(t);
+          t.stop();
+        });
+        setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+        if (!screenTrackRef.current) replaceOutgoingVideoTrack(null);
+        else currentVideoTrackRef.current = null;
+        setIsCameraOff(true);
+        broadcastMediaState(isMuted, true);
+      }
+    } catch (e) {
+      console.error("WebRTC: camera toggle failed", e);
+      if (e.name === "NotAllowedError") {
+        alert("Permission refusée pour la caméra. Vérifiez les autorisations du navigateur ou du système.");
+      } else if (e.name === "NotReadableError") {
+        alert("La caméra est déjà utilisée par une autre application.");
+      } else if (e.name === "NotFoundError") {
+        alert("Aucune caméra détectée.");
+      } else {
+        alert(`Impossible d'activer la caméra : ${e.message}`);
+      }
+    } finally {
+      cameraBusyRef.current = false;
+    }
+  }, [broadcastMediaState, isCameraOff, isMuted, replaceOutgoingVideoTrack]);
 
   const startScreenShare = useCallback(async () => {
-    console.log("WebRTC: startScreenShare clicked");
     try {
       const screen = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-      });
-      console.log("WebRTC: Screen share stream obtained", {
-        trackCount: screen.getTracks().length,
+        video: { frameRate: { ideal: 10, max: 15 } },
+        audio: false,
       });
       const track = screen.getVideoTracks()[0];
+      screenStreamRef.current = screen;
       setScreenStream(screen);
       setIsScreenSharing(true);
       setScreenSharer(userId);
       if (track) {
+        // Slides / images: favour sharp text over motion
+        track.contentHint = "detail";
+        screenTrackRef.current = track;
         replaceOutgoingVideoTrack(track);
         track.onended = () => stopScreenShare();
       }
       wsRef.current?.send(JSON.stringify({ type: "screen_share_started" }));
     } catch (e) {
-      console.error("WebRTC: Screen share failed", e);
-      alert(`Screen sharing failed: ${e.message}`);
+      if (e.name !== "NotAllowedError") {
+        console.error("WebRTC: Screen share failed", e);
+        alert(`Le partage d'écran a échoué : ${e.message}`);
+      }
     }
   }, [replaceOutgoingVideoTrack, userId]);
 
   const stopScreenShare = useCallback(() => {
-    if (screenStream) screenStream.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current = null;
+    screenTrackRef.current = null;
     setScreenStream(null);
     setIsScreenSharing(false);
     setScreenSharer(null);
-    if (localStreamRef.current) {
-      const track = localStreamRef.current.getVideoTracks()[0];
-      if (track) replaceOutgoingVideoTrack(track);
-    }
+    // Back to the camera if it is on, otherwise stop sending video
+    const camera = localStreamRef.current?.getVideoTracks()[0] || null;
+    replaceOutgoingVideoTrack(camera);
     wsRef.current?.send(JSON.stringify({ type: "screen_share_stopped" }));
-  }, [replaceOutgoingVideoTrack, screenStream]);
+  }, [replaceOutgoingVideoTrack]);
+
+  // ---- Quality monitor: sample every peer, degrade fast / recover slowly, tell the UI --------------
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      const ids = Object.keys(peersRef.current).filter((id) => connectedPeersRef.current.has(id));
+      if (ids.length === 0) return;
+      const updates = {};
+      await Promise.all(
+        ids.map(async (peerId) => {
+          const peer = peersRef.current[peerId];
+          const state = qualityRef.current[peerId];
+          if (!peer || peer.destroyed || !state) return;
+          let sample = null;
+          try {
+            sample = await sampleStats(peer, state.prev);
+          } catch (e) {
+            return;
+          }
+          if (!sample) return;
+          state.prev = { bytes: sample.bytes, timestamp: sample.timestamp };
+          const next = nextLevel(state, sample);
+          const changed = next.level !== state.level;
+          state.level = next.level;
+          state.goodStreak = next.goodStreak;
+          updates[peerId] = { level: next.level, rttMs: sample.rttMs, lossPct: Math.round(sample.lossPct), kbps: sample.kbps };
+          if (changed) applyPeerPlan(peerId);
+        }),
+      );
+      if (Object.keys(updates).length) {
+        setPeerQuality((prev) => ({ ...prev, ...updates }));
+      }
+    }, QUALITY_POLL_MS);
+    return () => clearInterval(timer);
+  }, [applyPeerPlan]);
+
+  // Release the camera, microphone and screen capture when leaving, not just the connections
+  const stopAllLocalMedia = useCallback(() => {
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    localStreamRef.current = null;
+    screenStreamRef.current = null;
+    screenTrackRef.current = null;
+    currentVideoTrackRef.current = null;
+  }, []);
 
   useEffect(
     () => () => {
+      intentionalCloseRef.current = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       cleanupPeers();
       if (wsRef.current) wsRef.current.close();
+      stopAllLocalMedia();
     },
-    [cleanupPeers],
+    [cleanupPeers, stopAllLocalMedia],
   );
 
   const sendDicomViewportSync = useCallback((attachmentId, viewportState) => {
@@ -566,9 +761,15 @@ export default function useWebRTC(
     connect,
     reconnectAsParticipant,
     disconnect: () => {
+      intentionalCloseRef.current = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       cleanupPeers();
       wsRef.current?.close();
+      stopAllLocalMedia();
     },
+    peerQuality,
+    lowData,
+    setLowData,
     toggleMute,
     toggleCamera,
     startScreenShare,

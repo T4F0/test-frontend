@@ -135,6 +135,7 @@ export async function initCornerstone() {
   cornerstoneTools.addTool(cornerstoneTools.EllipticalROITool)
   cornerstoneTools.addTool(cornerstoneTools.RectangleROITool)
   cornerstoneTools.addTool(cornerstoneTools.StackScrollTool)
+  cornerstoneTools.addTool(cornerstoneTools.ScaleOverlayTool)
   cornerstoneTools.addTool(CustomEraserTool)
 
   initialized = true
