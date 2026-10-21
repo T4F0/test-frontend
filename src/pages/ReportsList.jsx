@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getReports, downloadReportPdf, downloadReportDocx, fetchReportPdfBlob } from '../api/reportsApi'
 import { getMeetings } from '../api/meetingsApi'
-import { Search, Filter, FileText } from 'lucide-react'
+import { Search, Filter, FileText, Eye, Download, FileDown } from 'lucide-react'
 import PageTitle from '../components/PageTitle'
+import DataTable from '../components/DataTable'
+import EmptyState from '../components/EmptyState'
+import RowActionMenu from '../components/RowActionMenu'
+import { sortRows } from '../lib/sorting'
 
 export default function ReportsList() {
   const [reports, setReports] = useState([])
@@ -15,7 +19,7 @@ export default function ReportsList() {
   const filterSubmission = searchParams.get('submission') || ''
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortOrder, setSortOrder] = useState('desc') // 'desc' = newest first, 'asc' = oldest first
+  const [sort, setSort] = useState({ key: 'created', dir: 'desc' })
 
   const [previewPdfUrl, setPreviewPdfUrl] = useState(null)
   const [previewReportId, setPreviewReportId] = useState(null)
@@ -119,21 +123,17 @@ export default function ReportsList() {
     setPreviewError(null)
   }
 
-  const processedReports = reports
-    .filter((r) => {
-      const term = searchTerm.toLowerCase().trim()
-      if (!term) return true
-      const patientName = (r.submission_patient_name || '').toLowerCase()
-      const docName = (r.written_by_name || '').toLowerCase()
-      return patientName.includes(term) || docName.includes(term)
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.created_at)
-      const dateB = new Date(b.created_at)
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
-    })
+  const matching = reports.filter((r) => {
+    const term = searchTerm.toLowerCase().trim()
+    if (!term) return true
+    return (r.submission_patient_name || '').toLowerCase().includes(term) || (r.written_by_name || '').toLowerCase().includes(term)
+  })
+  const processedReports = sortRows(matching, sort, {
+    name: (r) => r.submission_name || r.submission_patient_name,
+    author: (r) => r.written_by_name,
+    created: (r) => new Date(r.created_at),
+  })
 
-  if (loading && reports.length === 0) return <div className="loading">Chargement des rapports...</div>
   if (error && reports.length === 0) return <div className="error">{error}</div>
 
   return (
@@ -229,122 +229,56 @@ export default function ReportsList() {
         </div>
       </div>
 
-      {reports.length === 0 ? (
-        <div className="empty-inline-card">
-          <p>{selectedMeeting ? 'Aucun rapport généré pour cette réunion.' : 'Aucun rapport généré pour le moment.'}</p>
-        </div>
-      ) : processedReports.length === 0 ? (
-            <div className="empty-inline-card">
-              <p>Aucun rapport ne correspond à votre recherche "{searchTerm}"</p>
+      <DataTable
+        columns={[
+          {
+            key: 'name',
+            label: 'Dossier / Soumission',
+            sortable: true,
+            render: (r) => (
+              <>
+                <strong>{r.submission_name || r.submission_patient_name || 'Sans titre'}</strong>
+                <div className="text-muted" style={{ fontSize: '0.8rem' }}>{r.form_name || r.submission_form_name}</div>
+              </>
+            ),
+          },
+          {
+            key: 'meeting',
+            label: 'Réunion',
+            render: (r) => (r.meeting_names?.length ? r.meeting_names.map((m) => m.name).join(', ') : <span className="text-muted">—</span>),
+          },
+          { key: 'author', label: 'Rédigé par', sortable: true, render: (r) => r.written_by_name || '—' },
+          { key: 'created', label: 'Date de création', sortable: true, render: (r) => new Date(r.created_at).toLocaleString('fr-FR') },
+        ]}
+        rows={processedReports}
+        sort={sort}
+        onSortChange={setSort}
+        loading={loading && reports.length === 0}
+        empty={
+          <EmptyState
+            icon={FileText}
+            title={reports.length === 0 ? (selectedMeeting ? 'Aucun rapport pour cette réunion' : 'Aucun rapport pour le moment') : 'Aucun résultat'}
+            description={reports.length === 0 ? 'Les rapports apparaissent ici une fois la décision de la RCP rédigée.' : `Aucun rapport ne correspond à « ${searchTerm} ».`}
+          />
+        }
+        actions={(r) => {
+          const busy = previewLoading === r.id || downloadingPdf === r.id || downloadingDocx === r.id
+          return (
+            <div className="ui-row-actions">
+              <button type="button" className="ui-primary-action" disabled={busy} onClick={() => handlePreview(r.id)}>
+                <Eye size={15} aria-hidden="true" /> {previewLoading === r.id ? 'Chargement…' : 'Aperçu'}
+              </button>
+              <RowActionMenu
+                label={`Autres actions pour ${r.submission_patient_name || 'ce rapport'}`}
+                items={[
+                  { label: downloadingPdf === r.id ? 'Génération…' : 'Télécharger le PDF', icon: Download, disabled: busy, onClick: () => handleDownloadPdf(r.id) },
+                  { label: downloadingDocx === r.id ? 'Génération…' : 'Télécharger en Word', icon: FileDown, disabled: busy, onClick: () => handleDownloadDocx(r.id) },
+                ]}
+              />
             </div>
-          ) : (
-            <>
-            <div className="reports-table-wrapper table-responsive-wrapper">
-              <table className="forms-table" style={{ tableLayout: 'fixed', width: '100%' }}>
-                <colgroup>
-                  <col style={{ width: '25%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '17%' }} />
-                  <col style={{ width: '25%' }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Dossier / Soumission</th>
-                    <th>Réunion</th>
-                    <th>Rédigé par</th>
-                    <th 
-                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} 
-                      style={{ cursor: 'pointer', userSelect: 'none' }}
-                      title="Cliquez pour trier par date"
-                    >
-                      Date de création <span style={{ marginLeft: '4px', fontSize: '0.82rem', color: 'var(--primary)' }}>{sortOrder === 'asc' ? '▲' : '▼'}</span>
-                    </th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {processedReports.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <strong>{r.submission_name || r.submission_patient_name || 'Sans titre'}</strong>
-                        <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name || r.submission_form_name}</div>
-                      </td>
-                      <td style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
-                        {r.meeting_names && r.meeting_names.length > 0
-                          ? r.meeting_names.map((m) => m.name).join(', ')
-                          : <span className="text-muted">—</span>
-                        }
-                      </td>
-                      <td>{r.written_by_name || '—'}</td>
-                      <td>{new Date(r.created_at).toLocaleString()}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <button
-                          className="btn-small btn-outline"
-                          disabled={previewLoading === r.id || downloadingPdf === r.id || downloadingDocx === r.id}
-                          onClick={() => handlePreview(r.id)}
-                          style={{ marginRight: 6 }}
-                        >
-                          {previewLoading === r.id ? 'Chargement...' : 'Aperçu'}
-                        </button>
-                        <button
-                          className="btn-small btn-primary"
-                          disabled={downloadingPdf === r.id || downloadingDocx === r.id}
-                          onClick={() => handleDownloadPdf(r.id)}
-                          style={{ marginRight: 6 }}
-                        >
-                          {downloadingPdf === r.id ? 'Génération...' : 'PDF'}
-                        </button>
-                        <button
-                          className="btn-small btn-secondary"
-                          disabled={downloadingDocx === r.id || downloadingPdf === r.id}
-                          onClick={() => handleDownloadDocx(r.id)}
-                        >
-                          {downloadingDocx === r.id ? 'Génération...' : 'Word (.docx)'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mobile-cards">
-              {processedReports.map((r) => (
-                <div key={r.id} className="mobile-card">
-                  <div className="mobile-card-header">
-                    <div className="mobile-card-title">
-                      <strong>{r.submission_name || r.submission_patient_name || 'Sans titre'}</strong>
-                      <div className="text-muted" style={{fontSize: '0.8rem'}}>{r.form_name || r.submission_form_name}</div>
-                    </div>
-                  </div>
-                  <div className="mobile-card-body">
-                    <span className="text-muted" style={{fontSize: '0.8rem'}}>
-                      {r.written_by_name || '—'} · {new Date(r.created_at).toLocaleString()}
-                    </span>
-                    {r.meeting_names && r.meeting_names.length > 0 && (
-                      <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>
-                        {r.meeting_names.map((m) => m.name).join(', ')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mobile-card-actions" style={{ flexWrap: 'wrap', gap: '6px' }}>
-                    <button className="btn-small btn-outline" disabled={previewLoading === r.id || downloadingPdf === r.id || downloadingDocx === r.id} onClick={() => handlePreview(r.id)}>
-                      {previewLoading === r.id ? 'Chargement...' : 'Aperçu'}
-                    </button>
-                    <button className="btn-small btn-primary" disabled={downloadingPdf === r.id || downloadingDocx === r.id} onClick={() => handleDownloadPdf(r.id)}>
-                      {downloadingPdf === r.id ? 'Génération...' : 'PDF'}
-                    </button>
-                    <button className="btn-small btn-secondary" disabled={downloadingDocx === r.id || downloadingPdf === r.id} onClick={() => handleDownloadDocx(r.id)}>
-                      {downloadingDocx === r.id ? 'Génération...' : 'Word (.docx)'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            </>
-          )}
-
+          )
+        }}
+      />
 
       {previewPdfUrl && (
         <div

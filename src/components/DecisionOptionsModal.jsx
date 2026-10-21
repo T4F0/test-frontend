@@ -7,8 +7,10 @@ import {
   reorderDecisionOptions,
 } from '../api/decisionOptionsApi'
 import { Gavel, Plus, X, Check, Pencil, ToggleLeft, ToggleRight, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
+import { useConfirm } from './ConfirmDialog'
 
 export default function DecisionOptionsModal({ isOpen, onClose, form }) {
+  const confirm = useConfirm()
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const [newLabel, setNewLabel] = useState('')
@@ -86,7 +88,7 @@ export default function DecisionOptionsModal({ isOpen, onClose, form }) {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer définitivement cette proposition ?')) return
+    if (!(await confirm({ title: 'Supprimer cette proposition ?', message: 'La proposition de décision sera supprimée définitivement.', confirmLabel: 'Supprimer', danger: true }))) return
     try {
       await deleteDecisionOption(id)
       setOptions(prev => prev.filter(o => o.id !== id))

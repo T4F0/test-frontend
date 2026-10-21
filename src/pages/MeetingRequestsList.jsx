@@ -6,6 +6,11 @@ import { useAuth } from '../context/AuthContext'
 import UserAvatar from '../components/UserAvatar'
 import { formatDate } from '../lib/dateUtils'
 import { Send, FileText, User, Calendar, ArrowRight, Eye, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { useConfirm } from '../components/ConfirmDialog'
+import { toast } from '../lib/toast'
+import PageTitle from '../components/PageTitle'
+import EmptyState from '../components/EmptyState'
+import TableSkeleton from '../components/TableSkeleton'
 
 const SectionRenderer = ({ section }) => (
   <div style={{ marginBottom: '1rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
@@ -42,6 +47,7 @@ const SectionRenderer = ({ section }) => (
 );
 
 export default function MeetingRequestsList() {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const { user } = useAuth()
   const [requests, setRequests] = useState([])
@@ -91,7 +97,7 @@ export default function MeetingRequestsList() {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
     } catch (err) {
       console.error('Error fetching file:', err)
-      alert('Erreur lors de l\'ouverture du fichier')
+      toast.error('Erreur lors de l\'ouverture du fichier')
     } finally {
       setViewingFileId(null)
     }
@@ -138,25 +144,25 @@ export default function MeetingRequestsList() {
     try {
       setAddingToMeeting(requestId)
       await addPatientToMeeting(nextMeeting.id, patientId)
-      alert('Patient ajouté à la prochaine réunion avec succès !')
+      toast.success('Patient ajouté à la prochaine réunion avec succès !')
       // Remove request from list or mark as accepted (depending on backend logic, typically the request is marked ACCEPTED when added to a meeting, but if not we might need to manually handle it. For now let's just reload requests)
       loadRequests()
     } catch (err) {
       console.error('Failed to add patient to meeting:', err)
-      alert('Échec de l\'ajout à la réunion.')
+      toast.error('Échec de l\'ajout à la réunion.')
     } finally {
       setAddingToMeeting(null)
     }
   }
 
   const handleRejectRequest = async (requestId) => {
-    if (!window.confirm('Voulez-vous classer cette demande sans suite ? (Elle ne sera plus affichée dans la liste)')) return
+    if (!(await confirm({ title: 'Classer cette demande sans suite ?', message: 'Elle ne sera plus affichée dans la liste.', confirmLabel: 'Classer sans suite', danger: true }))) return
     try {
       await rejectMeetingRequest(requestId)
       loadRequests()
     } catch (err) {
       console.error('Failed to reject meeting request:', err)
-      alert('Échec du classement de la demande.')
+      toast.error('Échec du classement de la demande.')
     }
   }
 
@@ -167,22 +173,19 @@ export default function MeetingRequestsList() {
       setSelectedSubmission(data)
     } catch (err) {
       console.error(err)
-      alert('Erreur lors du chargement du dossier.')
+      toast.error('Erreur lors du chargement du dossier.')
     } finally {
       setResumeLoading(false)
     }
   }
 
-  if (loading) return <div className="loading">Chargement des demandes...</div>
+  if (loading) return <div className="meetings-list"><TableSkeleton rows={3} columns={3} label="Chargement des demandes…" /></div>
 
   return (
     <div className="meetings-list">
       <div className="list-header" style={{ marginBottom: '2rem' }}>
         <div>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0 }}>
-            <Send size={28} className="text-primary" />
-            Demandes de réunions RCP
-          </h2>
+          <PageTitle icon={Send}>Demandes de réunions RCP</PageTitle>
           <p style={{ color: '#64748b', marginTop: '0.5rem' }}>
             Consultez et validez les demandes soumises par les médecins de votre service.
           </p>
@@ -192,11 +195,7 @@ export default function MeetingRequestsList() {
       {error && <div className="error">{error}</div>}
 
       {requests.length === 0 ? (
-        <div className="empty-state" style={{ textAlign: 'center', padding: '4rem 2rem', background: '#f8fafc', borderRadius: '12px', border: '2px dashed #e2e8f0' }}>
-          <Send size={48} style={{ color: '#cbd5e1', marginBottom: '1rem' }} />
-          <h3 style={{ color: '#475569' }}>Aucune demande en attente</h3>
-          <p style={{ color: '#64748b' }}>Toutes les demandes ont été traitées ou aucune n'a été soumise récemment.</p>
-        </div>
+        <EmptyState icon={Send} title="Aucune demande en attente" description="Toutes les demandes ont été traitées ou aucune n’a été soumise récemment." />
       ) : (
         <div className="meeting-requests-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {requests.map(req => {

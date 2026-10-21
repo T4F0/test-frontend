@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { login, getCurrentUser } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { Eye, EyeOff, Activity } from 'lucide-react'
+import TwoFactorPrompt from '../components/TwoFactorPrompt'
 
 export default function Login() {
 
@@ -11,25 +12,39 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [otpRequired, setOtpRequired] = useState(false)
+  const [otpError, setOtpError] = useState(null)
   const navigate = useNavigate()
   const { setUser } = useAuth()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const attempt = async (otp) => {
     try {
       setLoading(true)
       setError(null)
-      await login(username, password)
+      setOtpError(null)
+      await login(username, password, otp)
       // Reload user data
       const userData = await getCurrentUser()
       setUser(userData)
       navigate('/')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Échec de la connexion')
+      if (err.response?.data?.otp_required) {
+        setOtpRequired(true)
+        // The first answer only asks for a code; later ones say the code was refused
+        setOtpError(otp ? err.response.data.detail || 'Code incorrect.' : null)
+      } else {
+        setOtpRequired(false)
+        setError(err.response?.data?.detail || 'Échec de la connexion')
+      }
       console.error(err)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    attempt(undefined)
   }
 
   return (
@@ -103,6 +118,15 @@ export default function Login() {
             {loading ? 'Connexion en cours...' : 'Se connecter'}
           </button>
         </form>
+
+        {otpRequired && (
+          <TwoFactorPrompt
+            error={otpError}
+            loading={loading}
+            onSubmit={attempt}
+            onCancel={() => { setOtpRequired(false); setOtpError(null) }}
+          />
+        )}
 
         <p className="login-footer">
           Identifiants : Utilisez votre compte hospitalier

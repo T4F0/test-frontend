@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { titleForPath, statusLabel, SUBMISSION_STATUS_LABELS, MEETING_STATUS_LABELS } from './labels.js'
 
 test('titleForPath picks the most specific route', () => {
+  assert.equal(titleForPath('/'), 'Accueil · e-RCP')
   assert.equal(titleForPath('/patients'), 'Patients · e-RCP')
   assert.equal(titleForPath('/patients/abc-123'), 'Dossier patient · e-RCP')
   assert.equal(titleForPath('/patients/abc/edit'), 'Modifier le patient · e-RCP')

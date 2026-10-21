@@ -2,6 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getCurrentUser, getUser, getServices, updateUser, updateProfilePicture, removeProfilePicture, changePassword } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
+import TwoFactorPanel from '../components/TwoFactorPanel'
+import { resetUserTwoFactor } from '../api/authApi'
+import { toast } from '../lib/toast'
+import { ShieldCheck } from 'lucide-react'
 import UserAvatar from '../components/UserAvatar'
 import { ALGERIA_WILAYAS } from '../lib/constants'
 import { validatePhoneNumber } from '../lib/validators'
@@ -828,6 +832,25 @@ export default function UserProfile() {
             )}
           </div>
         </div>
+      )}
+
+      {activeTab === 'info' && !isOwnProfile && currentUser?.role === 'ADMIN' && user?.totp_enabled && (
+        <div className="tf">
+          <h3 className="tf-title"><ShieldCheck size={18} aria-hidden="true" /> Double authentification active</h3>
+          <p className="tf-text">Si cette personne a perdu son appareil et ses codes de secours, vous pouvez réinitialiser sa 2FA.</p>
+          <div className="tf-actions">
+            <button type="button" className="btn-small btn-danger" onClick={async () => {
+              try { await resetUserTwoFactor(user.id); setUser({ ...user, totp_enabled: false }); toast.success('2FA réinitialisée') } catch { toast.error('Échec de la réinitialisation') }
+            }}>Réinitialiser la 2FA</button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'password' && isOwnProfile && (
+        <TwoFactorPanel
+          enabled={Boolean(currentUser?.totp_enabled)}
+          onChange={(on) => setAuthUser({ ...currentUser, totp_enabled: on })}
+        />
       )}
 
       {/* ── Tab: Mot de passe (own profile only) ─────── */}

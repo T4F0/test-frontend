@@ -1,3 +1,4 @@
+import { useConfirm } from './ConfirmDialog'
 import { useState, useEffect } from 'react'
 
 const FIELD_TYPES = [
@@ -10,6 +11,7 @@ const FIELD_TYPES = [
 ]
 
 export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing = false }) {
+  const confirm = useConfirm()
   const [isEditing, setIsEditing] = useState(initialEditing)
   const [data, setData] = useState(field)
   const [saving, setSaving] = useState(false)
@@ -30,10 +32,9 @@ export default function FieldBuilder({ field, onUpdate, onDelete, initialEditing
     setIsEditing(false)
   }
 
-  const handleDelete = () => {
-    if (confirm(`Supprimer le champ "${field.name}" ?`)) {
-      onDelete(field.id)
-    }
+  const handleDelete = async () => {
+    const ok = await confirm({ title: 'Supprimer ce champ ?', message: `Le champ « ${field.name} » sera retiré du formulaire.`, confirmLabel: 'Supprimer', danger: true })
+    if (ok) onDelete(field.id)
   }
 
   return (

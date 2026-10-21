@@ -28,10 +28,12 @@ export function statusLabel(map, value) {
 
 /** Browser-tab title for a route path, in French. Never includes patient names (tab titles end up in history). */
 const ROUTE_TITLES = [
+  [/^\/$/, 'Accueil'],
   [/^\/login/, 'Connexion'],
   [/^\/register/, 'Inscription'],
   [/^\/forgot-password/, 'Mot de passe oublié'],
   [/^\/reset-password/, 'Nouveau mot de passe'],
+  [/^\/second-opinion/, 'Avis externe'],
   [/^\/secure-account/, 'Sécuriser mon compte'],
   [/^\/remove-account/, 'Suppression de compte'],
   [/^\/cases\/new/, 'Nouveau dossier RCP'],
@@ -59,6 +61,7 @@ const ROUTE_TITLES = [
   [/^\/attachments/, 'Pièces jointes'],
   [/^\/reports/, 'Rapports'],
   [/^\/settings\/services/, 'Paramètres des services'],
+  [/^\/analytics/, 'Statistiques'],
   [/^\/audit-logs/, 'Historique des activités'],
   [/^\/conference/, 'Visioconférence'],
 ]

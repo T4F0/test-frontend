@@ -32,6 +32,7 @@ const ROUTE_ACCESS = [
   { pattern: "/users/:id/edit", roles: ALL },
   { pattern: "/users/:id", roles: ALL },
   { pattern: "/users", roles: ALL_STAFF },
+  { pattern: "/analytics", roles: ALL_STAFF },
   { pattern: "/audit-logs", roles: [ADMIN] },
   { pattern: "/settings/services", roles: [] },
   { pattern: "/conference/:roomId", roles: ALL },

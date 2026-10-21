@@ -1,3 +1,4 @@
+import { applyFlipState, withoutFlip } from '../lib/dicomFlip'
 import { useEffect } from 'react'
 import * as cornerstoneTools from '@cornerstonejs/tools'
 import { authorColor, isSameDicomFile } from '../lib/dicomIds'
@@ -18,6 +19,7 @@ export default function useDicomFollower({
   isPresenter,
   localizeAnnotation,
   pointerHideTimerRef,
+  remoteAuthorsRef,
   renderingEngineRef,
   setAnnotationCount,
   setCurrentSlice,
@@ -45,6 +47,7 @@ export default function useDicomFollower({
       const addRemote = (ann) => {
         const local = localizeAnnotation(ann)
         cornerstoneTools.annotation.state.addAnnotation(local, element)
+        remoteAuthorsRef?.current.set(local.annotationUID, { name: senderName || 'Présentateur', color })
         try {
           cornerstoneTools.annotation.config.style.setAnnotationStyles(local.annotationUID, {
             color,
@@ -57,6 +60,8 @@ export default function useDicomFollower({
       if (action === 'add' || action === 'modify' || action === 'snapshot') {
         setRemoteAuthor({ name: senderName || 'Présentateur', color })
       }
+
+      if (action === 'clear' || action === 'snapshot') remoteAuthorsRef?.current.clear()
 
       if (action === 'clear') {
         try {
@@ -105,7 +110,7 @@ export default function useDicomFollower({
         isApplyingRemoteAnnotationRef.current = false
       }, 60)
     }
-  }, [activeFile?.originalId, dicomAnnotationSyncState, fileId, isApplyingRemoteAnnotationRef, isFollowing, isPresenter, localizeAnnotation, renderingEngineRef, setAnnotationCount, setRemoteAuthor, viewportRef])
+  }, [activeFile?.originalId, dicomAnnotationSyncState, fileId, isApplyingRemoteAnnotationRef, isFollowing, isPresenter, localizeAnnotation, remoteAuthorsRef, renderingEngineRef, setAnnotationCount, setRemoteAuthor, viewportRef])
 
   // --- Handle remote sync updates (Follower) ---
   useEffect(() => {
@@ -169,7 +174,8 @@ export default function useDicomFollower({
         // 3. Sync Camera or Zoom/Pan
         if (state.presentation && typeof viewport.setViewPresentation === 'function') {
           // Size-independent zoom/pan: stays correct when the follower's window differs
-          viewport.setViewPresentation(state.presentation)
+          applyFlipState(viewport, state.presentation)
+          viewport.setViewPresentation(withoutFlip(state.presentation))
         } else if (state.camera) {
           viewport.setCamera(state.camera)
         } else {

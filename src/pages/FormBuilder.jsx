@@ -22,6 +22,7 @@ import {
 import { SortableItem } from '../components/SortableItem'
 import DecisionOptionsModal from '../components/DecisionOptionsModal'
 import { Gavel, Monitor } from 'lucide-react'
+import { toast } from '../lib/toast'
 
 export default function FormBuilder() {
   const { id } = useParams()
@@ -133,7 +134,7 @@ export default function FormBuilder() {
       }
 
       await syncForm(id, payload)
-      alert('Formulaire mis à jour avec succès')
+      toast.success('Formulaire mis à jour avec succès')
       navigate('/forms')
     } catch (err) {
       setError('Échec de l\'enregistrement du formulaire')
@@ -145,7 +146,7 @@ export default function FormBuilder() {
 
   const handleAddSection = (parentId = null) => {
     if (!form.id) {
-      alert('Veuillez d\'abord enregistrer le formulaire pour créer un brouillon')
+      toast.error('Veuillez d\'abord enregistrer le formulaire pour créer un brouillon')
       return
     }
     const order = sections.filter(s => s.parent === parentId).length

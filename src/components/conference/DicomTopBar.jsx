@@ -1,4 +1,4 @@
-import { Shield, ShieldCheck, Images, Layers, Radio, Eye, EyeOff, MousePointer2, Keyboard, X } from 'lucide-react'
+import { Shield, ShieldCheck, Images, Layers, Radio, Eye, EyeOff, MousePointer2, Keyboard, X, ImagePlus } from 'lucide-react'
 
 /** Title, panel toggles, anonymisation and the three presenter states. */
 export default function DicomTopBar({
@@ -24,6 +24,10 @@ export default function DicomTopBar({
   showHelp,
   onToggleHelp,
   onClose,
+  canSaveFinding,
+  showSaveFinding,
+  savingFinding,
+  onSaveFinding,
 }) {
   return (
     <header className="dv-topbar">
@@ -71,6 +75,19 @@ export default function DicomTopBar({
           {isAnonymized ? <ShieldCheck size={16} /> : <Shield size={16} />}
           <span className="dv-btn-label">{isAnonymized ? 'Anonymisé' : 'Anonymiser'}</span>
         </button>
+
+        {showSaveFinding && (
+          <button
+            type="button"
+            className="dv-btn"
+            onClick={onSaveFinding}
+            disabled={savingFinding || !canSaveFinding}
+            title={canSaveFinding ? 'Enregistrer cette image et les mesures dans le dossier du patient' : "Disponible pour une image ouverte depuis un dossier patient"}
+          >
+            <ImagePlus size={16} />
+            <span className="dv-btn-label">{savingFinding ? 'Enregistrement…' : 'Image clé'}</span>
+          </button>
+        )}
 
         <span className="dv-divider" />
 

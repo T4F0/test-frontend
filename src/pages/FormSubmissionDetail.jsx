@@ -6,6 +6,7 @@ import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { Download, FileText, ExternalLink, Video, Image, Edit, Scan } from 'lucide-react'
 import DicomModal from '../components/conference/DicomModal'
 import { useAuth } from '../context/AuthContext'
+import Breadcrumbs from '../components/Breadcrumbs'
 
 function formatValue(value) {
   if (value === true) return 'Oui'
@@ -127,6 +128,7 @@ export default function FormSubmissionDetail() {
   return (
     <div className="submission-detail-fullscreen">
       <div className="submission-detail-inner">
+        <Breadcrumbs items={[{ label: 'Formulaires', to: '/forms' }, { label: 'Soumissions', to: `/forms/${formId}/submissions` }, { label: 'Dossier RCP' }]} />
         <header className="submission-detail-header">
           <div className="submission-detail-header-text">
             <h1 className="submission-detail-title">{submission.name || form.name}</h1>
@@ -231,6 +233,7 @@ export default function FormSubmissionDetail() {
                             file: file.file,
                             url: file.file,
                             file_type: 'DICOM',
+                            submission: file.submission,
                           })
                         } else {
                           downloadAttachment(file.file, null)

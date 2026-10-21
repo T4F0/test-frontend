@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAuditLogs } from '../api/auditLogsApi'
+import { getAuditLogs, exportAuditLogsCsv } from '../api/auditLogsApi'
 import { formatDateTime } from '../lib/dateUtils'
 import AuditLogDrawer from '../components/AuditLogDrawer'
+import PageTitle from '../components/PageTitle'
+import RowActionMenu from '../components/RowActionMenu'
+import EmptyState from '../components/EmptyState'
+import TableSkeleton from '../components/TableSkeleton'
 import { 
   Activity, PlusCircle, Edit, Trash2, Eye, Info,
   User, Calendar, FileText, FileType, Stethoscope, File, Shield,
-  LogIn, LogOut, AlertTriangle
+  LogIn, LogOut, AlertTriangle, Download, Search, X, FilterX, ExternalLink
 } from 'lucide-react'
 
 const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'VIEW', 'LOGIN', 'LOGOUT', 'LOGIN_FAILED']
@@ -60,302 +64,270 @@ const OBJECT_TYPE_ICONS = {
 export default function AuditLogsList() {
   const navigate = useNavigate()
   const [logs, setLogs] = useState([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState(null)
-  
+
   const [action, setAction] = useState('')
   const [objectType, setObjectType] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
   const [hasPrev, setHasPrev] = useState(false)
-
   const [selectedLog, setSelectedLog] = useState(null)
 
-  // Reset to first page when filtering
+  // The person search runs on the server: wait for a pause in typing
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const filters = useMemo(() => {
+    const f = {}
+    if (action) f.action = action
+    if (objectType) f.object_type = objectType
+    if (debouncedSearch) f.q = debouncedSearch
+    if (dateFrom) f.date_from = dateFrom
+    if (dateTo) f.date_to = dateTo
+    return f
+  }, [action, objectType, debouncedSearch, dateFrom, dateTo])
+
+  const hasFilters = Object.keys(filters).length > 0 || search !== ''
+
   useEffect(() => {
     setPage(1)
-  }, [action, objectType])
+  }, [filters])
 
   useEffect(() => {
-    loadLogs()
-  }, [action, objectType, page])
+    let cancelled = false
+    const load = async () => {
+      try {
+        setLoading(true)
+        const data = await getAuditLogs(page > 1 ? { ...filters, page } : filters)
+        if (cancelled) return
+        setLogs(Array.isArray(data.logs) ? data.logs : [])
+        setTotal(data.count)
+        setHasNext(data.hasNext)
+        setHasPrev(data.hasPrev)
+        setError(null)
+      } catch (err) {
+        if (!cancelled) setError("Échec du chargement de l'historique. Accès administrateur requis.")
+        console.error(err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [filters, page])
 
-  const loadLogs = async () => {
+  const resetFilters = () => {
+    setAction('')
+    setObjectType('')
+    setSearch('')
+    setDebouncedSearch('')
+    setDateFrom('')
+    setDateTo('')
+  }
+
+  const handleExport = async () => {
     try {
-      setLoading(true)
-      const filters = {}
-      if (action) filters.action = action
-      if (objectType) filters.object_type = objectType
-      if (page > 1) filters.page = page
-      
-      const data = await getAuditLogs(filters)
-      setLogs(Array.isArray(data.logs) ? data.logs : [])
-      setHasNext(data.hasNext)
-      setHasPrev(data.hasPrev)
-      setError(null)
+      setExporting(true)
+      await exportAuditLogsCsv(filters)
     } catch (err) {
-      setError('Échec du chargement de l\'historique. Accès administrateur requis.')
+      setError("Échec de l'export. Réessayez.")
       console.error(err)
     } finally {
-      setLoading(false)
+      setExporting(false)
     }
   }
 
-  const filteredLogs = logs.filter(log => {
-      if (!search) return true;
-      const searchLower = search.toLowerCase();
-      return (log.username?.toLowerCase().includes(searchLower) || 
-              log.user_email?.toLowerCase().includes(searchLower));
-  })
-
   const getObjectLink = (type, id) => {
-    switch(type) {
+    switch (type) {
       case 'User': return `/users/${id}`
       case 'Patient': return `/patients/${id}`
       case 'RCPMeeting': return `/meetings/${id}`
-      case 'Form': return `/forms/${id}`
+      case 'Form': return `/forms/${id}/submissions`
       default: return null
     }
   }
 
-  if (loading && logs.length === 0) return <div className="loading">Chargement de l'historique...</div>
-  if (error) return <div className="error">{error}</div>
+  const displayName = (log) => log.user_full_name || log.username || 'Système'
+
+  const rowMenu = (log) => {
+    const link = log.action !== 'DELETE' ? getObjectLink(log.object_type, log.object_id) : null
+    return [
+      { label: "Consulter l'élément", icon: ExternalLink, hidden: !link, onClick: () => navigate(link) },
+      { label: 'Voir la personne', icon: User, hidden: !log.user, onClick: () => navigate(`/users/${log.user}`) },
+    ]
+  }
+
+  if (error && logs.length === 0) return <div className="error">{error}</div>
 
   return (
-    <div className="list-container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      <div className="list-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0 }}>
-          <Shield className="text-primary" size={28} />
-          Historique des Activités
-        </h1>
-        <p className="text-muted" style={{ margin: '0.5rem 0 0 0', fontSize: '0.95rem' }}>
-          Suivi complet et simplifié des actions réalisées sur la plateforme.
-        </p>
+    <div className="list-container audit-page">
+      <div className="list-header audit-header">
+        <div>
+          <PageTitle icon={Shield}>Historique des activités</PageTitle>
+          <p className="text-muted audit-subtitle">Qui a fait quoi, et quand, sur la plateforme.</p>
+        </div>
+        <button type="button" className="ui-btn ui-btn-ghost" onClick={handleExport} disabled={exporting || total === 0}>
+          <Download size={16} aria-hidden="true" />
+          {exporting ? 'Export…' : 'Exporter en CSV'}
+        </button>
       </div>
 
-      <div className="filters-bar" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-        <div style={{ flex: 1, minWidth: '200px' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>Filtrer par action</label>
-          <select value={action} onChange={(e) => setAction(e.target.value)} className="filter-select" style={{ width: '100%', margin: 0, padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+      <div className="audit-filters">
+        <label className="audit-field">
+          <span>Action</span>
+          <select value={action} onChange={(e) => setAction(e.target.value)}>
             <option value="">Toutes les actions</option>
-            {ACTIONS.map(a => <option key={a} value={a}>{ACTION_LABELS[a] || a}</option>)}
+            {ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a] || a}</option>)}
           </select>
-        </div>
-
-        <div style={{ flex: 1, minWidth: '200px' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>Filtrer par type d'élément</label>
-          <select value={objectType} onChange={(e) => setObjectType(e.target.value)} className="filter-select" style={{ width: '100%', margin: 0, padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-            <option value="">Tous les types d'éléments</option>
-            {OBJECT_TYPES.map(t => <option key={t} value={t}>{OBJECT_TYPE_LABELS[t] || t}</option>)}
+        </label>
+        <label className="audit-field">
+          <span>Type d'élément</span>
+          <select value={objectType} onChange={(e) => setObjectType(e.target.value)}>
+            <option value="">Tous les types</option>
+            {OBJECT_TYPES.map((t) => <option key={t} value={t}>{OBJECT_TYPE_LABELS[t] || t}</option>)}
           </select>
-        </div>
-
-        <div style={{ flex: 2, minWidth: '250px' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>Recherche rapide</label>
-          <div style={{ position: 'relative' }}>
-            <input 
-              type="text" 
-              placeholder="Rechercher un médecin, un email ou une référence..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="filter-input"
-              style={{ width: '100%', margin: 0, padding: '0.6rem 2rem 0.6rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-            />
+        </label>
+        <label className="audit-field">
+          <span>Du</span>
+          <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(e) => setDateFrom(e.target.value)} />
+        </label>
+        <label className="audit-field">
+          <span>Au</span>
+          <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)} />
+        </label>
+        <label className="audit-field audit-field-search">
+          <span>Personne</span>
+          <div className="audit-search">
+            <Search size={16} aria-hidden="true" />
+            <input type="text" placeholder="Nom, identifiant ou email…" value={search} onChange={(e) => setSearch(e.target.value)} />
             {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                style={{
-                  position: 'absolute',
-                  right: '0.6rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--gray-400)',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                ✕
+              <button type="button" aria-label="Effacer la recherche" onClick={() => setSearch('')}>
+                <X size={15} aria-hidden="true" />
               </button>
             )}
           </div>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <button onClick={loadLogs} className="btn-secondary btn-with-icon" style={{ height: '42px', padding: '0 1rem' }}>
-            <Activity size={16} /> Actualiser
+        </label>
+        {hasFilters && (
+          <button type="button" className="ui-btn ui-btn-ghost audit-reset" onClick={resetFilters}>
+            <FilterX size={16} aria-hidden="true" /> Réinitialiser
           </button>
-        </div>
+        )}
       </div>
 
-      {filteredLogs.length === 0 ? (
-        <div className="empty-inline-card" style={{ padding: '3rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-          <Activity size={48} style={{ color: '#94a3b8', margin: '0 auto 1rem' }} />
-          <p style={{ color: '#475569', fontSize: '1.1rem', margin: 0 }}>Aucune activité trouvée pour ces critères.</p>
-        </div>
+      <div className="ui-count" aria-live="polite" style={{ marginBottom: '0.75rem' }}>
+        {loading ? 'Chargement…' : `${total} événement${total > 1 ? 's' : ''}${hasFilters ? ' correspondant aux filtres' : ''}`}
+      </div>
+
+      {loading && logs.length === 0 ? (
+        <TableSkeleton rows={8} columns={4} label="Chargement de l'historique…" />
+      ) : logs.length === 0 ? (
+        <EmptyState
+          icon={Activity}
+          title="Aucune activité trouvée"
+          description={hasFilters ? 'Aucun événement ne correspond à ces filtres.' : "Rien n'a encore été enregistré."}
+          action={hasFilters ? <button type="button" className="ui-btn ui-btn-ghost" onClick={resetFilters}>Réinitialiser les filtres</button> : null}
+        />
       ) : (
         <>
-        <div className="audit-table-wrapper" style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-          <table className="forms-table" style={{ margin: 0, width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ background: '#f1f5f9' }}>
-              <tr>
-                <th style={{ padding: '1rem', fontWeight: 600, color: '#334155', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Date & Heure</th>
-                <th style={{ padding: '1rem', fontWeight: 600, color: '#334155', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Intervenant</th>
-                <th style={{ padding: '1rem', fontWeight: 600, color: '#334155', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Action Réalisée</th>
-                <th style={{ padding: '1rem', fontWeight: 600, color: '#334155', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Lien vers l'élément</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((log) => {
-                const objectLink = getObjectLink(log.object_type, log.object_id);
-                return (
-                <tr 
-                  key={log.id} 
-                  onClick={() => { if (log.user) navigate(`/users/${log.user}`) }}
-                  style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s', cursor: log.user ? 'pointer' : 'default' }}
-                  className={log.user ? "hover-row-highlight" : ""}
-                >
-                  <td style={{ padding: '1rem', verticalAlign: 'middle', color: '#475569', whiteSpace: 'nowrap' }}>
-                    {formatDateTime(log.timestamp)}
-                  </td>
-                  <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexShrink: 0 }}>
-                        <User size={18} />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>
-                          {log.username || 'Système'}
-                        </div>
-                        {log.user_email && (
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{log.user_email}</div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        {ACTION_ICONS[log.action] || <Activity size={16} />}
-                      </div>
-                      <span>
-                        <span style={{ fontWeight: 600, color: '#334155' }}>{ACTION_LABELS[log.action] || log.action}</span>
-                        {' '}sur un(e){' '}
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#f1f5f9', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem', color: '#475569', fontWeight: 500, border: '1px solid #e2e8f0' }}>
-                          {OBJECT_TYPE_ICONS[log.object_type]}
-                          {OBJECT_TYPE_LABELS[log.object_type] || log.object_type}
-                        </span>
-                      </span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', verticalAlign: 'middle' }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {log.action === 'DELETE' ? (
-                        <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Élément supprimé</span>
-                      ) : objectLink ? (
-                        <button 
-                          className="btn-small btn-outline" 
-                          onClick={(e) => { e.stopPropagation(); navigate(objectLink); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem' }}
-                        >
-                          <Eye size={14} />
-                          Consulter
-                        </button>
-                      ) : (
-                        <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Non consultable directement</span>
-                      )}
-                      <button
-                        className="btn-small btn-outline"
-                        onClick={(e) => { e.stopPropagation(); setSelectedLog(log); }}
-                        title="Voir les détails"
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.65rem', color: '#6366f1', borderColor: '#c7d2fe' }}
-                      >
-                        <Info size={14} />
-                        Détails
-                      </button>
-                    </div>
-                  </td>
+          <div className="audit-table-wrapper">
+            <table className="forms-table audit-table">
+              <thead>
+                <tr>
+                  <th>Date et heure</th>
+                  <th>Intervenant</th>
+                  <th>Action réalisée</th>
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <tr key={log.id} className="ui-row-link" onClick={() => setSelectedLog(log)}>
+                    <td className="audit-date">{formatDateTime(log.timestamp)}</td>
+                    <td>
+                      <div className="audit-person">
+                        <span className="audit-avatar"><User size={18} aria-hidden="true" /></span>
+                        <div>
+                          <strong>{displayName(log)}</strong>
+                          {log.user_email && <div className="audit-email">{log.user_email}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="audit-action">
+                        <span className="audit-action-icon">{ACTION_ICONS[log.action] || <Activity size={16} />}</span>
+                        <span>
+                          <strong>{ACTION_LABELS[log.action] || log.action}</strong>
+                          <span className="audit-object">{OBJECT_TYPE_ICONS[log.object_type]}{OBJECT_TYPE_LABELS[log.object_type] || log.object_type}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="actions" onClick={(e) => e.stopPropagation()}>
+                      <div className="ui-row-actions">
+                        <button type="button" className="ui-primary-action" onClick={() => setSelectedLog(log)}>
+                          <Info size={15} aria-hidden="true" /> Détails
+                        </button>
+                        <RowActionMenu label="Autres actions" items={rowMenu(log)} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <div className="mobile-cards">
-          {filteredLogs.map((log) => {
-            const objectLink = getObjectLink(log.object_type, log.object_id);
-            return (
-              <div key={log.id} className="mobile-card" onClick={() => { if (log.user) navigate(`/users/${log.user}`); }}>
+          <div className="mobile-cards">
+            {logs.map((log) => (
+              <div key={log.id} className="mobile-card" onClick={() => setSelectedLog(log)}>
                 <div className="mobile-card-header">
                   <div className="mobile-card-title">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      {ACTION_ICONS[log.action] || <Activity size={14} />}
+                    <div className="audit-action">
+                      <span className="audit-action-icon">{ACTION_ICONS[log.action] || <Activity size={14} />}</span>
                       <strong>{ACTION_LABELS[log.action] || log.action}</strong>
                     </div>
-                    <div className="text-muted" style={{fontSize: '0.8rem'}}>
-                      {formatDateTime(log.timestamp)}
-                    </div>
+                    <div className="text-muted" style={{ fontSize: '0.8rem' }}>{formatDateTime(log.timestamp)}</div>
                   </div>
                 </div>
                 <div className="mobile-card-body">
-                  <span>
-                    {log.username || 'Système'}
-                    {log.user_email && <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: '0.5rem'}}>{log.user_email}</span>}
-                  </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#f1f5f9', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', marginLeft: 'auto' }}>
-                    {OBJECT_TYPE_LABELS[log.object_type] || log.object_type}
-                  </span>
+                  <span>{displayName(log)}</span>
+                  <span className="audit-object" style={{ marginLeft: 'auto' }}>{OBJECT_TYPE_LABELS[log.object_type] || log.object_type}</span>
                 </div>
-                <div className="mobile-card-actions">
-                  {log.action !== 'DELETE' && objectLink ? (
-                    <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); navigate(objectLink); }}>
-                      Consulter
-                    </button>
-                  ) : (
-                    <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>Élément supprimé</span>
-                  )}
-                  <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); setSelectedLog(log); }} style={{ marginLeft: 'auto' }}>
-                    Détails
+                <div className="mobile-card-actions" onClick={(e) => e.stopPropagation()}>
+                  <button type="button" className="ui-primary-action" onClick={() => setSelectedLog(log)}>
+                    <Info size={15} aria-hidden="true" /> Détails
                   </button>
+                  <RowActionMenu label="Autres actions" items={rowMenu(log)} />
                 </div>
               </div>
-            )
-          })}
-        </div>
+            ))}
+          </div>
         </>
       )}
 
       {logs.length > 0 && (
         <div className="pagination-bar">
-          <button
-            className="pagination-bar__btn"
-            disabled={!hasPrev || loading}
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-          >
+          <button className="pagination-bar__btn" disabled={!hasPrev || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             ← Précédente
           </button>
           <span className="pagination-bar__page">Page {page}</span>
-          <button
-            className="pagination-bar__btn"
-            disabled={!hasNext || loading}
-            onClick={() => setPage(p => p + 1)}
-          >
+          <button className="pagination-bar__btn" disabled={!hasNext || loading} onClick={() => setPage((p) => p + 1)}>
             Suivante →
           </button>
         </div>
       )}
 
-      {selectedLog && (
-        <AuditLogDrawer log={selectedLog} onClose={() => setSelectedLog(null)} />
-      )}
+      {selectedLog && <AuditLogDrawer log={selectedLog} onClose={() => setSelectedLog(null)} />}
     </div>
   )
 }

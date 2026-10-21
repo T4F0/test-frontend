@@ -14,8 +14,8 @@ export default function NewCaseGateway() {
   const { user } = useAuth()
 
   useEffect(() => {
-    if (user && user.role !== 'MEDECIN') {
-      navigate('/meetings')
+    if (user && user.role === 'COORDINATEUR') {
+      navigate('/meetings', { replace: true })
     }
   }, [user, navigate])
 

@@ -18,10 +18,8 @@ import {
   TOOLS,
   WL_PRESETS,
   applyToolBindings,
-  renderArrowTextBox,
 } from '../../lib/dicomTools'
 import {
-  authorColor,
   dicomEndpointFor,
   isSameDicomFile,
   normalizeDicomUrl,
@@ -32,9 +30,16 @@ import { getUserAnnotations, removeUserAnnotations } from '../../lib/dicomAnnota
 import useViewportResize from '../../hooks/useViewportResize'
 import useDicomShortcuts from '../../hooks/useDicomShortcuts'
 import useDicomFollower from '../../hooks/useDicomFollower'
+import useDicomHistory from '../../hooks/useDicomHistory'
+import useDicomAuthorHover from '../../hooks/useDicomAuthorHover'
+import useArrowPrompt from '../../hooks/useArrowPrompt'
 import { installRoiGuards } from '../../lib/dicomRoiGuards'
 import { saveAnnotations, loadAnnotations } from '../../lib/dicomAnnotationStore'
 import { orientationFromCamera } from '../../lib/dicomOrientation'
+import { extractMeasurements } from '../../lib/dicomMeasurements'
+import { captureViewport } from '../../lib/dicomKeyImage'
+import { createFinding } from '../../api/caseToolsApi'
+import { useAuth } from '../../context/AuthContext'
 
 export default function DicomViewer({
   file,
@@ -109,67 +114,22 @@ export default function DicomViewer({
   const [activeSeriesUid, setActiveSeriesUid] = useState(null)
   const [currentSeriesFile, setCurrentSeriesFile] = useState(null)
 
-  // Arrow Annotation Naming Prompt State (In-visualization modal to avoid native browser alerts)
-  const [arrowPrompt, setArrowPrompt] = useState(null)
-  const [arrowInputText, setArrowInputText] = useState('')
-  const arrowInputRef = useRef(null)
-  const promptArrowTextRef = useRef(null)
-
-  promptArrowTextRef.current = (doneCallback, initialText = '', isEditing = false) => {
-    setArrowInputText(initialText || '')
-    setArrowPrompt({ doneCallback, initialText, isEditing })
-  }
-
-  useEffect(() => {
-    if (arrowPrompt) {
-      setTimeout(() => {
-        arrowInputRef.current?.focus()
-        arrowInputRef.current?.select()
-      }, 60)
-    }
-  }, [arrowPrompt])
-
-  const handleConfirmArrowNaming = useCallback((text) => {
-    if (arrowPrompt?.doneCallback) {
-      const trimmed = (text || '').trim() || 'Flèche'
-      arrowPrompt.doneCallback(trimmed)
-    }
-    setArrowPrompt(null)
-    setArrowInputText('')
-  }, [arrowPrompt])
-
-  const handleCancelArrowNaming = useCallback(() => {
-    if (arrowPrompt?.doneCallback) {
-      if (arrowPrompt.isEditing) {
-        arrowPrompt.doneCallback(arrowPrompt.initialText || 'Flèche')
-      } else {
-        arrowPrompt.doneCallback(null)
-      }
-    }
-    setArrowPrompt(null)
-    setArrowInputText('')
-  }, [arrowPrompt])
-
-  const configureArrowInstance = useCallback((arrowInstance) => {
-    if (!arrowInstance) return
-
-    arrowInstance.configuration = {
-      ...arrowInstance.configuration,
-      arrowFirst: false,
-      getTextCallback: (doneCallback) => {
-        promptArrowTextRef.current?.(doneCallback, '', false)
-      },
-      changeTextCallback: (data, eventData, doneCallback) => {
-        const currentLabel = data?.data?.label || data?.label || ''
-        promptArrowTextRef.current?.(doneCallback, currentLabel, true)
-      },
-    }
-
-    arrowInstance.renderLinkedTextBoxAnnotation = renderArrowTextBox
-  }, [])
+  // Arrow annotation naming (in-viewer prompt instead of a native dialog)
+  const {
+    arrowPrompt,
+    arrowInputText,
+    setArrowInputText,
+    arrowInputRef,
+    promptArrowTextRef,
+    handleConfirmArrowNaming,
+    handleCancelArrowNaming,
+    configureArrowInstance,
+  } = useArrowPrompt()
 
   const isApplyingRemoteAnnotationRef = useRef(false)
   const serializeAnnotationRef = useRef(null)
+  const historyApiRef = useRef(null)
+  const remoteAuthorsRef = useRef(new Map())
   const onBroadcastAnnotationSyncRef = useRef(onBroadcastAnnotationSync)
   useEffect(() => {
     onBroadcastAnnotationSyncRef.current = onBroadcastAnnotationSync
@@ -479,12 +439,7 @@ export default function DicomViewer({
     (axis) => {
       const viewport = currentViewport()
       if (!viewport) return
-      const now = viewport.getViewPresentation({ flipHorizontal: true, flipVertical: true })
-      viewport.setViewPresentation(
-        axis === 'h'
-          ? { flipHorizontal: !now.flipHorizontal }
-          : { flipVertical: !now.flipVertical },
-      )
+      viewport.flip(axis === 'h' ? { flipHorizontal: true } : { flipVertical: true })
       afterImageChange(viewport)
     },
     [afterImageChange, currentViewport],
@@ -547,6 +502,34 @@ export default function DicomViewer({
     return () => clearInterval(timer)
   }, [fileId, isPresenter])
 
+  const { user: authUser } = useAuth()
+  const findingSubmission =
+    file?.submission || file?.submissionId || activeFile?.submission || activeFile?.submissionId
+  const canSaveFinding = Boolean(findingSubmission) && authUser?.role !== 'COORDINATEUR'
+  const showSaveFinding = authUser?.role !== 'COORDINATEUR'
+  const [savingFinding, setSavingFinding] = useState(false)
+
+  const handleSaveFinding = useCallback(async () => {
+    if (!findingSubmission || savingFinding) return
+    setSavingFinding(true)
+    try {
+      const image = await captureViewport(viewportRef.current)
+      const measurements = extractMeasurements(getUserAnnotations())
+      await createFinding({
+        submission: findingSubmission,
+        document: activeFile?.id && /^[0-9a-f-]{36}$/i.test(String(activeFile.id)) ? activeFile.id : null,
+        title: `${dicomInfo?.modality || 'Imagerie'}${totalSlices > 1 ? ` · coupe ${currentSlice + 1}/${totalSlices}` : ''}`,
+        image,
+        measurements,
+      })
+      setNotice('Image clé enregistrée dans le dossier')
+    } catch (e) {
+      setNotice(e?.response?.data?.image?.[0] || "Échec de l'enregistrement de l'image clé")
+    } finally {
+      setSavingFinding(false)
+    }
+  }, [activeFile, currentSlice, dicomInfo, findingSubmission, savingFinding, totalSlices])
+
   const handleToggleAnonymized = useCallback(() => {
     const next = !isAnonymized
     if (isPresenterRef.current) {
@@ -601,6 +584,7 @@ export default function DicomViewer({
   }, [])
 
   useDicomFollower({
+    remoteAuthorsRef,
     activeFile,
     dicomAnnotationSyncState,
     dicomSyncState,
@@ -832,6 +816,9 @@ export default function DicomViewer({
 
         const handleAnnotationChanged = (evt) => {
           refreshAnnotationStats()
+          if (!isApplyingRemoteAnnotationRef.current && evt.type === cornerstoneTools.Enums.Events.ANNOTATION_COMPLETED) {
+            historyApiRef.current?.record()
+          }
           if (!isPresenterRef.current || isApplyingRemoteAnnotationRef.current) return
           const ann = evt.detail?.annotation
           if (!ann) return
@@ -848,6 +835,7 @@ export default function DicomViewer({
 
         const handleAnnotationRemoved = (evt) => {
           refreshAnnotationStats()
+          if (!isApplyingRemoteAnnotationRef.current) historyApiRef.current?.record()
           const currentVp = renderingEngineRef.current?.getViewport(viewportId)
           if (currentVp) {
             cornerstoneTools.utilities.triggerAnnotationRenderForViewportIds([viewportId])
@@ -917,6 +905,7 @@ export default function DicomViewer({
         } catch (e) {}
 
         refreshAnnotationStats()
+        historyApiRef.current?.reset()
 
         // Presentation survived a reload: push the fresh view to followers
         if (isPresenterRef.current) {
@@ -1122,6 +1111,21 @@ export default function DicomViewer({
     return () => clearTimeout(t)
   }, [confirmClear])
 
+  const authorHover = useDicomAuthorHover({ fileId, viewportRef, renderingEngineRef, remoteAuthorsRef })
+
+  const annotationHistory = useDicomHistory({
+    fileId,
+    viewportRef,
+    renderingEngineRef,
+    serializeAnnotationRef,
+    localizeAnnotationRef,
+    isApplyingRemoteAnnotationRef,
+    isPresenterRef,
+    onBroadcastAnnotationSyncRef,
+    setAnnotationCount,
+  })
+  historyApiRef.current = annotationHistory
+
   useDicomShortcuts({
     fileId,
     isPresenterRef,
@@ -1177,6 +1181,10 @@ export default function DicomViewer({
         showHelp={showShortcuts}
         onToggleHelp={() => setShowShortcuts((v) => !v)}
         onClose={onClose}
+        canSaveFinding={canSaveFinding}
+        showSaveFinding={showSaveFinding}
+        savingFinding={savingFinding}
+        onSaveFinding={handleSaveFinding}
       />
 
       <div className="dv-body">
@@ -1191,6 +1199,10 @@ export default function DicomViewer({
           annotationCount={annotationCount}
           confirmClear={confirmClear}
           onDeleteSelected={handleDeleteSelected}
+          onUndo={annotationHistory.undo}
+          onRedo={annotationHistory.redo}
+          canUndo={annotationHistory.canUndo}
+          canRedo={annotationHistory.canRedo}
           onClearAll={handleClearAllAnnotations}
           onReset={handleReset}
           windowValues={currentVOI}
@@ -1273,6 +1285,12 @@ export default function DicomViewer({
               }}
               style={{ width: '100%', height: '100%', visibility: loading || error ? 'hidden' : 'visible' }}
             />
+
+            {authorHover && (
+              <div className="dv-author-tip" style={{ left: authorHover.x + 14, top: authorHover.y + 14, borderColor: authorHover.color }} role="status">
+                <span className="dv-author-dot" style={{ background: authorHover.color }} /> {authorHover.name}
+              </div>
+            )}
 
             {dicomInfo && !loading && !error && (
               <DicomHud

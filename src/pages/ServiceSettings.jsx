@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getServices, updateServiceHeader, updateServiceParticipants } from '../api/authApi'
+import { getServices, updateServiceHeader, updateServiceParticipants, updateServiceActive } from '../api/authApi'
 import { resolveApiUrl } from '../api/config'
 import { useAuth } from '../context/AuthContext'
 import { getForms } from '../api/formsApi'
@@ -11,6 +11,7 @@ import {
   reorderDecisionOptions,
 } from '../api/decisionOptionsApi'
 import { Settings, Upload, Trash2, Users, Plus, X, ChevronDown, ChevronUp, Check, Image as ImageIcon, ToggleLeft, ToggleRight, GripVertical, Gavel, ArrowUp, ArrowDown, Pencil, Monitor } from 'lucide-react'
+import { useConfirm } from '../components/ConfirmDialog'
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -412,6 +413,7 @@ function GroupEditor({ group, index, total, onTitleChange, onAddMember, onRemove
 // ─── Decision Options Section ──────────────────────────────────────────────────
 
 function DecisionOptionsSection({ service }) {
+  const confirm = useConfirm()
   const [forms, setForms] = useState([])
   const [selectedFormId, setSelectedFormId] = useState('')
   const [decisionOptions, setDecisionOptions] = useState([])
@@ -521,7 +523,7 @@ function DecisionOptionsSection({ service }) {
   }
 
   const handleDelete = async (optionId) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cette proposition ?")) return
+    if (!(await confirm({ title: 'Supprimer cette proposition ?', message: 'La proposition de décision sera supprimée définitivement.', confirmLabel: 'Supprimer', danger: true }))) return
     try {
       await deleteDecisionOption(optionId)
       setDecisionOptions(prev => prev.filter(o => o.id !== optionId))
@@ -822,11 +824,34 @@ export default function ServiceSettings() {
     setServices(prev => prev.map(s => s.id === updated.id ? updated : s))
   }
 
-  const isAllowed = currentUser?.is_global_admin || currentUser?.role === 'ADMIN'
+  const confirm = useConfirm()
+  const [togglingActive, setTogglingActive] = useState(false)
+  const handleToggleServiceActive = async (service) => {
+    const activating = !service.is_active
+    const ok = await confirm({
+      title: activating ? 'Réactiver ce service ?' : 'Désactiver ce service ?',
+      message: activating
+        ? `« ${service.name} » redeviendra disponible et ses utilisateurs pourront se reconnecter.`
+        : `Les utilisateurs de « ${service.name} » ne pourront plus se connecter et le service disparaîtra des listes d'inscription. Les données sont conservées.`,
+      confirmLabel: activating ? 'Réactiver' : 'Désactiver',
+      danger: !activating,
+    })
+    if (!ok) return
+    setTogglingActive(true)
+    try {
+      handleUpdated(await updateServiceActive(service.id, activating))
+    } catch {
+      setError("Impossible de modifier l'état du service.")
+    } finally {
+      setTogglingActive(false)
+    }
+  }
+
+  const isAllowed = Boolean(currentUser?.is_global_admin)
   if (!isAllowed) {
     return (
       <div className="empty" style={{ padding: '2rem' }}>
-        Accès réservé aux administrateurs.
+        Accès réservé aux administrateurs généraux.
       </div>
     )
   }
@@ -912,6 +937,16 @@ export default function ServiceSettings() {
                   </span>
                 </div>
               </div>
+              <button
+                type="button"
+                className="ui-btn"
+                style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                disabled={togglingActive}
+                onClick={() => handleToggleServiceActive(selectedService)}
+              >
+                {selectedService.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                {selectedService.is_active ? 'Désactiver le service' : 'Réactiver le service'}
+              </button>
             </div>
 
             <HeaderSection service={selectedService} onUpdated={handleUpdated} />

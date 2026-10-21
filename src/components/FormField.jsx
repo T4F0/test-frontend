@@ -1,54 +1,46 @@
-export default function FormField({ field, value, onChange }) {
-  const baseProps = {
-    id: `field-${field.id}`,
-    name: `field-${field.id}`,
-    value: value || '',
-    onChange: (e) => onChange(e.target.value),
-    required: field.required,
-  }
+import { toast } from '../lib/toast'
+const ALLOWED_EXTENSIONS = [
+  '.pdf', '.docx', '.doc', '.txt',
+  '.jpg', '.jpeg', '.png', '.webp', '.tiff', '.bmp',
+  '.mp4', '.avi', '.mov', '.webm', '.mpeg',
+  '.dcm', '.dicom', '.ima',
+]
 
-  const isSingleCheckbox =
-    field.field_type === 'checkbox' && (!field.options || field.options.length === 0)
+/**
+ * One field of a case form. Validation is done by the page (not the browser), which passes `error`;
+ * the wrapper id lets the page scroll to the first problem.
+ */
+export default function FormField({ field, value, onChange, error }) {
+  const inputId = `field-${field.id}`
+  const describedBy = error ? `${inputId}-error` : undefined
+  const common = {
+    id: inputId,
+    name: inputId,
+    'aria-required': field.required || undefined,
+    'aria-invalid': error ? true : undefined,
+    'aria-describedby': describedBy,
+  }
+  const textProps = { ...common, value: value ?? '', onChange: (e) => onChange(e.target.value) }
+
+  const hasOptions = field.options && field.options.length > 0
+  const isSingleCheckbox = field.field_type === 'checkbox' && !hasOptions
 
   return (
-    <div className="form-field">
+    <div className={`form-field ff ${error ? 'has-error' : ''}`} id={`field-wrap-${field.id}`}>
       {!isSingleCheckbox && (
-        <label htmlFor={baseProps.id} style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', color: 'var(--gray-900)' }}>
+        <label htmlFor={inputId} className="ff-label">
           {field.name}
-          {field.required && <span className="required">*</span>}
-          {field.show_rdv && (
-            <span 
-              title="Champ Report"
-              style={{ 
-                marginLeft: '8px', 
-                fontSize: '0.75em', 
-                backgroundColor: '#e0f2fe', 
-                color: '#0284c7', 
-                padding: '2px 6px', 
-                borderRadius: '12px',
-                fontWeight: '500',
-                border: '1px solid #bae6fd'
-              }}>
-              Champ report
-            </span>
-          )}
+          {field.required && <span className="required" aria-hidden="true"> *</span>}
+          {field.show_rdv && <span className="ff-badge" title="Ce champ apparaît dans le rapport">Champ report</span>}
         </label>
       )}
 
-      {field.field_type === 'text' && (
-        <input type="text" {...baseProps} placeholder={field.placeholder} />
-      )}
-
-      {field.field_type === 'number' && (
-        <input type="number" {...baseProps} placeholder={field.placeholder} />
-      )}
-
-      {field.field_type === 'date' && (
-        <input type="date" {...baseProps} />
-      )}
+      {field.field_type === 'text' && <input type="text" className="ff-input" {...textProps} placeholder={field.placeholder} />}
+      {field.field_type === 'number' && <input type="number" className="ff-input" {...textProps} placeholder={field.placeholder} />}
+      {field.field_type === 'date' && <input type="date" className="ff-input" {...textProps} />}
 
       {field.field_type === 'select' && (
-        <select {...baseProps} style={{ padding: '0.15rem 0.35rem', fontSize: '0.725rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--border-radius)' }}>
+        <select className="ff-input" {...textProps}>
           <option value="">-- Sélectionner --</option>
           {field.options?.map((opt, i) => (
             <option key={i} value={opt}>{opt}</option>
@@ -57,68 +49,47 @@ export default function FormField({ field, value, onChange }) {
       )}
 
       {field.field_type === 'checkbox' && (
-        <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.15rem' }}>
-          {(!field.options || field.options.length === 0) ? (
-            <label className="checkbox-item single" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.15rem 0.3rem', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--border-radius)', cursor: 'pointer', fontSize: '0.725rem' }}>
-              <input
-                type="checkbox"
-                checked={!!value}
-                onChange={(e) => onChange(e.target.checked)}
-                required={field.required}
-              />
-              <span className="checkbox-label" style={{ fontSize: '0.725rem' }}>
+        <div className="ff-checks" role={hasOptions ? 'group' : undefined} aria-labelledby={hasOptions ? undefined : undefined}>
+          {!hasOptions ? (
+            <label className="ff-check">
+              <input type="checkbox" {...common} checked={!!value} onChange={(e) => onChange(e.target.checked)} />
+              <span>
                 {field.name}
-                {field.required && <span className="required"> *</span>}
+                {field.required && <span className="required" aria-hidden="true"> *</span>}
               </span>
             </label>
           ) : (
-            <div className="checkbox-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-              {field.options.map((opt, i) => {
-                const currentValues = Array.isArray(value) ? value : []
-                const isChecked = currentValues.includes(opt)
-                
-                return (
-                  <label key={i} className="checkbox-item" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.15rem 0.35rem', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--border-radius)', cursor: 'pointer', transition: 'background-color 0.2s' }}>
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={(e) => {
-                        const newValues = e.target.checked
-                          ? [...currentValues, opt]
-                          : currentValues.filter(v => v !== opt)
-                        onChange(newValues)
-                      }}
-                      style={{ width: '0.8rem', height: '0.8rem', accentColor: 'var(--primary)' }}
-                    />
-                    <span className="checkbox-label" style={{ fontSize: '0.725rem' }}>{opt}</span>
-                  </label>
-                )
-              })}
-            </div>
+            field.options.map((opt, i) => {
+              const current = Array.isArray(value) ? value : []
+              return (
+                <label key={i} className="ff-check">
+                  <input
+                    type="checkbox"
+                    checked={current.includes(opt)}
+                    aria-invalid={error ? true : undefined}
+                    onChange={(e) => onChange(e.target.checked ? [...current, opt] : current.filter((v) => v !== opt))}
+                  />
+                  <span>{opt}</span>
+                </label>
+              )
+            })
           )}
         </div>
       )}
 
       {field.field_type === 'file' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="ff-file">
           <input
-            id={`field-${field.id}`}
-            name={`field-${field.id}`}
+            {...common}
             type="file"
-            accept={field.accepted_file_types && field.accepted_file_types !== '*' ? field.accepted_file_types : ".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp,.tiff,.bmp,.mp4,.avi,.mov,.webm,.mpeg,.dcm,.dicom,.ima"}
-            required={field.required}
+            className="ff-input"
+            accept={field.accepted_file_types && field.accepted_file_types !== '*' ? field.accepted_file_types : ALLOWED_EXTENSIONS.join(',')}
             onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) {
-                const allowedExtensions = [
-                  '.pdf', '.docx', '.doc', '.txt',
-                  '.jpg', '.jpeg', '.png', '.webp', '.tiff', '.bmp',
-                  '.mp4', '.avi', '.mov', '.webm', '.mpeg',
-                  '.dcm', '.dicom', '.ima'
-                ]
                 const ext = '.' + file.name.split('.').pop().toLowerCase()
-                if (!allowedExtensions.includes(ext)) {
-                  alert(`Le format de fichier "${ext}" n'est pas autorisé. Formats acceptés : PDF, Word, Texte, Images, Vidéos et DICOM.`)
+                if (!ALLOWED_EXTENSIONS.includes(ext)) {
+                  toast.error(`Le format de fichier "${ext}" n'est pas autorisé. Formats acceptés : PDF, Word, Texte, Images, Vidéos et DICOM.`)
                   e.target.value = ''
                   onChange(null)
                   return
@@ -126,20 +97,19 @@ export default function FormField({ field, value, onChange }) {
               }
               onChange(file || null)
             }}
-            style={{ flex: 1 }}
           />
           {value && (
-            <button 
-              type="button"
-              className="btn-small btn-secondary" 
-              onClick={() => onChange(null)}
-              title="Effacer le fichier"
-              style={{ padding: '0.4rem' }}
-            >
+            <button type="button" className="ff-clear" onClick={() => onChange(null)} title="Effacer le fichier" aria-label="Effacer le fichier">
               ×
             </button>
           )}
         </div>
+      )}
+
+      {error && (
+        <p className="ff-error" id={`${inputId}-error`} role="alert">
+          {error}
+        </p>
       )}
     </div>
   )

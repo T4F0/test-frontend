@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getForm } from '../api/formsApi'
 import { getSubmissions } from '../api/submissionsApi'
 import { useAuth } from '../context/AuthContext'
+import Breadcrumbs from '../components/Breadcrumbs'
 
 export default function FormSubmissionsList() {
   const { id } = useParams()
@@ -45,6 +46,7 @@ export default function FormSubmissionsList() {
 
   return (
     <div className="submissions-list">
+      <Breadcrumbs items={[{ label: 'Formulaires', to: '/forms' }, { label: 'Soumissions' }]} />
       <div className="submissions-header">
         <h2>Soumissions : {form.name}</h2>
         <button

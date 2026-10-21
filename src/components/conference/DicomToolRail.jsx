@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Trash2, Undo2, SlidersHorizontal, SwatchBook, FlipHorizontal2, FlipVertical2, RotateCcw, RotateCw, Ruler, SunMoon } from 'lucide-react'
+import { Trash2, Undo2, Redo2, CornerUpLeft, SlidersHorizontal, SwatchBook, FlipHorizontal2, FlipVertical2, RotateCcw, RotateCw, Ruler, SunMoon } from 'lucide-react'
 import { TOOLS, TOOL_GROUPS, WL_PRESETS } from '../../lib/dicomTools'
 
 /** Vertical tool rail (horizontal strip on narrow viewers). Tooltips come from data-tip. */
@@ -15,6 +15,10 @@ export default function DicomToolRail({
   confirmClear,
   onDeleteSelected,
   onClearAll,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onReset,
   windowValues,
   onSetWindow,
@@ -175,6 +179,15 @@ export default function DicomToolRail({
             </div>
           )}
         </div>
+
+        <button type="button" className="dv-rail-btn" onClick={onUndo} disabled={!canUndo} data-tip="Annuler la dernière annotation · Ctrl Z" aria-label="Annuler">
+          <CornerUpLeft size={19} strokeWidth={1.9} />
+          <span className="dv-rail-label">Annuler</span>
+        </button>
+        <button type="button" className="dv-rail-btn" onClick={onRedo} disabled={!canRedo} data-tip="Rétablir · Ctrl Maj Z" aria-label="Rétablir">
+          <Redo2 size={19} strokeWidth={1.9} />
+          <span className="dv-rail-label">Rétablir</span>
+        </button>
 
         <button type="button" className="dv-rail-btn" onClick={onReset} data-tip="Réinitialiser l'affichage · R" aria-label="Réinitialiser l'affichage">
           <Undo2 size={19} strokeWidth={1.9} />

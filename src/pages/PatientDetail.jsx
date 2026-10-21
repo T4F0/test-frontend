@@ -8,12 +8,18 @@ import { useAuth } from '../context/AuthContext'
 import { SUBMISSION_STATUS_COLORS, SUBMISSION_STATUS_LABELS, SUBMISSION_STATUS_OPTIONS } from '../lib/labels'
 import { UserRound, Share2, ClipboardList, Scale, Stethoscope, Eye, Pencil, Paperclip, FileText, Trash2 } from 'lucide-react'
 import PageTitle from '../components/PageTitle'
+import Breadcrumbs from '../components/Breadcrumbs'
+import { useConfirm } from '../components/ConfirmDialog'
+import { toast } from '../lib/toast'
+import DecisionActions from '../components/DecisionActions'
+import CaseTools from '../components/CaseTools'
 
 const STATUS_LABELS = SUBMISSION_STATUS_LABELS
 const STATUS_COLORS = SUBMISSION_STATUS_COLORS
 const ALL_STATUSES = SUBMISSION_STATUS_OPTIONS
 
 export default function PatientDetail() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -151,18 +157,18 @@ export default function PatientDetail() {
       await markSubmissionStatus(submissionId, newStatus)
       loadSubmissions()
     } catch (err) {
-      alert('Échec de la mise à jour du statut')
+      toast.error('Échec de la mise à jour du statut')
       console.error(err)
     }
   }
 
   const handleDeleteSubmission = async (submissionId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce dossier RCP ? Cette action est irréversible.')) return
+    if (!(await confirm({ title: 'Supprimer ce dossier RCP ?', message: 'Le dossier et ses données seront supprimés. Cette action est irréversible.', confirmLabel: 'Supprimer', danger: true }))) return
     try {
       await deleteSubmission(submissionId)
       loadSubmissions()
     } catch (err) {
-      alert('Échec de la suppression du dossier')
+      toast.error('Échec de la suppression du dossier')
       console.error(err)
     }
   }
@@ -207,6 +213,7 @@ export default function PatientDetail() {
 
   return (
     <div className="patient-detail-container">
+      <Breadcrumbs items={[{ label: user?.role === 'ADMIN' || user?.role === 'COORDINATEUR' ? 'Patients' : 'Mes patients', to: '/patients' }, { label: 'Dossier patient' }]} />
       <div className="detail-header">
         <PageTitle icon={UserRound}>Dossier patient : {`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}</PageTitle>
         <div className="detail-actions">
@@ -498,6 +505,11 @@ export default function PatientDetail() {
                                   })}
                                 </span>
                               </div>
+                              <DecisionActions
+                                reportId={report.id}
+                                canManage={user?.role === 'ADMIN' || user?.role === 'COORDINATEUR'}
+                                currentUserId={user?.id}
+                              />
                             </div>
                           </div>
                         ))}
@@ -586,6 +598,7 @@ export default function PatientDetail() {
                         </span>
                       )}
                     </div>
+                    <CaseTools submission={sub} canWrite={user?.role !== 'COORDINATEUR'} />
                   </div>
                 )
               })}

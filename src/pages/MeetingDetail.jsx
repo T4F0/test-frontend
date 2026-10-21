@@ -1,18 +1,22 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { getMeeting, deleteMeeting, getSubmissionResume, addSubmissionToMeeting, removeSubmissionFromMeeting, updateMeeting } from '../api/meetingsApi'
+import { getMeeting, deleteMeeting, getSubmissionResume, addSubmissionToMeeting, removeSubmissionFromMeeting, updateMeeting, downloadMeetingBriefing } from '../api/meetingsApi'
 import { getSubmissions, getSubmission } from '../api/submissionsApi'
 import { getForm } from '../api/formsApi'
 import { getAttachments, downloadAttachment } from '../api/attachmentsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
 import UserAvatar from '../components/UserAvatar'
-import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2, X, Download, Image as ImageIcon, Video as VideoIcon, Scan } from 'lucide-react'
+import { Video, FileText, User, Calendar, Activity, ChevronDown, ChevronUp, AlertCircle, ClipboardList, ExternalLink, Plus, Trash2, X, Download, FileDown, Image as ImageIcon, Video as VideoIcon, Scan } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
 import MeetingSummary from '../components/MeetingSummary'
 import DoctorCaseSection from '../components/DoctorCaseSection'
 import DicomModal from '../components/conference/DicomModal'
 import PageTitle from '../components/PageTitle'
+import { toast } from '../lib/toast'
+import AgendaOrderList from '../components/AgendaOrderList'
+import Breadcrumbs from '../components/Breadcrumbs'
+import { useConfirm } from '../components/ConfirmDialog'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 const GENDER_LABELS = { M: 'Homme', F: 'Femme', O: 'Autre' }
@@ -82,6 +86,7 @@ function SectionDataRenderer({ section, submissionData }) {
 }
 
 export default function MeetingDetail() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const doctorFilter = searchParams.get('doctor')
@@ -106,6 +111,8 @@ export default function MeetingDetail() {
   const [detailPanel, setDetailPanel] = useState({ open: false, loading: false, error: null, submission: null, form: null, attachments: [] })
   const [activeDetailId, setActiveDetailId] = useState(null)
   const [selectedDicom, setSelectedDicom] = useState(null)
+  const [agendaView, setAgendaView] = useState('doctor')
+  const [savingOrder, setSavingOrder] = useState(false)
 
   // Grouped submissions by doctor
   const groupedSubmissions = useMemo(() => {
@@ -125,6 +132,49 @@ export default function MeetingDetail() {
     });
     return groups;
   }, [meeting]);
+
+  const canReorder =
+    meeting?.status !== 'FINISHED' &&
+    (user?.role === 'ADMIN' || user?.role === 'COORDINATEUR' || user?.id === meeting?.coordinator)
+
+  const isCoordinatorish =
+    user?.role === 'ADMIN' || user?.role === 'COORDINATEUR' || user?.id === meeting?.coordinator
+
+  const handleBriefing = async () => {
+    try {
+      const blob = await downloadMeetingBriefing(id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `preparation-${id}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      toast.error('Échec du téléchargement de la fiche de préparation')
+      console.error(err)
+    }
+  }
+
+  const handleReorder = async (orderedIds) => {
+    const previous = meeting
+    const byId = new Map(meeting.submission_details.map((s) => [String(s.id), s]))
+    setMeeting({
+      ...meeting,
+      agenda_order: orderedIds,
+      submission_details: orderedIds.map((sid) => byId.get(sid)).filter(Boolean),
+    })
+    setSavingOrder(true)
+    try {
+      await updateMeeting(id, { agenda_order: orderedIds })
+      setError(null)
+    } catch (err) {
+      setMeeting(previous)
+      setError("Échec de l'enregistrement de l'ordre de passage")
+      console.error(err)
+    } finally {
+      setSavingOrder(false)
+    }
+  }
 
   const formatUserName = (candidate) => {
     if (!candidate) return '—'
@@ -165,7 +215,7 @@ export default function MeetingDetail() {
   }
 
   const handleRemoveMySubmission = async (submissionId) => {
-    if (!window.confirm('Retirer ce dossier de la réunion ?')) return
+    if (!(await confirm({ title: 'Retirer ce dossier ?', message: 'Le dossier reste disponible, il sera seulement retiré de l’ordre du jour de cette réunion.', confirmLabel: 'Retirer', danger: true }))) return
     try {
       await removeSubmissionFromMeeting(id, submissionId)
       loadMeeting()
@@ -247,7 +297,7 @@ export default function MeetingDetail() {
   }
 
   const handleDelete = async () => {
-    if (!window.confirm('Supprimer cette réunion ?')) return
+    if (!(await confirm({ title: 'Supprimer cette réunion ?', message: 'Les dossiers qu’elle contient ne sont pas supprimés.', confirmLabel: 'Supprimer', danger: true }))) return
     try {
       await deleteMeeting(id)
       navigate('/meetings')
@@ -325,6 +375,7 @@ export default function MeetingDetail() {
 
   return (
     <div className="meeting-detail-container">
+      <Breadcrumbs items={[{ label: 'Réunions', to: '/meetings' }, { label: meeting.title || 'Réunion RCP' }]} />
       <div className="detail-header">
         <PageTitle icon={Calendar}>{meeting.title || 'Détails de la réunion RCP'}</PageTitle>
         <div className="detail-actions">
@@ -343,7 +394,7 @@ export default function MeetingDetail() {
                 <button 
                   className="btn-secondary" 
                   onClick={async () => {
-                    if (window.confirm('Voulez-vous clôturer cette réunion ?')) {
+                    if (await confirm({ title: 'Clôturer cette réunion ?', message: 'Elle passera au statut « Terminée » pour tous les participants.', confirmLabel: 'Clôturer' })) {
                       try {
                         await updateMeeting(id, { status: 'FINISHED' });
                         loadMeeting();
@@ -418,15 +469,37 @@ export default function MeetingDetail() {
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <PageTitle as="h2" icon={ClipboardList} size={22}>Dossiers à l'ordre du jour</PageTitle>
-            <button 
-              onClick={() => setShowAddSubModal(true)}
-              className="btn-small btn-primary btn-with-icon"
-            >
-              <Plus size={14} /> Ajouter un dossier
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {isCoordinatorish && (
+                <button onClick={handleBriefing} className="btn-small btn-secondary btn-with-icon">
+                  <FileDown size={14} /> Fiche de préparation
+                </button>
+              )}
+              <button
+                onClick={() => setShowAddSubModal(true)}
+                className="btn-small btn-primary btn-with-icon"
+              >
+                <Plus size={14} /> Ajouter un dossier
+              </button>
+            </div>
           </div>
           
-          {Object.entries(groupedSubmissions).length > 0 ? (
+          {meeting.submission_details?.length > 1 && (
+            <div className="view-toggle" role="group" aria-label="Organisation des dossiers" style={{ marginBottom: '1rem' }}>
+              <button type="button" className={agendaView === 'doctor' ? 'is-active' : ''} aria-pressed={agendaView === 'doctor'} onClick={() => setAgendaView('doctor')}>Par médecin</button>
+              <button type="button" className={agendaView === 'order' ? 'is-active' : ''} aria-pressed={agendaView === 'order'} onClick={() => setAgendaView('order')}>Ordre de passage</button>
+            </div>
+          )}
+
+          {agendaView === 'order' && meeting.submission_details?.length > 1 ? (
+            <AgendaOrderList
+              submissions={meeting.submission_details}
+              editable={canReorder}
+              saving={savingOrder}
+              onReorder={handleReorder}
+              onView={handleViewFormDetails}
+            />
+          ) : Object.entries(groupedSubmissions).length > 0 ? (
             Object.entries(groupedSubmissions).map(([doctorId, group]) => (
               <DoctorCaseSection
                 key={doctorId}
@@ -550,6 +623,7 @@ export default function MeetingDetail() {
                                       file: file.file,
                                       url: file.file,
                                       file_type: 'DICOM',
+                                      submission: file.submission,
                                     })
                                   } else {
                                     downloadAttachment(file.file, null)

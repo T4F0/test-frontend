@@ -2,9 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getPatients, deletePatient } from '../api/patientsApi'
 import { formatDate } from '../lib/dateUtils'
-import { Search, X, Users } from 'lucide-react'
+import { Search, X, Users, FolderOpen, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import PageTitle from '../components/PageTitle'
+import RowActionMenu from '../components/RowActionMenu'
+import SortHeader from '../components/SortHeader'
+import EmptyState from '../components/EmptyState'
+import TableSkeleton from '../components/TableSkeleton'
+import { useConfirm } from '../components/ConfirmDialog'
+import { nextSort, sortRows } from '../lib/sorting'
 
 export default function PatientsList() {
   const [patients, setPatients] = useState([])
@@ -13,6 +19,8 @@ export default function PatientsList() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [deleting, setDeleting] = useState(null)
+  const [sort, setSort] = useState(null)
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
@@ -87,19 +95,38 @@ export default function PatientsList() {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce patient ?')) {
-      try {
-        setDeleting(id)
-        await deletePatient(id)
-        setPatients(patients.filter(p => p.id !== id))
-      } catch (err) {
-        setError('Échec de la suppression du patient')
-        console.error(err)
-      } finally {
-        setDeleting(null)
-      }
+    const ok = await confirm({
+      title: 'Supprimer ce patient ?',
+      message: 'Le dossier du patient et ses dossiers RCP seront supprimés. Cette action est irréversible.',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      setDeleting(id)
+      await deletePatient(id)
+      setPatients(patients.filter(p => p.id !== id))
+    } catch (err) {
+      setError('Échec de la suppression du patient')
+      console.error(err)
+    } finally {
+      setDeleting(null)
     }
   }
+
+  const canEdit = user?.role !== 'COORDINATEUR'
+  const sortedPatients = sortRows(patients, sort, {
+    name: (p) => `${p.last_name || ''} ${p.first_name || ''}`.trim(),
+    owner: (p) => formatDoctorName(p.created_by_info),
+    birth: (p) => (p.birth_date ? new Date(p.birth_date) : null),
+    created: (p) => (p.created_at ? new Date(p.created_at) : null),
+    code: (p) => p.anonymized_code,
+  })
+  const onSort = (key) => setSort(nextSort(sort, key))
+  const menuItems = (patient) => [
+    { label: 'Modifier le profil', icon: Pencil, hidden: !canEdit, onClick: () => navigate(`/patients/${patient.id}/edit`) },
+    { label: deleting === patient.id ? 'Suppression…' : 'Supprimer', icon: Trash2, danger: true, hidden: !canEdit, disabled: deleting === patient.id, onClick: () => handleDelete(patient.id) },
+  ]
 
   return (
     <div className="list-container">
@@ -137,20 +164,29 @@ export default function PatientsList() {
               <X size={16} />
             </button>
           )}
-          {!loading && debouncedSearch && (
-            <span className="search-field-count">
-              {patients.length} résultat{patients.length !== 1 ? 's' : ''}
+          {!loading && (
+            <span className="search-field-count" aria-live="polite">
+              {patients.length} {debouncedSearch ? `résultat${patients.length !== 1 ? 's' : ''}` : `patient${patients.length !== 1 ? 's' : ''}`}
             </span>
           )}
         </div>
       </div>
 
       {loading ? (
-        <div className="loading" style={{ textAlign: 'center', padding: '2rem' }}>Chargement des patients...</div>
+        <TableSkeleton rows={6} columns={6} label="Chargement des patients…" />
       ) : patients.length === 0 ? (
-        <div className="empty-state">
-          <p>Aucun patient trouvé</p>
-        </div>
+        <EmptyState
+          icon={debouncedSearch ? Search : Users}
+          title={debouncedSearch ? 'Aucun patient trouvé' : 'Aucun patient pour le moment'}
+          description={debouncedSearch ? `Aucun résultat pour « ${debouncedSearch} ».` : 'Ajoutez un patient pour créer son premier dossier RCP.'}
+          action={
+            debouncedSearch ? (
+              <button type="button" className="ui-btn ui-btn-ghost" onClick={() => setSearch('')}>Effacer la recherche</button>
+            ) : canEdit ? (
+              <button type="button" className="ui-btn ui-btn-primary" onClick={() => navigate('/patients/new')}><UserPlus size={16} /> Nouveau patient</button>
+            ) : null
+          }
+        />
       ) : (
         <>
           <div className="patients-table-wrapper" style={{ position: 'relative', marginTop: '1.25rem' }}>
@@ -178,21 +214,20 @@ export default function PatientsList() {
             ref={tableContainerRef}
             onScroll={handleTableScroll}
           >
-            <table className="data-table">
+            <table className="data-table patients-table">
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>Responsable</th>
-                  <th>Date de naissance</th>
+                  <SortHeader label="Nom" sortKey="name" sort={sort} onSort={onSort} />
+                  <SortHeader label="Responsable" sortKey="owner" sort={sort} onSort={onSort} />
+                  <SortHeader label="Date de naissance" sortKey="birth" sort={sort} onSort={onSort} />
                   <th>Sexe</th>
-                  <th>Identifiant patient</th>
-                  {/* <th>Accès</th> */}
-                  <th>Créé le</th>
-                  <th>Actions</th>
+                  <SortHeader label="Identifiant patient" sortKey="code" sort={sort} onSort={onSort} />
+                  <SortHeader label="Créé le" sortKey="created" sort={sort} onSort={onSort} />
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
-                {patients.map((patient) => {
+                {sortedPatients.map((patient) => {
                   /*
                   const isOwner = patient.created_by === user?.id
                   const showAccess = user?.role === 'MEDECIN'
@@ -234,29 +269,12 @@ export default function PatientsList() {
                       */}
                       <td>{formatDate(patient.created_at)}</td>
                       <td className="actions-cell">
-                        <button
-                          className="btn-small btn-info"
-                          onClick={() => navigate(`/patients/${patient.id}`)}
-                        >
-                          Dossier patient
-                        </button>
-                        {user?.role !== 'COORDINATEUR' && (
-                          <>
-                            <button
-                              className="btn-small btn-secondary"
-                              onClick={() => navigate(`/patients/${patient.id}/edit`)}
-                            >
-                              Modifier
-                            </button>
-                            <button
-                              className="btn-small btn-danger"
-                              onClick={() => handleDelete(patient.id)}
-                              disabled={deleting === patient.id}
-                            >
-                              {deleting === patient.id ? '...' : 'Supprimer'}
-                            </button>
-                          </>
-                        )}
+                        <div className="ui-row-actions">
+                          <button type="button" className="ui-primary-action" onClick={() => navigate(`/patients/${patient.id}`)}>
+                            <FolderOpen size={15} aria-hidden="true" /> Dossier
+                          </button>
+                          <RowActionMenu label={`Autres actions pour ${`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}`} items={menuItems(patient)} />
+                        </div>
                       </td>
                     </tr>
                   )
@@ -267,7 +285,7 @@ export default function PatientsList() {
           </div>
 
           <div className="mobile-cards">
-            {patients.map((patient) => {
+            {sortedPatients.map((patient) => {
               const ownerName = formatDoctorName(patient.created_by_info)
               const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
               return (
@@ -289,20 +307,11 @@ export default function PatientsList() {
                       Né(e) le {formatDate(patient.birth_date)} · Créé le {formatDate(patient.created_at)}
                     </span>
                   </div>
-                  <div className="mobile-card-actions">
-                    <button className="btn-small btn-info" onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}`); }}>
-                      Dossier patient
+                  <div className="mobile-card-actions" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="ui-primary-action" onClick={() => navigate(`/patients/${patient.id}`)}>
+                      <FolderOpen size={15} aria-hidden="true" /> Dossier patient
                     </button>
-                    {user?.role !== 'COORDINATEUR' && (
-                      <>
-                        <button className="btn-small btn-secondary" onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}/edit`); }}>
-                          Modifier
-                        </button>
-                        <button className="btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(patient.id); }} disabled={deleting === patient.id}>
-                          {deleting === patient.id ? '...' : 'Supprimer'}
-                        </button>
-                      </>
-                    )}
+                    <RowActionMenu label={`Autres actions pour ${patientName}`} items={menuItems(patient)} />
                   </div>
                 </div>
               )

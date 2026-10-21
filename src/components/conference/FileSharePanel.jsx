@@ -95,6 +95,7 @@ export default function FileSharePanel({
       uploadedByName: attachment.uploaded_by_name || 'Unknown',
       source,
       originalId: attachment.id,
+      submissionId: attachment.submission_id || attachment.submission || null,
       dicom_metadata: attachment.dicom_metadata || null,
       dicom_url: attachment.dicom_url || null,
     }

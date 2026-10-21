@@ -1,15 +1,33 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getForm } from '../api/formsApi'
-import { submitForm, getSubmission, updateSubmission } from '../api/submissionsApi'
+import { submitForm, getSubmission, updateSubmission, getSubmissionsByPatient } from '../api/submissionsApi'
 import { getPatients, getPatient } from '../api/patientsApi'
 import { uploadAttachment } from '../api/attachmentsApi'
 import { formatDate } from '../lib/dateUtils'
 import FormField from '../components/FormField'
 import SearchableSelect from '../components/SearchableSelect'
+import Breadcrumbs from '../components/Breadcrumbs'
+import StatusBadge from '../components/StatusBadge'
+import { useConfirm } from '../components/ConfirmDialog'
+import { validateSubmission, requiredProgress } from '../lib/formValidation'
+import { clearDraft, draftKey, hasContent, loadDraft, saveDraft } from '../lib/formDraft'
+import { CheckCircle2, CircleAlert, RotateCcw, UserRound } from 'lucide-react'
+import { toast } from '../lib/toast'
 
-function SectionRenderer({ section, formData, onFieldChange }) {
+const AUTOSAVE_DELAY_MS = 800
+const ageFrom = (birth) => {
+  if (!birth) return null
+  const d = new Date(birth)
+  if (Number.isNaN(d.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - d.getFullYear()
+  if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) age -= 1
+  return age
+}
+
+function SectionRenderer({ section, formData, onFieldChange, errors }) {
   const isNested = !!section.parent;
 
   const combinedItems = [
@@ -28,6 +46,7 @@ function SectionRenderer({ section, formData, onFieldChange }) {
               key={`field-${item.id}`}
               field={item}
               value={formData[item.id]}
+              error={errors[item.id]}
               onChange={(value) => onFieldChange(item.id, value)}
             />
           ) : (
@@ -36,6 +55,7 @@ function SectionRenderer({ section, formData, onFieldChange }) {
               section={item} 
               formData={formData} 
               onFieldChange={onFieldChange} 
+              errors={errors}
             />
           )
         ))}
@@ -48,6 +68,9 @@ export default function FormSubmission() {
   const { id, submissionId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const copyFromId = searchParams.get('copy')
+  const [copiedFrom, setCopiedFrom] = useState(false)
   const preselectPatientId = location.state?.preselectPatientId
   const incomingReferenceCode = location.state?.referenceCode || ''
   const { user } = useAuth()
@@ -63,6 +86,14 @@ export default function FormSubmission() {
   const [patientSearch, setPatientSearch] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [patientError, setPatientError] = useState(null)
+  const [errors, setErrors] = useState({})
+  const [dirty, setDirty] = useState(false)
+  const [pendingDraft, setPendingDraft] = useState(null)
+  const [savedAt, setSavedAt] = useState(null)
+  const [patientCases, setPatientCases] = useState([])
+  const confirm = useConfirm()
+  const submittedRef = useRef(false)
+  const key = draftKey(user?.id, id, submissionId)
 
   useEffect(() => {
     if (user?.role === 'COORDINATEUR') {
@@ -111,6 +142,25 @@ export default function FormSubmission() {
       } else {
         setIsEditing(false)
         setFormData(initialValues)
+        if (copyFromId) {
+          // Template: reuse the clinical answers of an earlier case, minus files, for a new patient
+          try {
+            const source = await getSubmission(copyFromId)
+            const fileIds = new Set()
+            const collect = (sections) => sections?.forEach((sec) => {
+              sec.fields?.forEach((f) => f.field_type === 'file' && fileIds.add(String(f.id)))
+              collect(sec.children)
+            })
+            collect(formDataResponse.sections)
+            const kept = Object.fromEntries(Object.entries(source.data || {}).filter(([k]) => !fileIds.has(String(k)) && k in initialValues))
+            setFormData({ ...initialValues, ...kept })
+            setCopiedFrom(true)
+          } catch (e) {
+            console.error('Failed to copy case', e)
+          }
+        }
+        const draft = loadDraft(window.sessionStorage, draftKey(user?.id, id, null))
+        if (draft && hasContent(draft.data)) setPendingDraft(draft)
         if (preselectPatientId) {
           try {
             const patient = await getPatient(preselectPatientId)
@@ -148,7 +198,85 @@ export default function FormSubmission() {
   }
 
   const handleFieldChange = (fieldId, value) => {
-    setFormData({ ...formData, [fieldId]: value })
+    setFormData((prev) => ({ ...prev, [fieldId]: value }))
+    setDirty(true)
+    setErrors((prev) => {
+      if (!prev[fieldId]) return prev
+      const next = { ...prev }
+      delete next[fieldId]
+      return next
+    })
+  }
+
+  const restoreDraft = () => {
+    if (!pendingDraft) return
+    setFormData((prev) => ({ ...prev, ...pendingDraft.data }))
+    if (pendingDraft.patient) setSelectedPatient(pendingDraft.patient)
+    if (pendingDraft.referenceCode) setReferenceCode(pendingDraft.referenceCode)
+    setSavedAt(pendingDraft.savedAt)
+    setPendingDraft(null)
+    setDirty(true)
+  }
+
+  const discardDraft = () => {
+    clearDraft(window.sessionStorage, key)
+    setPendingDraft(null)
+  }
+
+  // Autosave a moment after the last change (never while a restore decision is pending)
+  useEffect(() => {
+    if (!dirty || pendingDraft || submittedRef.current) return undefined
+    const timer = setTimeout(() => {
+      const saved = saveDraft(window.sessionStorage, key, { data: formData, patient: selectedPatient, referenceCode })
+      if (saved) setSavedAt(saved.savedAt)
+    }, AUTOSAVE_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [dirty, pendingDraft, formData, selectedPatient, referenceCode, key])
+
+  // Warn before the tab is closed or reloaded with unsaved work
+  useEffect(() => {
+    if (!dirty) return undefined
+    const warn = (e) => {
+      if (submittedRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  // Previous cases of the selected patient, for the side panel
+  useEffect(() => {
+    if (!selectedPatient) {
+      setPatientCases([])
+      return undefined
+    }
+    let cancelled = false
+    getSubmissionsByPatient(selectedPatient)
+      .then((rows) => !cancelled && setPatientCases(Array.isArray(rows) ? rows.filter((r) => String(r.id) !== String(submissionId)) : []))
+      .catch(() => !cancelled && setPatientCases([]))
+    return () => {
+      cancelled = true
+    }
+  }, [selectedPatient, submissionId])
+
+  const scrollToError = useCallback((errorKey) => {
+    const el = document.getElementById(errorKey === 'patient' ? 'patient-selection' : `field-wrap-${errorKey}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.setTimeout(() => el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true }), 350)
+  }, [])
+
+  const handleCancel = async () => {
+    if (dirty && hasContent(formData)) {
+      const ok = await confirm({
+        title: 'Quitter sans soumettre ?',
+        message: 'Un brouillon est conservé pour cette session : vous pourrez le reprendre en rouvrant ce formulaire.',
+        confirmLabel: 'Quitter',
+      })
+      if (!ok) return
+    }
+    navigate(-1)
   }
 
   const getFileType = (file) => {
@@ -164,8 +292,11 @@ export default function FormSubmission() {
     e.preventDefault()
     setPatientError(null)
 
-    if (!selectedPatient) {
-      setPatientError('Veuillez sélectionner un patient.')
+    const { errors: found, firstErrorId } = validateSubmission(form.sections, formData, selectedPatient)
+    setErrors(found)
+    if (firstErrorId) {
+      if (found.patient) setPatientError(found.patient)
+      scrollToError(firstErrorId)
       return
     }
 
@@ -224,7 +355,9 @@ export default function FormSubmission() {
         }
       }
 
-      alert(isEditing ? 'Soumission mise à jour avec succès !' : 'Formulaire et fichiers soumis avec succès !')
+      submittedRef.current = true
+      clearDraft(window.sessionStorage, key)
+      toast.success(isEditing ? 'Soumission mise à jour avec succès !' : 'Formulaire et fichiers soumis avec succès !')
       navigate('/forms/' + id + '/submissions/' + currentSubmissionId)
     } catch (err) {
       setError('Échec de la soumission du formulaire : ' + err.message)
@@ -238,52 +371,150 @@ export default function FormSubmission() {
   if (error) return <div className="error">{error}</div>
   if (!form) return <div className="error">Formulaire introuvable</div>
 
+  const patient = patients.find((p) => String(p.id) === String(selectedPatient))
+  const age = ageFrom(patient?.birth_date)
+  const progress = requiredProgress(form.sections, formData, selectedPatient)
+  const errorCount = Object.keys(errors).length
+
   return (
-    <div className="form-submission">
-      <h2>{isEditing ? `Modifier : ${form.name}` : form.name}</h2>
-      {form.description && <p className="description">{form.description}</p>}
-
-      <form onSubmit={handleSubmit} className="submission-form">
-        <div className="patient-selection-container">
-          <SearchableSelect
-            label="Patient"
-            placeholder="Rechercher un patient par nom..."
-            options={patients.map(p => ({
-              value: p.id,
-              label: `${p.first_name} ${p.last_name}`,
-              subLabel: `DDN : ${formatDate(p.birth_date)}`
-            }))}
-            value={selectedPatient}
-            onChange={(val) => {
-              setSelectedPatient(val);
-              setPatientError(null);
-            }}
-            onSearch={setPatientSearch}
-            loading={patientsLoading}
-            required
-            error={patientError}
-            disabled={isEditing} // Often we don't want to change the patient once submitted
-          />
+    <div className="form-submission fs-page">
+      <Breadcrumbs items={[{ label: 'Formulaires', to: '/forms' }, { label: form.name }]} />
+      <div className="fs-header">
+        <div>
+          <h1 className="fs-title">{isEditing ? `Modifier : ${form.name}` : form.name}</h1>
+          {form.description && <p className="description">{form.description}</p>}
         </div>
-
-        {form.sections?.map(section => (
-          <SectionRenderer 
-            key={section.id} 
-            section={section} 
-            formData={formData} 
-            onFieldChange={handleFieldChange} 
-          />
-        ))}
-
-        <div className="form-actions">
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? 'Envoi en cours...' : (isEditing ? 'Mettre à jour' : 'Soumettre le formulaire')}
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
-            Annuler
-          </button>
+        <div className="fs-status" aria-live="polite">
+          {savedAt ? (
+            <span className="fs-saved"><CheckCircle2 size={16} aria-hidden="true" /> Brouillon enregistré à {new Date(savedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+          ) : dirty ? (
+            <span className="fs-saving">Enregistrement du brouillon…</span>
+          ) : null}
         </div>
-      </form>
+      </div>
+
+      {copiedFrom && (
+        <div className="fs-draft-banner" role="status">
+          <RotateCcw size={18} aria-hidden="true" />
+          <span>Modèle repris d’un dossier précédent (sans fichiers). Choisissez le patient et adaptez les réponses.</span>
+        </div>
+      )}
+
+      {pendingDraft && (
+        <div className="fs-draft-banner" role="alert">
+          <RotateCcw size={18} aria-hidden="true" />
+          <span>
+            Un brouillon de ce formulaire a été enregistré le {new Date(pendingDraft.savedAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.
+          </span>
+          <button type="button" className="ui-btn ui-btn-primary" onClick={restoreDraft}>Reprendre</button>
+          <button type="button" className="ui-btn ui-btn-ghost" onClick={discardDraft}>Ignorer</button>
+        </div>
+      )}
+
+      {errorCount > 0 && (
+        <div className="fs-error-summary" role="alert">
+          <CircleAlert size={18} aria-hidden="true" />
+          {errorCount === 1 ? '1 champ à corriger' : `${errorCount} champs à corriger`} avant de soumettre.
+        </div>
+      )}
+
+      <div className="fs-layout">
+        <form onSubmit={handleSubmit} className="submission-form fs-form" noValidate>
+          <div className="patient-selection-container" id="patient-selection">
+            <SearchableSelect
+              label="Patient"
+              placeholder="Rechercher un patient par nom..."
+              options={patients.map(p => ({
+                value: p.id,
+                label: `${p.first_name} ${p.last_name}`,
+                subLabel: `DDN : ${formatDate(p.birth_date)}`
+              }))}
+              value={selectedPatient}
+              onChange={(val) => {
+                setSelectedPatient(val)
+                setPatientError(null)
+                setDirty(true)
+                setErrors((prev) => {
+                  const next = { ...prev }
+                  delete next.patient
+                  return next
+                })
+              }}
+              onSearch={setPatientSearch}
+              loading={patientsLoading}
+              required
+              error={patientError}
+              disabled={isEditing}
+            />
+          </div>
+
+          {form.sections?.map(section => (
+            <SectionRenderer
+              key={section.id}
+              section={section}
+              formData={formData}
+              onFieldChange={handleFieldChange}
+              errors={errors}
+            />
+          ))}
+
+          <div className="form-actions">
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? 'Envoi en cours...' : (isEditing ? 'Mettre à jour' : 'Soumettre le formulaire')}
+            </button>
+            <button type="button" className="btn-secondary" onClick={handleCancel}>
+              Annuler
+            </button>
+          </div>
+        </form>
+
+        <aside className="fs-aside" aria-label="Résumé du dossier">
+          <section className="fs-panel">
+            <h2>Progression</h2>
+            <div className="fs-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-label="Champs obligatoires renseignés">
+              <div style={{ width: `${progress.percent}%` }} />
+            </div>
+            <p className="fs-progress-text">{progress.done} / {progress.total} champs obligatoires</p>
+          </section>
+
+          <section className="fs-panel">
+            <h2><UserRound size={16} aria-hidden="true" /> Patient</h2>
+            {patient ? (
+              <>
+                <p className="fs-patient-name">{`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}</p>
+                <dl className="fs-facts">
+                  {age !== null && (<><dt>Âge</dt><dd>{age} ans</dd></>)}
+                  <dt>Sexe</dt><dd>{patient.gender === 'M' ? 'Homme' : patient.gender === 'F' ? 'Femme' : 'Autre'}</dd>
+                  <dt>Naissance</dt><dd>{formatDate(patient.birth_date)}</dd>
+                  {patient.anonymized_code && (<><dt>Identifiant</dt><dd>{patient.anonymized_code}</dd></>)}
+                </dl>
+              </>
+            ) : (
+              <p className="fs-muted">Sélectionnez un patient pour voir son résumé.</p>
+            )}
+          </section>
+
+          {selectedPatient && (
+            <section className="fs-panel">
+              <h2>Dossiers précédents</h2>
+              {patientCases.length === 0 ? (
+                <p className="fs-muted">Aucun dossier précédent pour ce patient.</p>
+              ) : (
+                <ul className="fs-cases">
+                  {patientCases.slice(0, 4).map((c) => (
+                    <li key={c.id}>
+                      <a href={`/forms/${c.form}/submissions/${c.id}`} target="_blank" rel="noreferrer">
+                        <span>{c.form_name || 'Dossier'}<small>{formatDate(c.created_at)}</small></span>
+                        <StatusBadge status={c.status} />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+        </aside>
+      </div>
     </div>
   )
 }

@@ -15,6 +15,7 @@ import {
   tuneOpusSdp,
   videoConstraints,
 } from "../lib/rtcQuality";
+import { toast } from '../lib/toast'
 
 const QUALITY_POLL_MS = 4000;
 const RECONNECT_MAX_ATTEMPTS = 8;
@@ -253,12 +254,13 @@ export default function useWebRTC(
           break;
         case "webrtc_offer":
         case "webrtc_answer":
-        case "webrtc_ice_candidate":
+        case "webrtc_ice_candidate": {
           const peerId = data.sender_user_id;
           if (!peersRef.current[peerId]) createPeer(peerId, false);
           const p = peersRef.current[peerId];
           if (p && !p.destroyed) p.signal(data.data);
           break;
+        }
         case "media_state_update":
           setParticipants((prev) =>
             prev.map((p) =>
@@ -386,13 +388,13 @@ export default function useWebRTC(
             localStreamRef.current = empty;
             setLocalStream(empty);
             if (e.name === "NotReadableError" || e.message?.includes("in use")) {
-              alert(
+              toast.error(
                 `Camera/Microphone is already in use by another application.\n\n1. Close other apps like Teams, Zoom, or Chrome.\n2. Ensure no other instances of this app are running.\n3. Restart the app.`,
               );
             } else if (e.name === "NotAllowedError") {
-              alert("Permission refusée pour le micro. Vérifiez les autorisations du navigateur ou du système.");
+              toast.error("Permission refusée pour le micro. Vérifiez les autorisations du navigateur ou du système.");
             } else if (e.name !== "NotFoundError") {
-              alert(`Impossible d'accéder au micro : ${e.message}`);
+              toast.error(`Impossible d'accéder au micro : ${e.message}`);
             }
           }
         }
@@ -548,7 +550,7 @@ export default function useWebRTC(
       setIsMuted(state);
       broadcastMediaState(state, isCameraOff);
     } else {
-      alert(
+      toast.error(
         "Microphone stream not available. Please ensure your mic is connected.",
       );
     }
@@ -559,7 +561,7 @@ export default function useWebRTC(
   // The camera is opened when turned on and released when turned off, instead of capturing all the time.
   const toggleCamera = useCallback(async () => {
     if (!localStreamRef.current) {
-      alert("Flux local indisponible. Vérifiez que votre matériel est connecté.");
+      toast.error("Flux local indisponible. Vérifiez que votre matériel est connecté.");
       return;
     }
     if (cameraBusyRef.current) return;
@@ -595,13 +597,13 @@ export default function useWebRTC(
     } catch (e) {
       console.error("WebRTC: camera toggle failed", e);
       if (e.name === "NotAllowedError") {
-        alert("Permission refusée pour la caméra. Vérifiez les autorisations du navigateur ou du système.");
+        toast.error("Permission refusée pour la caméra. Vérifiez les autorisations du navigateur ou du système.");
       } else if (e.name === "NotReadableError") {
-        alert("La caméra est déjà utilisée par une autre application.");
+        toast.error("La caméra est déjà utilisée par une autre application.");
       } else if (e.name === "NotFoundError") {
-        alert("Aucune caméra détectée.");
+        toast.error("Aucune caméra détectée.");
       } else {
-        alert(`Impossible d'activer la caméra : ${e.message}`);
+        toast.error(`Impossible d'activer la caméra : ${e.message}`);
       }
     } finally {
       cameraBusyRef.current = false;
@@ -630,7 +632,7 @@ export default function useWebRTC(
     } catch (e) {
       if (e.name !== "NotAllowedError") {
         console.error("WebRTC: Screen share failed", e);
-        alert(`Le partage d'écran a échoué : ${e.message}`);
+        toast.error(`Le partage d'écran a échoué : ${e.message}`);
       }
     }
   }, [replaceOutgoingVideoTrack, userId]);

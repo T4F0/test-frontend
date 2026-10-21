@@ -18,6 +18,7 @@
     "events": "^3.3.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router": "^7.0.0",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.64.1",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^6.0.1",
@@ -50,7 +52,7 @@
     "electron:build": "vite build --base ./ && electron-builder",
     "electron:preview": "electron .",
     "lint": "eslint src/components/conference src/lib src/pages/VideoConferenceRoom.jsx",
-    "test": "node --test src/lib/"
+    "test": "node --test src/lib/ src/i18n/"
   },
   "build": {
     "appId": "com.ercp.desktop",

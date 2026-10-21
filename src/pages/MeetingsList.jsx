@@ -3,9 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getMeetings, deleteMeeting, joinMeeting, askToJoinMeeting } from '../api/meetingsApi'
 import { createConference } from '../api/conferenceApi'
 import { useAuth } from '../context/AuthContext'
-import { Video, Calendar, Clock, Users, ArrowRight, Loader } from 'lucide-react'
+import { Video, Calendar, Clock, Users, ArrowRight, Loader, FolderOpen, Pencil, Trash2, List, CalendarDays } from 'lucide-react'
 import { formatDate, formatDateTime } from '../lib/dateUtils'
 import PageTitle from '../components/PageTitle'
+import RowActionMenu from '../components/RowActionMenu'
+import TableSkeleton from '../components/TableSkeleton'
+import { useConfirm } from '../components/ConfirmDialog'
+import MeetingsCalendar from '../components/MeetingsCalendar'
 
 const STATUS_LABELS = { PLANNED: 'Planifiée', LIVE: 'En cours', FINISHED: 'Terminée' }
 
@@ -14,10 +18,18 @@ export default function MeetingsList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('')
+  const [view, setView] = useState(() => {
+    try { return sessionStorage.getItem('meetings-view') === 'calendar' ? 'calendar' : 'list' } catch { return 'list' }
+  })
+  const changeView = (v) => {
+    setView(v)
+    try { sessionStorage.setItem('meetings-view', v) } catch { /* ignore */ }
+  }
   const [searchParams] = useSearchParams()
   const filterSubmission = searchParams.get('submission') || ''
   const navigate = useNavigate()
   const { user } = useAuth()
+  const confirm = useConfirm()
   const [joiningId, setJoiningId] = useState(null)
   // Track ask-to-join request state per meeting: { [meetingId]: 'loading' | 'sent' | null }
   const [askJoinState, setAskJoinState] = useState({})
@@ -31,8 +43,8 @@ export default function MeetingsList() {
   }, [filter, filterSubmission])
 
   useEffect(() => {
-    loadMeetings()
-  }, [filter, filterSubmission, page])
+    if (view === 'list') loadMeetings()
+  }, [filter, filterSubmission, page, view])
 
   const loadMeetings = async () => {
     try {
@@ -106,7 +118,14 @@ export default function MeetingsList() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette réunion ?')) return
+    const meeting = meetings.find((m) => m.id === id)
+    const ok = await confirm({
+      title: 'Supprimer cette réunion ?',
+      message: `« ${meeting?.title || 'Cette réunion'} » sera supprimée. Les dossiers qu’elle contient ne sont pas supprimés.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await deleteMeeting(id)
       setMeetings(meetings.filter((m) => m.id !== id))
@@ -115,13 +134,64 @@ export default function MeetingsList() {
     }
   }
 
-  if (loading) return <div className="loading">Chargement des réunions...</div>
+  const canManage = !['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role)
+  const meetingMenu = (m) => [
+    { label: 'Modifier la réunion', icon: Pencil, hidden: !canManage, onClick: () => navigate(`/meetings/${m.id}/edit`) },
+    { label: 'Supprimer', icon: Trash2, danger: true, hidden: !canManage, onClick: () => handleDelete(m.id) },
+  ]
+
+  if (view === 'calendar') {
+    return (
+      <div className="list-container">
+        <div className="list-header">
+          <PageTitle icon={Calendar}>Réunions RCP</PageTitle>
+          <div className="list-header-actions">
+            <div className="view-toggle" role="group" aria-label="Affichage">
+            <button type="button" className={view === 'list' ? 'is-active' : ''} aria-pressed={view === 'list'} onClick={() => changeView('list')}>
+              <List size={15} aria-hidden="true" /> Liste
+            </button>
+            <button type="button" className={view === 'calendar' ? 'is-active' : ''} aria-pressed={view === 'calendar'} onClick={() => changeView('calendar')}>
+              <CalendarDays size={15} aria-hidden="true" /> Calendrier
+            </button>
+          </div>
+            <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
+              <option value="">Tous les statuts</option>
+              <option value="PLANNED">Planifiée</option>
+              <option value="LIVE">En cours</option>
+              <option value="FINISHED">Terminée</option>
+            </select>
+            {canManage && (
+              <button className="btn-primary" onClick={() => navigate('/meetings/new')}>+ Nouvelle réunion</button>
+            )}
+          </div>
+        </div>
+        <MeetingsCalendar status={filter} />
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="list-container">
+        <div className="list-header"><PageTitle icon={Calendar}>Réunions RCP</PageTitle></div>
+        <TableSkeleton rows={4} columns={5} label="Chargement des réunions…" />
+      </div>
+    )
+  }
 
   return (
     <div className="list-container">
       <div className="list-header">
         <PageTitle icon={Calendar}>Réunions RCP</PageTitle>
         <div className="list-header-actions">
+          <div className="view-toggle" role="group" aria-label="Affichage">
+            <button type="button" className={view === 'list' ? 'is-active' : ''} aria-pressed={view === 'list'} onClick={() => changeView('list')}>
+              <List size={15} aria-hidden="true" /> Liste
+            </button>
+            <button type="button" className={view === 'calendar' ? 'is-active' : ''} aria-pressed={view === 'calendar'} onClick={() => changeView('calendar')}>
+              <CalendarDays size={15} aria-hidden="true" /> Calendrier
+            </button>
+          </div>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -234,15 +304,12 @@ export default function MeetingsList() {
                         )
                       })()}
                     </td>
-                    <td className="actions">
-                      <div className="action-group-horizontal">
-                        <button className="btn-small btn-secondary" onClick={() => navigate(`/meetings/${m.id}`)}>Gérer</button>
-                        {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
-                          <>
-                            <button className="btn-small btn-outline" onClick={() => navigate(`/meetings/${m.id}/edit`)}>Modifier</button>
-                            <button className="btn-small btn-danger" onClick={() => handleDelete(m.id)}>×</button>
-                          </>
-                        )}
+                    <td className="actions" onClick={(e) => e.stopPropagation()}>
+                      <div className="ui-row-actions">
+                        <button type="button" className="ui-primary-action" onClick={() => navigate(`/meetings/${m.id}`)}>
+                          <FolderOpen size={15} aria-hidden="true" /> Ouvrir
+                        </button>
+                        <RowActionMenu label={`Autres actions pour ${m.title || 'la réunion'}`} items={meetingMenu(m)} />
                       </div>
                     </td>
                   </tr>
@@ -307,14 +374,11 @@ export default function MeetingsList() {
                       )
                     })()}
                   </div>
-                  <div className="action-group-horizontal">
-                    <button className="btn-small btn-secondary" onClick={(e) => { e.stopPropagation(); navigate(`/meetings/${m.id}`); }}>Gérer</button>
-                    {!['MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
-                      <>
-                        <button className="btn-small btn-outline" onClick={(e) => { e.stopPropagation(); navigate(`/meetings/${m.id}/edit`); }}>Modifier</button>
-                        <button className="btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}>×</button>
-                      </>
-                    )}
+                  <div className="ui-row-actions" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="ui-primary-action" onClick={() => navigate(`/meetings/${m.id}`)}>
+                      <FolderOpen size={15} aria-hidden="true" /> Ouvrir
+                    </button>
+                    <RowActionMenu label={`Autres actions pour ${m.title || 'la réunion'}`} items={meetingMenu(m)} />
                   </div>
                 </div>
               </div>

@@ -2,12 +2,15 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import UserAvatar from './UserAvatar'
-import { Activity, ClipboardList, Users, Calendar, FileText, Shield, Settings, LogOut, Bell, Send, CheckSquare, Trash2, Menu, X } from 'lucide-react'
+import CommandPalette from './CommandPalette'
+import { useI18n } from '../i18n/LanguageContext'
+import { Search, Activity, ClipboardList, Users, Calendar, FileText, Shield, Settings, LogOut, Bell, Send, CheckSquare, Trash2, Menu, X, BarChart3 } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications } from '../api/authApi'
 import { formatDate } from '../lib/dateUtils'
 
 export default function Layout() {
   const { user, authenticated, logout } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
   
@@ -15,6 +18,23 @@ export default function Layout() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const notifRef = useRef(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  // Ctrl/Cmd+K (or "/" outside a text field) opens the quick search
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = /^(input|textarea|select)$/i.test(e.target?.tagName || '') || e.target?.isContentEditable
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen((v) => !v)
+      } else if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault()
+        setPaletteOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
 
@@ -112,30 +132,42 @@ export default function Layout() {
     navigate('/login')
   }
 
-  const patientsLabel = ['ADMIN', 'COORDINATEUR'].includes(user?.role) ? 'Patients' : 'Mes Patients'
+  const patientsLabel = ['ADMIN', 'COORDINATEUR'].includes(user?.role) ? t('nav.patients') : t('nav.myPatients')
 
   const homePath = !authenticated ? '/login' : '/'
 
   const navLinks = [
-    { to: '/forms', label: 'Formulaires', icon: ClipboardList, roles: ['ADMIN', 'COORDINATEUR', 'MEDECIN_EXPERT', 'MEDECIN'] },
+    { to: '/forms', label: t('nav.forms'), icon: ClipboardList, roles: ['ADMIN', 'COORDINATEUR', 'MEDECIN_EXPERT', 'MEDECIN'] },
     // Show patients for ADMIN, MEDECIN, and COORDINATEUR
     ...(['ADMIN', 'MEDECIN', 'MEDECIN_EXPERT', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/patients', label: patientsLabel, icon: Users }] : []),
-    { to: '/meetings', label: 'Réunions', icon: Calendar },
-    { to: '/reports', label: 'Rapports', icon: FileText },
+    { to: '/meetings', label: t('nav.meetings'), icon: Calendar },
+    { to: '/reports', label: t('nav.reports'), icon: FileText },
     // Coordinators and Admin can see the requests list
-    ...(['ADMIN', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/meetings/requests', label: 'Demandes', icon: Send }] : []),
+    ...(['ADMIN', 'COORDINATEUR'].includes(user?.role) ? [{ to: '/meetings/requests', label: t('nav.requests'), icon: Send }] : []),
     // MEDECIN can request an RCP meeting
-    ...(user?.role === 'MEDECIN' ? [{ to: '/meetings/request', label: 'Demander une RCP', icon: Send }] : []),
+    ...(user?.role === 'MEDECIN' ? [{ to: '/meetings/request', label: t('nav.requestRcp'), icon: Send }] : []),
     // For Coordinators, label is 'Medecins', for ADMIN it is 'Utilisateurs'
+    ...(user?.role === 'COORDINATEUR' ? [{ to: '/analytics', label: t('nav.stats'), icon: BarChart3 }] : []),
     { 
       to: '/users', 
-      label: user?.role === 'COORDINATEUR' ? 'Medecins' : 'Utilisateurs', 
+      label: user?.role === 'COORDINATEUR' ? t('nav.doctors') : t('nav.users'), 
       icon: Users, 
       roles: ['ADMIN', 'COORDINATEUR'] 
     },
   ].filter(link => !link.roles || link.roles.includes(user?.role))
 
   const unreadCount = notifications.filter(n => !n.is_read).length
+
+  // Admins have three management entries: group them so the bar stays calm
+  const isAdminRole = user?.role === 'ADMIN'
+  const adminItems = [
+    ...(isAdminRole ? [{ to: '/users', label: t('nav.users'), icon: Users }] : []),
+    ...(isAdminRole ? [{ to: '/analytics', label: t('nav.stats'), icon: BarChart3 }] : []),
+    ...(isAdminRole ? [{ to: '/audit-logs', label: t('nav.audit'), icon: Shield }] : []),
+    ...(user?.is_global_admin ? [{ to: '/settings/services', label: t('nav.settings'), icon: Settings }] : []),
+  ]
+  const mainLinks = isAdminRole ? navLinks.filter((l) => l.to !== '/users') : navLinks
+  const paletteLinks = [{ to: '/', label: t('nav.home'), icon: Activity }, ...mainLinks, ...adminItems]
 
   return (
     <div className="layout">
@@ -160,7 +192,7 @@ export default function Layout() {
             {authenticated ? (
               <>
                 <div className="nav-links">
-                  {navLinks.map(({ to, label, icon: Icon }) => (
+                  {mainLinks.map(({ to, label, icon: Icon }) => (
                     <Link
                       key={to}
                       to={to}
@@ -170,24 +202,32 @@ export default function Layout() {
                       {label}
                     </Link>
                   ))}
-                  {user?.role === 'ADMIN' && (
-                    <Link to="/audit-logs" className={location.pathname === '/audit-logs' ? 'active' : ''}>
-                      <Shield size={18} />
-                      Audit
+                  {adminItems.length > 0 && <span className="nav-sep" aria-hidden="true" />}
+                  {adminItems.map(({ to, label, icon: Icon }) => (
+                    <Link key={to} to={to} className={location.pathname === to || location.pathname.startsWith(`${to}/`) ? 'active' : ''}>
+                      <Icon size={17} />
+                      {label}
                     </Link>
-                  )}
-                  {(user?.is_global_admin || user?.role === 'ADMIN') && (
-                    <Link to="/settings/services" className={location.pathname === '/settings/services' ? 'active' : ''}>
-                      <Settings size={18} />
-                      Paramètres
-                    </Link>
-                  )}
+                  ))}
                 </div>
                 
                 <div className="navbar-controls">
+                  <button
+                    type="button"
+                    className="nav-search-btn"
+                    onClick={() => setPaletteOpen(true)}
+                    aria-label="Recherche rapide"
+                    title="Recherche rapide (Ctrl K)"
+                  >
+                    <Search size={17} aria-hidden="true" />
+                    <span className="nav-search-text">{t('nav.search')}</span>
+                    <kbd>Ctrl K</kbd>
+                  </button>
                   {['ADMIN', 'COORDINATEUR', 'MEDECIN', 'MEDECIN_EXPERT'].includes(user?.role) && (
                     <div className="notifications-wrapper" ref={notifRef} style={{ position: 'relative' }}>
                       <button 
+                        className="nav-bell"
+                        aria-label="Notifications"
                         onClick={() => setShowNotifications(!showNotifications)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative', color: '#64748b' }}
                       >
@@ -334,9 +374,9 @@ export default function Layout() {
                         </span>
                       </div>
                     </Link>
-                    <button onClick={handleLogout} className="btn-logout" title="Déconnexion" style={{display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                    <button onClick={handleLogout} className="btn-logout" title={t('nav.logout')} style={{display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
                       <LogOut size={18} />
-                      <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Déconnexion</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{t('nav.logout')}</span>
                     </button>
                   </div>
                 </div>
@@ -402,7 +442,7 @@ export default function Layout() {
                         Audit
                       </Link>
                     )}
-                    {(user?.is_global_admin || user?.role === 'ADMIN') && (
+                    {user?.is_global_admin && (
                       <Link to="/settings/services" className={location.pathname === '/settings/services' ? 'active' : ''} onClick={closeMobileMenu}>
                         <Settings size={18} />
                         Paramètres
@@ -413,7 +453,7 @@ export default function Layout() {
                   <div className="mobile-drawer-footer">
                     <button onClick={handleLogout} className="btn-logout mobile-logout-btn">
                       <LogOut size={16} />
-                      <span>Déconnexion</span>
+                      <span>{t('nav.logout')}</span>
                     </button>
                   </div>
                 </div>
@@ -426,6 +466,7 @@ export default function Layout() {
       <main className="container" style={{ paddingTop: '1.5rem' }}>
         <Outlet />
       </main>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} pages={paletteLinks} user={user} />
     </div>
   )
 }

@@ -34,6 +34,7 @@ export const SHORTCUTS = [
   ['W / P / Z', 'Contraste / Déplacer / Zoom'],
   ['L / A / O / B', 'Longueur / Angle / ROI ellipse / ROI rectangle'],
   ['F / E', 'Flèche / Gomme'],
+  ['Ctrl Z / Ctrl Maj Z', 'Annuler / Rétablir une annotation'],
   ['1 – 6', 'Préréglages de fenêtrage'],
   ['↑ ↓ / Molette', 'Coupe précédente / suivante'],
   ['Espace', 'Lecture / pause (ciné)'],

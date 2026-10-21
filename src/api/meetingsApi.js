@@ -143,3 +143,9 @@ export const rejectMeetingJoinRequest = async (meetingId, requestId) => {
   const { data } = await authAxios.post(`${API_BASE}/meetings/${meetingId}/reject_join_request/`, { request_id: requestId })
   return data
 }
+
+export const downloadMeetingBriefing = async (id) => {
+  const authAxios = getAuthAxios()
+  const { data } = await authAxios.get(`${API_BASE}/meetings/${id}/briefing/`, { responseType: 'blob' })
+  return data
+}

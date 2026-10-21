@@ -34,6 +34,8 @@ import { Users, MessageSquare, ClipboardList, Clock, UserCheck, X, Bell } from '
 import { dicomEndpointFor } from '../lib/dicomIds'
 import '../conference.css'
 import '../conference-ui.css'
+import { useConfirm } from '../components/ConfirmDialog'
+import { toast } from '../lib/toast'
 
 
 const CONFERENCE_STATUS_LABELS = {
@@ -44,6 +46,7 @@ const CONFERENCE_STATUS_LABELS = {
 }
 
 export default function VideoConferenceRoom() {
+  const confirm = useConfirm()
   const { roomId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -202,7 +205,7 @@ export default function VideoConferenceRoom() {
   const handleNotesSync = useCallback(() => {}, [])
 
   const handleConferenceEnded = useCallback(() => {
-    alert("La réunion a été terminée par l'hôte.")
+    toast.info("La réunion a été terminée par l'hôte.")
     navigate('/meetings')
   }, [navigate])
 
@@ -254,9 +257,9 @@ export default function VideoConferenceRoom() {
 
   const handleJoinRejected = useCallback((reason) => {
     if (reason === 'meeting_ended') {
-      alert('La réunion est terminée.')
+      toast.info('La réunion est terminée.')
     } else {
-      alert("Votre demande pour rejoindre a été refusée par l'hôte.")
+      toast.info("Votre demande pour rejoindre a été refusée par l'hôte.")
     }
     navigate('/meetings')
   }, [navigate])
@@ -597,7 +600,7 @@ export default function VideoConferenceRoom() {
       }
     } catch (err) {
       console.error('Accept failed:', err)
-      alert(err.response?.data?.detail || 'Échec de l\'acceptation')
+      toast.error(err.response?.data?.detail || 'Échec de l\'acceptation')
     }
   }
 
@@ -614,7 +617,7 @@ export default function VideoConferenceRoom() {
       }
     } catch (err) {
       console.error('Reject failed:', err)
-      alert(err.response?.data?.detail || 'Échec du refus')
+      toast.error(err.response?.data?.detail || 'Échec du refus')
     }
   }
 
@@ -644,7 +647,7 @@ export default function VideoConferenceRoom() {
   }
 
   const handleEndMeeting = async () => {
-    if (!window.confirm('Terminer cette réunion pour tous les participants ?')) return
+    if (!(await confirm({ title: 'Terminer la réunion ?', message: 'La réunion sera terminée pour tous les participants.', confirmLabel: 'Terminer', danger: true }))) return
     try {
       await endConference(conference.id)
       disconnect()
@@ -664,7 +667,7 @@ export default function VideoConferenceRoom() {
     ]
     const ext = '.' + file.name.split('.').pop().toLowerCase()
     if (!allowedExtensions.includes(ext)) {
-      alert(`Le format de fichier "${ext}" n'est pas autorisé. Formats acceptés : PDF, Word, Texte, Images, Vidéos et DICOM.`)
+      toast.error(`Le format de fichier "${ext}" n'est pas autorisé. Formats acceptés : PDF, Word, Texte, Images, Vidéos et DICOM.`)
       return
     }
 
@@ -703,7 +706,7 @@ export default function VideoConferenceRoom() {
   }
 
   const handleRemoveParticipant = async (userId) => {
-    if (!window.confirm('Supprimer ce participant ?')) return
+    if (!(await confirm({ title: 'Retirer ce participant ?', message: 'Il sera exclu de la réunion en cours.', confirmLabel: 'Retirer', danger: true }))) return
     try {
       await removeParticipant(conference.id, userId)
       loadConference()
@@ -713,14 +716,14 @@ export default function VideoConferenceRoom() {
   }
 
   const handlePromoteAttachment = async (attachmentId) => {
-    if (!activeSubmissionId) return alert('Veuillez sélectionner un dossier correctement.');
+    if (!activeSubmissionId) return toast.info('Veuillez sélectionner un dossier correctement.');
     try {
       await promoteConferenceAttachment(conference.id, attachmentId, activeSubmissionId)
       loadConference()
-      alert('Le fichier a été ajouté avec succès au dossier permanent.')
+      toast.success('Le fichier a été ajouté avec succès au dossier permanent.')
     } catch (err) {
       console.error('Promotion failed:', err)
-      alert('Échec de l\'ajout du fichier au dossier : ' + (err.response?.data?.detail || err.message))
+      toast.error('Échec de l\'ajout du fichier au dossier : ' + (err.response?.data?.detail || err.message))
     }
   }
 

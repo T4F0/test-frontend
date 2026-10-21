@@ -1458,3 +1458,12 @@
   padding: 0.35rem 0.7rem;
   font-size: 0.85rem;
 }
+
+/* Patients table: fit the viewport so the "Dossier" action is always visible without scrolling */
+.patients-table { min-width: 0; width: 100%; }
+.patients-table thead th { padding: 0.8rem 0.7rem; letter-spacing: 0.04em; font-size: 0.7rem; line-height: 1.25; vertical-align: bottom; }
+.patients-table tbody td { padding: 0.7rem 0.7rem; font-size: 0.88rem; }
+.patients-table .name-cell { max-width: 220px; overflow-wrap: anywhere; }
+.patients-table td:nth-child(3), .patients-table td:nth-child(6) { white-space: nowrap; }
+.patients-table td.actions-cell { display: table-cell; width: 1%; white-space: nowrap; }
+.patients-table .gender-badge { padding: 0.25rem 0.6rem; }

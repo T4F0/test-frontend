@@ -1,58 +1,45 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import { titleForPath } from './lib/labels'
+import Dashboard from './pages/Dashboard'
+import { ConfirmProvider } from './components/ConfirmDialog'
+import Toaster from './components/Toaster'
+import OfflineBanner from './components/OfflineBanner'
+import { LanguageProvider } from './i18n/LanguageContext'
 import RouteGuard from './components/RouteGuard'
 import Login from './pages/Login'
-import Register from './pages/Register'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPasswordConfirm from './pages/ResetPasswordConfirm'
-import SecureAccount from './pages/SecureAccount'
-import RemoveAccount from './pages/RemoveAccount'
-import FormsList from './pages/FormsList'
-import FormBuilder from './pages/FormBuilder'
-import FormSubmission from './pages/FormSubmission'
-import FormSubmissionsList from './pages/FormSubmissionsList'
-import FormSubmissionDetail from './pages/FormSubmissionDetail'
-import UserManagement from './pages/UserManagement'
-import UserForm from './pages/UserForm'
-import UserProfile from './pages/UserProfile'
-import PatientsList from './pages/PatientsList'
-import PatientForm from './pages/PatientForm'
-import PatientDetail from './pages/PatientDetail'
-import MeetingsList from './pages/MeetingsList'
-import MeetingDetail from './pages/MeetingDetail'
-import MeetingForm from './pages/MeetingForm'
-import MeetingRequestForm from './pages/MeetingRequestForm'
-import MeetingRequestsList from './pages/MeetingRequestsList'
-import AttachmentsList from './pages/AttachmentsList'
-import AuditLogsList from './pages/AuditLogsList'
-import ReportsList from './pages/ReportsList'
-import VideoConferenceRoom from './pages/VideoConferenceRoom'
-import ServiceSettings from './pages/ServiceSettings'
-import NewCaseGateway from './pages/NewCaseGateway'
+const Register = lazy(() => import('./pages/Register'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPasswordConfirm = lazy(() => import('./pages/ResetPasswordConfirm'))
+const SecureAccount = lazy(() => import('./pages/SecureAccount'))
+const RemoveAccount = lazy(() => import('./pages/RemoveAccount'))
+const FormsList = lazy(() => import('./pages/FormsList'))
+const FormBuilder = lazy(() => import('./pages/FormBuilder'))
+const FormSubmission = lazy(() => import('./pages/FormSubmission'))
+const FormSubmissionsList = lazy(() => import('./pages/FormSubmissionsList'))
+const FormSubmissionDetail = lazy(() => import('./pages/FormSubmissionDetail'))
+const UserManagement = lazy(() => import('./pages/UserManagement'))
+const UserForm = lazy(() => import('./pages/UserForm'))
+const UserProfile = lazy(() => import('./pages/UserProfile'))
+const PatientsList = lazy(() => import('./pages/PatientsList'))
+const PatientForm = lazy(() => import('./pages/PatientForm'))
+const PatientDetail = lazy(() => import('./pages/PatientDetail'))
+const MeetingsList = lazy(() => import('./pages/MeetingsList'))
+const MeetingDetail = lazy(() => import('./pages/MeetingDetail'))
+const MeetingForm = lazy(() => import('./pages/MeetingForm'))
+const MeetingRequestForm = lazy(() => import('./pages/MeetingRequestForm'))
+const MeetingRequestsList = lazy(() => import('./pages/MeetingRequestsList'))
+const AttachmentsList = lazy(() => import('./pages/AttachmentsList'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const AuditLogsList = lazy(() => import('./pages/AuditLogsList'))
+const ReportsList = lazy(() => import('./pages/ReportsList'))
+const VideoConferenceRoom = lazy(() => import('./pages/VideoConferenceRoom'))
+const ServiceSettings = lazy(() => import('./pages/ServiceSettings'))
+const NewCaseGateway = lazy(() => import('./pages/NewCaseGateway'))
+const SecondOpinion = lazy(() => import('./pages/SecondOpinion'))
 
-
-function HomeRedirect() {
-  const { user } = useAuth()
-  
-  if (user?.role === 'MEDECIN_EXPERT') {
-    return <Navigate to="/meetings" replace />
-  }
-  
-  if (user?.role === 'MEDECIN') {
-    return <Navigate to="/patients" replace />
-  }
-  
-  // Coordinators and Admins go to users
-  if (['COORDINATEUR', 'ADMIN'].includes(user?.role)) {
-    return <Navigate to="/users" replace />
-  }
-  
-  // Fallback
-  return <Navigate to="/patients" replace />
-}
 
 function AppRoutes() {
   const { loading, authenticated } = useAuth()
@@ -68,8 +55,10 @@ function AppRoutes() {
   }
 
   return (
+    <Suspense fallback={<div className="loading" role="status">Chargement...</div>}>
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/second-opinion/:token" element={<SecondOpinion />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordConfirm />} />
@@ -79,7 +68,7 @@ function AppRoutes() {
       <Route element={<Layout />}>
         {authenticated ? (
           <Route element={<RouteGuard />}>
-            <Route path="/" element={<HomeRedirect />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/cases/new" element={<NewCaseGateway />} />
             <Route path="/forms" element={<FormsList />} />
             <Route path="/forms/new" element={<FormBuilder />} />
@@ -107,6 +96,7 @@ function AppRoutes() {
 
             <Route path="/reports" element={<ReportsList />} />
             <Route path="/settings/services" element={<ServiceSettings />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/audit-logs" element={<AuditLogsList />} />
             <Route path="/conference/:roomId" element={<VideoConferenceRoom />} />
           </Route>
@@ -115,14 +105,21 @@ function AppRoutes() {
         )}
       </Route>
     </Routes>
+    </Suspense>
   )
 }
 
 function App() {
   return (
+    <LanguageProvider>
     <AuthProvider>
-      <AppRoutes />
+      <ConfirmProvider>
+        <AppRoutes />
+        <Toaster />
+        <OfflineBanner />
+      </ConfirmProvider>
     </AuthProvider>
+    </LanguageProvider>
   )
 }
 

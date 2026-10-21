@@ -63,10 +63,11 @@ authAxios.interceptors.response.use(
   }
 )
 
-export const login = async (username, password) => {
+export const login = async (username, password, otp) => {
   const { data } = await axios.post(`${API_BASE}/token/`, {
     username,
-    password
+    password,
+    ...(otp ? { otp } : {}),
   })
   localStorage.setItem('access_token', data.access)
   localStorage.setItem('refresh_token', data.refresh)
@@ -241,6 +242,11 @@ export const updateServiceParticipants = async (id, { participants_config, inclu
   return data
 }
 
+export const updateServiceActive = async (id, is_active) => {
+  const { data } = await authAxios.patch(`${API_BASE}/services/${id}/`, { is_active })
+  return data
+}
+
 export const deleteService = async (id) => {
   await authAxios.delete(`${API_BASE}/services/${id}/`)
 }
@@ -261,3 +267,8 @@ export const fetchFileAsBlob = async (url) => {
   })
   return response.data
 }
+
+export const setupTwoFactor = async () => (await authAxios.post(`${API_BASE}/auth/2fa/setup/`)).data
+export const enableTwoFactor = async (code) => (await authAxios.post(`${API_BASE}/auth/2fa/enable/`, { code })).data
+export const disableTwoFactor = async (password, code) => (await authAxios.post(`${API_BASE}/auth/2fa/disable/`, { password, code })).data
+export const resetUserTwoFactor = async (userId) => (await authAxios.post(`${API_BASE}/auth/2fa/reset/${userId}/`)).data

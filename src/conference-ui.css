@@ -1398,3 +1398,7 @@
   color: #3730a3;
   opacity: 1;
 }
+
+/* Author label shown when hovering an annotation drawn by someone else */
+.dv-author-tip { position: absolute; z-index: 6; pointer-events: none; display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; font-size: 0.78rem; font-weight: 600; color: #fff; background: rgba(15, 23, 42, 0.92); border: 1px solid; border-radius: 999px; white-space: nowrap; }
+.dv-author-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }

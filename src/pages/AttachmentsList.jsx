@@ -3,18 +3,25 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getAttachments, deleteAttachment, uploadAttachment, downloadAttachment } from '../api/attachmentsApi'
 import { getSubmissions } from '../api/submissionsApi'
 import { formatDate } from '../lib/dateUtils'
-import { Download, Paperclip } from 'lucide-react'
+import { Download, Paperclip, FolderOpen, Trash2 } from 'lucide-react'
+import DataTable from '../components/DataTable'
+import EmptyState from '../components/EmptyState'
+import RowActionMenu from '../components/RowActionMenu'
+import { sortRows } from '../lib/sorting'
 import DicomModal from '../components/conference/DicomModal'
 import PageTitle from '../components/PageTitle'
+import { useConfirm } from '../components/ConfirmDialog'
 
 const FILE_TYPE_LABELS = { PDF: 'PDF', IMAGE: 'Image', VIDEO: 'Video', DICOM: 'DICOM' }
 
 export default function AttachmentsList() {
+  const confirm = useConfirm()
   const [attachments, setAttachments] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [sort, setSort] = useState({ key: 'date', dir: 'desc' })
   const [selectedDicom, setSelectedDicom] = useState(null)
   const abortControllerRef = useRef(null)
   const [searchParams] = useSearchParams()
@@ -121,7 +128,7 @@ export default function AttachmentsList() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette pièce jointe ?')) return
+    if (!(await confirm({ title: 'Supprimer cette pièce jointe ?', message: 'Le fichier sera définitivement supprimé.', confirmLabel: 'Supprimer', danger: true }))) return
     try {
       await deleteAttachment(id)
       setAttachments(attachments.filter((a) => a.id !== id))
@@ -159,6 +166,7 @@ export default function AttachmentsList() {
         file: getRelativeUrl(a.file),
         url: getRelativeUrl(a.file),
         file_type: 'DICOM',
+        submission: a.submission,
       })
     } else {
       downloadAttachment(getRelativeUrl(a.file), null)
@@ -213,93 +221,45 @@ export default function AttachmentsList() {
         <div className="empty-inline-card">
           <p>Veuillez sélectionner un dossier (soumission de formulaire) pour voir et gérer ses pièces jointes.</p>
         </div>
-      ) : loading && attachments.length === 0 ? (
-        <div className="loading">Chargement...</div>
-      ) : attachments.length === 0 ? (
-        <p className="empty">Aucune pièce jointe pour ce dossier.</p>
       ) : (
-        <>
-        <div className="attachments-table-wrapper table-responsive-wrapper">
-          <table className="forms-table">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Nom du fichier</th>
-                <th>Dossier RCP</th>
-                <th>Téléchargé par</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attachments.map((a) => (
-                <tr key={a.id}>
-                  <td><span className={`file-type-badge ${a.file_type.toLowerCase()}`}>{FILE_TYPE_LABELS[a.file_type] ?? a.file_type}</span></td>
-                  <td><strong>{a.file_name || 'Sans titre'}</strong></td>
-                  <td className="text-muted">{a.submission_name || '—'}</td>
-                  <td>{a.uploaded_by_name ?? '—'}</td>
-                  <td>{formatDate(a.uploaded_at)}</td>
-                  <td className="actions">
-                    {a.file && (
-                      <>
-                        <button 
-                          className="btn-small btn-outline" 
-                          onClick={() => handleOpenAttachment(a)}
-                        >
-                          Ouvrir
-                        </button>
-                        <button 
-                          className="btn-small btn-secondary" 
-                          onClick={() => downloadAttachment(getRelativeUrl(a.file), a.file_name)}
-                        >
-                          <Download size={12} />
-                          Télécharger
-                        </button>
-                      </>
-                    )}
-                    <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mobile-cards">
-          {attachments.map((a) => (
-            <div key={a.id} className="mobile-card">
-              <div className="mobile-card-header">
-                <div className="mobile-card-title">
-                  <span className={`file-type-badge ${(a.file_type || '').toLowerCase()}`} style={{display: 'inline-block', marginBottom: '0.35rem'}}>
-                    {FILE_TYPE_LABELS[a.file_type] ?? a.file_type}
-                  </span>
-                  <strong>{a.file_name || 'Sans titre'}</strong>
-                </div>
-              </div>
-              <div className="mobile-card-body">
-                <span className="text-muted">{a.submission_name || '—'}</span>
-                <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>
-                  {a.uploaded_by_name ?? '—'} · {formatDate(a.uploaded_at)}
-                </span>
-              </div>
-              <div className="mobile-card-actions">
-                {a.file && (
-                  <>
-                    <button className="btn-small btn-outline" onClick={() => handleOpenAttachment(a)}>
-                      Ouvrir
-                    </button>
-                    <button className="btn-small btn-secondary" onClick={() => downloadAttachment(getRelativeUrl(a.file), a.file_name)}>
-                      <Download size={12} />
-                      Télécharger
-                    </button>
-                  </>
-                )}
-                <button className="btn-small btn-danger" onClick={() => handleDelete(a.id)}>Supprimer</button>
-              </div>
+        <DataTable
+          columns={[
+            { key: 'name', label: 'Fichier', sortable: true, render: (a) => (
+              <>
+                <span className={`file-type-badge ${(a.file_type || '').toLowerCase()}`} style={{ marginRight: 8 }}>{FILE_TYPE_LABELS[a.file_type] ?? a.file_type}</span>
+                <strong>{a.file_name || 'Sans titre'}</strong>
+              </>
+            ) },
+            { key: 'submission', label: 'Dossier RCP', render: (a) => <span className="text-muted">{a.submission_name || '—'}</span> },
+            { key: 'by', label: 'Téléchargé par', sortable: true, render: (a) => a.uploaded_by_name ?? '—' },
+            { key: 'date', label: 'Date', sortable: true, render: (a) => formatDate(a.uploaded_at) },
+          ]}
+          rows={sortRows(attachments, sort, {
+            name: (a) => a.file_name,
+            by: (a) => a.uploaded_by_name,
+            date: (a) => new Date(a.uploaded_at),
+          })}
+          sort={sort}
+          onSortChange={setSort}
+          loading={loading && attachments.length === 0}
+          empty={<EmptyState icon={Paperclip} title="Aucune pièce jointe" description="Ajoutez un fichier avec « Uploader un fichier » ci-dessus." />}
+          actions={(a) => (
+            <div className="ui-row-actions">
+              {a.file && (
+                <button type="button" className="ui-primary-action" onClick={() => handleOpenAttachment(a)}>
+                  <FolderOpen size={15} aria-hidden="true" /> Ouvrir
+                </button>
+              )}
+              <RowActionMenu
+                label={`Autres actions pour ${a.file_name || 'ce fichier'}`}
+                items={[
+                  { label: 'Télécharger', icon: Download, hidden: !a.file, onClick: () => downloadAttachment(getRelativeUrl(a.file), a.file_name) },
+                  { label: 'Supprimer', icon: Trash2, danger: true, onClick: () => handleDelete(a.id) },
+                ]}
+              />
             </div>
-          ))}
-        </div>
-        </>
+          )}
+        />
       )}
 
       <DicomModal file={selectedDicom} onClose={() => setSelectedDicom(null)} />

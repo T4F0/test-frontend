@@ -14,8 +14,12 @@ import {
 } from '../api/authApi'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../lib/dateUtils'
-import { Calendar, Users, ChevronRight, FileText, Activity, Search, Filter, FilterX } from 'lucide-react'
+import { Calendar, Users, ChevronRight, FileText, Activity, Search, Filter, FilterX, Pencil, Trash2, UserRound } from 'lucide-react'
 import MeetingTab from '../components/MeetingTab'
+import RowActionMenu from '../components/RowActionMenu'
+import SortHeader from '../components/SortHeader'
+import { useConfirm } from '../components/ConfirmDialog'
+import { nextSort, sortRows } from '../lib/sorting'
 
 const ROLE_LABELS = {
   'MEDECIN': 'Médecin traitant',
@@ -26,6 +30,8 @@ const ROLE_LABELS = {
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth()
+  const confirm = useConfirm()
+  const [sort, setSort] = useState(null)
   const [users, setUsers] = useState([])
   const [pendingUsers, setPendingUsers] = useState([])
   const [services, setServices] = useState([])
@@ -149,13 +155,19 @@ export default function UserManagement() {
   }
 
   const handleDelete = async (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      try {
-        await deleteUser(id)
-        setUsers(users.filter(u => u.id !== id))
-      } catch (err) {
-        setError('Échec de la suppression de l\'utilisateur')
-      }
+    const target = users.find(u => u.id === id)
+    const ok = await confirm({
+      title: 'Supprimer cet utilisateur ?',
+      message: `${`${target?.first_name || ''} ${target?.last_name || ''}`.trim() || 'Ce compte'} ne pourra plus se connecter. Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await deleteUser(id)
+      setUsers(users.filter(u => u.id !== id))
+    } catch (err) {
+      setError('Échec de la suppression de l\'utilisateur')
     }
   }
 
@@ -169,13 +181,18 @@ export default function UserManagement() {
   }
 
   const handleReject = async (id) => {
-    if (confirm('Êtes-vous sûr de vouloir rejeter cette inscription ?')) {
-      try {
-        await rejectRegistration(id)
-        loadData()
-      } catch (err) {
-        setError('Échec du rejet de l\'utilisateur')
-      }
+    const ok = await confirm({
+      title: 'Rejeter cette inscription ?',
+      message: 'La personne sera informée que son inscription n’a pas été acceptée.',
+      confirmLabel: 'Rejeter',
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await rejectRegistration(id)
+      loadData()
+    } catch (err) {
+      setError('Échec du rejet de l\'utilisateur')
     }
   }
 
@@ -221,7 +238,13 @@ export default function UserManagement() {
   }
 
   const handleDeleteService = async (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce service ?')) {
+    const ok = await confirm({
+      title: 'Supprimer ce service ?',
+      message: 'Un service qui contient des utilisateurs ou des données ne peut pas être supprimé.',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    })
+    if (ok) {
       try {
         setServiceError(null)
         await deleteService(id)
@@ -249,7 +272,7 @@ export default function UserManagement() {
   const uniqueHospitals = [...new Set(activeUsers.map(u => u.hospital))].filter(Boolean)
   
   const searchLower = search.toLowerCase()
-  const filteredUsers = activeUsers.filter(u => {
+  const matchingUsers = activeUsers.filter(u => {
     const matchesSearch = !search ||
       `${u.first_name} ${u.last_name}`.toLowerCase().includes(searchLower) ||
       (u.email || '').toLowerCase().includes(searchLower) ||
@@ -262,6 +285,16 @@ export default function UserManagement() {
 
     return matchesSearch && matchesRole && matchesService && matchesHospital;
   })
+  const filteredUsers = sortRows(matchingUsers, sort, {
+    name: (u) => `${u.last_name || ''} ${u.first_name || ''}`.trim(),
+    email: (u) => u.email,
+  })
+  const onSort = (key) => setSort(nextSort(sort, key))
+  const userMenu = (u) => [
+    { label: 'Voir ses patients', icon: Users, hidden: u.role !== 'MEDECIN', onClick: () => navigate(`/patients?doctor=${u.id}`) },
+    { label: 'Modifier', icon: Pencil, onClick: () => navigate(`/users/${u.id}/edit`) },
+    { label: 'Supprimer', icon: Trash2, danger: true, hidden: currentUser?.role !== 'ADMIN', onClick: () => handleDelete(u.id) },
+  ]
 
   return (
     <div className="users-management">
@@ -378,8 +411,8 @@ export default function UserManagement() {
               {/* ... table content remains the same ... */}
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>Email</th>
+                  <SortHeader label="Nom" sortKey="name" sort={sort} onSort={onSort} />
+                  <SortHeader label="Email" sortKey="email" sort={sort} onSort={onSort} />
                   <th style={{ position: 'relative' }}>
                     <div 
                       className="filter-header"
@@ -476,7 +509,7 @@ export default function UserManagement() {
                     )}
                   </th>
                   <th>Téléphone</th>
-                  <th>Actions</th>
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -507,32 +540,16 @@ export default function UserManagement() {
                     )}
                     <td>{user.hospital || '-'}</td>
                     <td>{user.phone_number || '-'}</td>
-                    <td className="actions">
-                      {user.role === 'MEDECIN' && (
-                        <button
-                          onClick={() => navigate(`/patients?doctor=${user.id}`)}
-                          className="btn-small btn-info"
-                          style={{ marginRight: '5px' }}
-                          title="Voir les patients de ce médecin"
-                        >
-                          <Users size={15} aria-hidden="true" /> Voir patients
+                    <td className="actions" onClick={(e) => e.stopPropagation()}>
+                      <div className="ui-row-actions">
+                        <button type="button" className="ui-primary-action" onClick={() => navigate(`/users/${user.id}`)}>
+                          <UserRound size={15} aria-hidden="true" /> Profil
                         </button>
-                      )}
-                      <button 
-                        onClick={() => navigate(`/users/${user.id}/edit`)}
-                        className="btn-small"
-                        style={{ marginRight: '5px' }}
-                      >
-                        Modifier
-                      </button>
-                      {currentUser?.role === 'ADMIN' && (
-                        <button 
-                          onClick={() => handleDelete(user.id)}
-                          className="btn-small btn-danger"
-                        >
-                          Supprimer
-                        </button>
-                      )}
+                        <RowActionMenu
+                          label={`Autres actions pour ${user.first_name} ${user.last_name}`}
+                          items={userMenu(user)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -562,20 +579,11 @@ export default function UserManagement() {
                       <span className="text-muted" style={{fontSize: '0.8rem', marginLeft: 'auto'}}>{user.phone_number}</span>
                     )}
                   </div>
-                  <div className="mobile-card-actions">
-                    {user.role === 'MEDECIN' && (
-                      <button className="btn-small btn-info" onClick={(e) => { e.stopPropagation(); navigate(`/patients?doctor=${user.id}`); }}>
-                        <Users size={15} aria-hidden="true" /> Patients
-                      </button>
-                    )}
-                    <button className="btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/users/${user.id}/edit`); }}>
-                      Modifier
+                  <div className="mobile-card-actions" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="ui-primary-action" onClick={() => navigate(`/users/${user.id}`)}>
+                      <UserRound size={15} aria-hidden="true" /> Profil
                     </button>
-                    {currentUser?.role === 'ADMIN' && (
-                      <button className="btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }}>
-                        Supprimer
-                      </button>
-                    )}
+                    <RowActionMenu label={`Autres actions pour ${user.first_name} ${user.last_name}`} items={userMenu(user)} />
                   </div>
                 </div>
               ))}

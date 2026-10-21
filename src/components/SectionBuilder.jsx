@@ -1,3 +1,4 @@
+import { useConfirm } from './ConfirmDialog'
 import { useState } from 'react'
 import FieldBuilder from './FieldBuilder'
 import {
@@ -21,6 +22,7 @@ export default function SectionBuilder({
   newlyCreatedFieldId = null,
   generateTempId
 }) {
+  const confirm = useConfirm()
   const [isEditing, setIsEditing] = useState(section.id === newlyCreatedSectionId)
   const [name, setName] = useState(section.name)
   const [saving, setSaving] = useState(false)
@@ -43,10 +45,9 @@ export default function SectionBuilder({
     setIsEditing(false)
   }
 
-  const handleDelete = () => {
-    if (confirm('Supprimer cette section et tout son contenu ?')) {
-      onDelete(section.id)
-    }
+  const handleDelete = async () => {
+    const ok = await confirm({ title: 'Supprimer cette section ?', message: 'La section et tous ses champs seront retirés du formulaire.', confirmLabel: 'Supprimer', danger: true })
+    if (ok) onDelete(section.id)
   }
 
   const handleAddSubSection = () => {
